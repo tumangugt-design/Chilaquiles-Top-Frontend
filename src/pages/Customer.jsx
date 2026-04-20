@@ -117,12 +117,18 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
         console.log('Recaptcha already rendered or error:', renderError);
       }
 
+      console.log('Sending OTP to:', phoneNumber);
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      console.log('OTP sent successfully, confirmation result received');
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        console.log('Component unmounted, skipping state updates');
+        return;
+      }
 
       setConfirmationResult(confirmation);
       setShowOTPModal(true);
+      console.log('Modal state set to true');
       toast.success('Código enviado por SMS');
     } catch (error) {
       console.error('Error enviando SMS:', error);

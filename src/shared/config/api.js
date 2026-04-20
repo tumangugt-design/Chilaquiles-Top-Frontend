@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { auth } from './firebase.js';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+let API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+if (API_URL.startsWith('http://') && !API_URL.includes('localhost') && !API_URL.includes('127.0.0.1')) {
+  API_URL = API_URL.replace('http://', 'https://');
+}
 
 const api = axios.create({
   baseURL: API_URL,
