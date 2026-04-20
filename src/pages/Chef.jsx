@@ -28,10 +28,11 @@ const ChefPage = () => {
   }, [session]);
 
   const advance = async (order) => {
+    // If order has no chef assigned, the backend will assign it automatically on status update
     const nextStatus = order.status === 'recibido' ? 'en_proceso' : 'listo_para_despacho';
     try {
       await updateOrderStatus(order._id, nextStatus);
-      toast.success('Orden actualizada');
+      toast.success(order.status === 'recibido' ? '¡Orden Tomada!' : '¡Orden Lista!');
       loadOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
@@ -107,9 +108,9 @@ const ChefPage = () => {
             {['recibido', 'en_proceso'].includes(order.status) && (
               <Button 
                 onClick={() => advance(order)}
-                className="w-full !py-4 shadow-lg shadow-brand-orange/20"
+                className={`w-full !py-4 shadow-lg ${order.status === 'recibido' ? 'shadow-brand-blue/20 !bg-brand-blue' : 'shadow-brand-orange/20'}`}
               >
-                {order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
+                {order.status === 'recibido' ? 'Tomar Orden' : 'Marcar como Listo'}
               </Button>
             )}
             

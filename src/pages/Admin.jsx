@@ -28,6 +28,8 @@ const AdminPage = () => {
   useEffect(() => {
     if (session?.role === 'ADMIN' && session?.status === 'approved') {
       loadData();
+      const interval = setInterval(loadData, 5000);
+      return () => clearInterval(interval);
     }
   }, [session]);
 

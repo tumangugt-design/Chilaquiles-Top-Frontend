@@ -36,19 +36,30 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
   const isMountedRef = useRef(true);
 
   const initRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+      
       window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
-        callback: () => {},
+        callback: () => {
+          console.log('reCAPTCHA resolved');
+        },
         'expired-callback': () => {
+          console.log('reCAPTCHA expired');
           if (window.recaptchaVerifier) {
             window.recaptchaVerifier.clear();
             window.recaptchaVerifier = null;
           }
         }
       });
+      return window.recaptchaVerifier;
+    } catch (err) {
+      console.error('Error initializing reCAPTCHA:', err);
+      return null;
     }
-    return window.recaptchaVerifier;
   };
 
   useEffect(() => {
@@ -56,7 +67,9 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
     return () => {
       isMountedRef.current = false;
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        try {
+          window.recaptchaVerifier.clear();
+        } catch (e) {}
         window.recaptchaVerifier = null;
       }
     };
@@ -109,33 +122,21 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
       const phoneNumber = normalizeGtPhone(localData.phone);
       const verifier = initRecaptcha();
       
-      // We must render it before using it in signInWithPhoneNumber
-      try {
-        await verifier.render();
-      } catch (renderError) {
-        // If it's already rendered, it might throw, but we can safely ignore or log it
-        console.log('Recaptcha already rendered or error:', renderError);
-      }
+      if (!verifier) throw new Error('Error al inicializar el verificador de seguridad.');
 
       console.log('Sending OTP to:', phoneNumber);
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-      console.log('OTP sent successfully, confirmation result received');
-
-      if (!isMountedRef.current) {
-        console.log('Component unmounted, skipping state updates');
-        return;
-      }
+      
+      if (!isMountedRef.current) return;
 
       setConfirmationResult(confirmation);
       setShowOTPModal(true);
-      console.log('Modal state set to true');
       toast.success('Código enviado por SMS');
     } catch (error) {
       console.error('Error enviando SMS:', error);
       
-      // On error, reset reCAPTCHA
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        try { window.recaptchaVerifier.clear(); } catch(e){}
         window.recaptchaVerifier = null;
       }
 

@@ -28,6 +28,7 @@ const RepartidorPage = () => {
   }, [session]);
 
   const advance = async (order) => {
+    // Backend assigns courier automatically on first status update
     const nextStatus = order.status === 'listo_para_despacho' ? 'en_camino' : 'entregado';
     try {
       await updateOrderStatus(order._id, nextStatus);
@@ -126,7 +127,7 @@ const RepartidorPage = () => {
                 onClick={() => advance(order)}
                 className={`w-full !py-5 text-lg shadow-xl ${order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20'}`}
               >
-                {order.status === 'listo_para_despacho' ? 'Iniciar Entrega' : 'Confirmar Entrega'}
+                {order.status === 'listo_para_despacho' ? 'Tomar Cliente' : 'Confirmar Entrega'}
               </Button>
             )}
           </div>
