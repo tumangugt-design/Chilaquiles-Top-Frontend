@@ -150,7 +150,7 @@ const ChefPage = ({ authSession }) => {
                          <span className="text-[8px] font-bold text-brand-blue">{order.chefId.name?.charAt(0)}</span>
                        )}
                     </div>
-                    <span className="text-[10px] font-black text-brand-blue uppercase">Orden de {order.chefId.name?.split(' ')[0]}</span>
+                    <span className="text-[10px] font-black text-brand-blue uppercase">Orden de {order.chefId.name}</span>
                   </div>
                 )}
               </div>
@@ -207,7 +207,7 @@ const ChefPage = ({ authSession }) => {
                 onClick={() => (!order.chefId || order.chefId._id === session.uid) && advance(order)}
                 disabled={order.chefId && order.chefId._id !== session.uid}
               >
-                {!order.chefId ? 'Tomar Pedido' : order.chefId._id !== session.uid ? `En Cocina (${order.chefId.name?.split(' ')[0]})` : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
+                {!order.chefId ? 'Tomar Pedido' : order.chefId._id !== session.uid ? `En Cocina (${order.chefId.name})` : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
               </Button>
             )}
             

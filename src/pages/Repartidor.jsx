@@ -154,7 +154,7 @@ const RepartidorPage = ({ authSession }) => {
                          <span className="text-[8px] font-bold text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
                        )}
                     </div>
-                    <span className="text-[10px] font-black text-brand-orange uppercase">Asignado a {order.repartidorId.name?.split(' ')[0]}</span>
+                    <span className="text-[10px] font-black text-brand-orange uppercase">Asignado a {order.repartidorId.name}</span>
                   </div>
                 )}
               </div>
@@ -212,7 +212,7 @@ const RepartidorPage = ({ authSession }) => {
                 disabled={order.repartidorId && order.repartidorId._id !== session.uid}
                 className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session.uid) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
               >
-                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.uid ? `En Ruta (${order.repartidorId.name?.split(' ')[0]})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
+                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.uid ? `En Ruta (${order.repartidorId.name})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
               </Button>
             )}
           </div>

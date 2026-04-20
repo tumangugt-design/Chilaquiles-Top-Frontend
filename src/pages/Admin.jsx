@@ -286,7 +286,7 @@ const AdminPage = ({ authSession }) => {
                                <span className="text-[7px] font-black text-brand-blue">{order.chefId.name?.charAt(0)}</span>
                              )}
                           </div>
-                          <span className="text-[9px] font-black text-brand-blue uppercase">Chef: {order.chefId.name?.split(' ')[0]}</span>
+                          <span className="text-[9px] font-black text-brand-blue uppercase">Chef: {order.chefId.name}</span>
                         </div>
                       )}
                       {order.repartidorId && (
@@ -298,7 +298,7 @@ const AdminPage = ({ authSession }) => {
                                <span className="text-[7px] font-black text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
                              )}
                           </div>
-                          <span className="text-[9px] font-black text-brand-orange uppercase">Reparto: {order.repartidorId.name?.split(' ')[0]}</span>
+                          <span className="text-[9px] font-black text-brand-orange uppercase">Reparto: {order.repartidorId.name}</span>
                         </div>
                       )}
                     </div>
