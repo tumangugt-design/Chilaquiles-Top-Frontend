@@ -23,5 +23,3 @@ const Button = ({ children, variant = 'primary', fullWidth = false, className = 
 }
 
 export default Button;
-
-export default Button

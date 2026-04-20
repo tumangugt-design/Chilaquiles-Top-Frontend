@@ -117,5 +117,3 @@ const OptionCard = ({
 }
 
 export default OptionCard;
-
-export default OptionCard

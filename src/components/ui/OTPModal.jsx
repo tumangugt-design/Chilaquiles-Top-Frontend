@@ -103,5 +103,3 @@ const OTPModal = ({ isOpen, onClose, onVerify, phone, isSending }) => {
 };
 
 export default OTPModal;
-
-export default OTPModal;
