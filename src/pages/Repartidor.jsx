@@ -34,11 +34,21 @@ const RepartidorPage = ({ authSession }) => {
   }, [session, activeTab]);
 
   const advance = async (order) => {
-    // Backend assigns courier automatically on first status update
-    const nextStatus = order.status === 'listo_para_despacho' ? 'en_camino' : 'entregado';
+    let nextStatus = '';
+    if (order.status === 'listo_para_despacho') nextStatus = 'recolectado';
+    else if (order.status === 'recolectado') nextStatus = 'en_camino';
+    else if (order.status === 'en_camino') nextStatus = 'entregado';
+
+    if (!nextStatus) return;
+
     try {
       await updateOrderStatus(order._id, nextStatus);
-      toast.success(nextStatus === 'en_camino' ? '¡Ruta Iniciada!' : '¡Pedido Entregado!');
+      const messages = {
+        recolectado: '¡Pedido Recolectado!',
+        en_camino: '¡Ruta Iniciada!',
+        entregado: '¡Pedido Entregado!'
+      };
+      toast.success(messages[nextStatus]);
       loadOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
@@ -135,6 +145,18 @@ const RepartidorPage = ({ authSession }) => {
               <div>
                 <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Guía #{order._id.slice(-4)}</p>
                 <h3 className="text-xl font-black text-ui-text">{order.name}</h3>
+                {order.repartidorId && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="w-5 h-5 rounded-full bg-brand-orange/10 flex items-center justify-center overflow-hidden">
+                       {order.repartidorId.photoUrl ? (
+                         <img src={order.repartidorId.photoUrl} alt="" className="w-full h-full object-cover" />
+                       ) : (
+                         <span className="text-[8px] font-bold text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
+                       )}
+                    </div>
+                    <span className="text-[10px] font-black text-brand-orange uppercase">Asignado a {order.repartidorId.name?.split(' ')[0]}</span>
+                  </div>
+                )}
               </div>
               <StatusBadge value={order.status} />
             </div>
@@ -170,39 +192,27 @@ const RepartidorPage = ({ authSession }) => {
                 </div>
               </div>
 
-              {/* Botones de Navegación PRO */}
-              <div className="grid grid-cols-2 gap-3">
-                {order.navigationLinks?.googleMaps && (
-                  <a 
-                    href={order.navigationLinks.googleMaps} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center justify-center space-x-2 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-black text-xs hover:bg-gray-50 transition-all shadow-sm"
-                  >
-                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                    <span>Google Maps</span>
-                  </a>
-                )}
-                {order.navigationLinks?.waze && (
-                  <a 
-                    href={order.navigationLinks.waze} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center justify-center space-x-2 py-3 rounded-2xl bg-[#33ccff] text-white font-black text-xs hover:opacity-90 transition-all shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16.4 12.2c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm-4.4.4c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm5.2 6.1c-.2-.6-.8-1.1-1.4-1.1h-8.4c-.7 0-1.2.4-1.4 1.1-.1.3 0 .6.3.8.1.1.2.1.3.1.2 0 .4-.1.5-.2.1-.1.2-.2.4-.2h8.4c.2 0 .3.1.4.2.1.1.3.2.5.2.1 0 .2 0 .3-.1.3-.2.4-.5.3-.8zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/></svg>
-                    <span>Waze</span>
-                  </a>
-                )}
-              </div>
+              {/* Logística: Botón Waze Exclusivo */}
+              {order.navigationLinks?.waze && (
+                <a 
+                  href={order.navigationLinks.waze} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="flex items-center justify-center space-x-3 py-4 rounded-[1.5rem] bg-[#33ccff] text-white font-black text-sm hover:opacity-90 transition-all shadow-lg shadow-[#33ccff]/20 mb-4"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16.4 12.2c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm-4.4.4c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm5.2 6.1c-.2-.6-.8-1.1-1.4-1.1h-8.4c-.7 0-1.2.4-1.4 1.1-.1.3 0 .6.3.8.1.1.2.1.3.1.2 0 .4-.1.5-.2.1-.1.2-.2.4-.2h8.4c.2 0 .3.1.4.2.1.1.3.2.5.2.1 0 .2 0 .3-.1.3-.2.4-.5.3-.8zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/></svg>
+                  <span>ABRIR LOCALIZACIÓN (WAZE)</span>
+                </a>
+              )}
             </div>
 
-            {['listo_para_despacho', 'en_camino'].includes(order.status) && (
+            {['listo_para_despacho', 'recolectado', 'en_camino'].includes(order.status) && (
               <Button 
-                onClick={() => advance(order)}
-                className={`w-full !py-5 text-lg shadow-xl ${order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20'}`}
+                onClick={() => (!order.repartidorId || order.repartidorId._id === session.uid) && advance(order)}
+                disabled={order.repartidorId && order.repartidorId._id !== session.uid}
+                className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session.uid) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
               >
-                {order.status === 'listo_para_despacho' ? 'Tomar Cliente' : 'Confirmar Entrega'}
+                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.uid ? `En Ruta (${order.repartidorId.name?.split(' ')[0]})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
               </Button>
             )}
           </div>

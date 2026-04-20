@@ -34,11 +34,16 @@ const ChefPage = ({ authSession }) => {
   }, [session, activeTab]);
 
   const advance = async (order) => {
-    // If order has no chef assigned, the backend will assign it automatically on status update
-    const nextStatus = order.status === 'recibido' ? 'en_proceso' : 'listo_para_despacho';
+    // Determine next status based on current status
+    let nextStatus = '';
+    if (order.status === 'recibido') nextStatus = 'en_proceso';
+    else if (order.status === 'en_proceso') nextStatus = 'listo_para_despacho';
+
+    if (!nextStatus) return;
+
     try {
       await updateOrderStatus(order._id, nextStatus);
-      toast.success(order.status === 'recibido' ? '¡Orden Tomada!' : '¡Orden Lista!');
+      toast.success(nextStatus === 'en_proceso' ? '¡Orden Tomada!' : '¡Orden Lista!');
       loadOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
@@ -136,6 +141,18 @@ const ChefPage = ({ authSession }) => {
               <div>
                 <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Orden #{order._id.slice(-4)}</p>
                 <h3 className="text-xl font-black text-ui-text">{order.name}</h3>
+                {order.chefId && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="w-5 h-5 rounded-full bg-brand-blue/10 flex items-center justify-center overflow-hidden">
+                       {order.chefId.photoUrl ? (
+                         <img src={order.chefId.photoUrl} alt="" className="w-full h-full object-cover" />
+                       ) : (
+                         <span className="text-[8px] font-bold text-brand-blue">{order.chefId.name?.charAt(0)}</span>
+                       )}
+                    </div>
+                    <span className="text-[10px] font-black text-brand-blue uppercase">Orden de {order.chefId.name?.split(' ')[0]}</span>
+                  </div>
+                )}
               </div>
               <StatusBadge value={order.status} />
             </div>
@@ -186,10 +203,11 @@ const ChefPage = ({ authSession }) => {
 
             {activeTab === 'active' && (
               <Button 
-                className={`w-full !py-4 font-black shadow-lg ${order.chefId ? 'shadow-brand-blue/20' : 'bg-ui-muted shadow-none'}`}
-                onClick={() => advance(order)}
+                className={`w-full !py-4 font-black shadow-lg ${(!order.chefId || order.chefId._id === session.uid) ? 'shadow-brand-blue/20' : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
+                onClick={() => (!order.chefId || order.chefId._id === session.uid) && advance(order)}
+                disabled={order.chefId && order.chefId._id !== session.uid}
               >
-                {!order.chefId ? 'Tomar Pedido' : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
+                {!order.chefId ? 'Tomar Pedido' : order.chefId._id !== session.uid ? `En Cocina (${order.chefId.name?.split(' ')[0]})` : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
               </Button>
             )}
             
