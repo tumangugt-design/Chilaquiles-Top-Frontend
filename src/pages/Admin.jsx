@@ -30,7 +30,9 @@ const AdminPage = ({ authSession }) => {
         setOrders(response.data);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo cargar la información del panel.');
+      console.error('Error loading Admin data:', err);
+      const msg = err.response?.data?.message || 'Error de conexión con el servidor.';
+      toast.error(`Admin: ${msg}`);
     } finally {
       setIsRefreshing(false);
     }

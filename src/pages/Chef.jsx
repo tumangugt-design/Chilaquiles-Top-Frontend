@@ -144,15 +144,28 @@ const ChefPage = ({ authSession }) => {
               <StatusBadge value={order.status} />
             </div>
 
-            <div className="space-y-4 mb-8">
-              {order.items.map((item, idx) => (
-                <div key={idx} className="flex items-center space-x-3 p-3 bg-ui-bg rounded-2xl border border-ui-border">
-                  <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue font-black text-xs">
-                    {item.quantity}
-                  </div>
-                  <span className="font-bold text-sm text-ui-text">{item.name}</span>
+            <div className="space-y-3 mb-8">
+              <div className="p-4 bg-ui-bg rounded-2xl border border-ui-border">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Destino</p>
+                <p className="text-sm font-bold text-ui-text leading-tight">{order.address}</p>
+              </div>
+              
+              <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Artículos Entregados</p>
+                <div className="space-y-1">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-[11px] font-bold">
+                      <span className="text-ui-text">{item.name}</span>
+                      <span className="text-brand-orange">x{item.quantity}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div className="p-4 bg-ui-bg rounded-2xl border border-ui-border">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Pago Recibido</p>
+                <p className="text-sm font-black text-brand-orange">Q{order.total}</p>
+              </div>
             </div>
 
             {activeTab === 'active' && (
