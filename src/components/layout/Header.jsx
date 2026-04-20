@@ -68,18 +68,9 @@ const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false, 
           )}
 
           {!isPanel && (
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="hidden sm:flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Live</span>
-              </div>
-
-              <div className="flex items-center bg-brand-blue/10 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-brand-blue/20">
-                <span className="hidden xs:inline text-[10px] font-bold text-brand-blue uppercase mr-1.5 leading-none">
-                  Platos:
-                </span>
-                <span className="text-sm font-extrabold text-brand-blue leading-none">{availableCount}</span>
-              </div>
+            <div className="flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Live Villa Nueva</span>
             </div>
           )}
         </div>
