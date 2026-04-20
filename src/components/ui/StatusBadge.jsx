@@ -1,16 +1,16 @@
 const classes = {
-  recibido: 'bg-slate-100 text-slate-700',
-  en_proceso: 'bg-amber-100 text-amber-700',
-  listo_para_despacho: 'bg-blue-100 text-blue-700',
-  en_camino: 'bg-purple-100 text-purple-700',
-  entregado: 'bg-green-100 text-green-700',
-  pending: 'bg-amber-100 text-amber-700',
-  approved: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-700'
+  recibido: 'bg-slate-500/10 text-slate-500',
+  en_proceso: 'bg-amber-500/10 text-brand-orange',
+  listo_para_despacho: 'bg-blue-500/10 text-brand-blue',
+  en_camino: 'bg-purple-500/10 text-purple-500',
+  entregado: 'bg-green-500/10 text-green-600',
+  pending: 'bg-amber-500/10 text-brand-orange',
+  approved: 'bg-green-500/10 text-green-600',
+  rejected: 'bg-red-500/10 text-brand-red'
 };
 
 const StatusBadge = ({ value }) => (
-  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${classes[value] || 'bg-gray-100 text-gray-700'}`}>
+  <span className={`inline-flex rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest border border-current opacity-90 ${classes[value] || 'bg-ui-muted/10 text-ui-muted'}`}>
     {String(value).replaceAll('_', ' ')}
   </span>
 );

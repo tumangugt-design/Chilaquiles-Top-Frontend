@@ -47,14 +47,14 @@ const Mascot = ({ currentStep, variant = 'fixed', className = '' }) => {
       <div
         className={`
           absolute -top-12 right-1/2 translate-x-1/2 lg:right-0 lg:translate-x-0
-          bg-white px-4 py-2 rounded-2xl shadow-xl border border-gray-100
+          bg-ui-card px-4 py-2 rounded-2xl shadow-xl border border-ui-border
           text-sm font-extrabold text-brand-blue whitespace-nowrap
           transition-all duration-300 pointer-events-none z-50
           ${showTooltip ? 'opacity-100 -translate-y-2' : 'opacity-0 translate-y-2'}
         `}
       >
         Hola, soy TopIA
-        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 lg:left-auto lg:right-8 lg:translate-x-0 w-3 h-3 bg-white transform rotate-45 border-r border-b border-gray-100" />
+        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 lg:left-auto lg:right-8 lg:translate-x-0 w-3 h-3 bg-ui-card transform rotate-45 border-r border-b border-ui-border" />
       </div>
 
       <div className={`w-full h-full ${isCheering ? 'animate-cheer' : 'animate-float'}`}>

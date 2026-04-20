@@ -12,7 +12,7 @@ const MildFlameIcon = () => (
     <defs>
       <linearGradient id="half-flame-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="50%" stopColor="#F97316" />
-        <stop offset="50%" stopColor="#CBD5E1" />
+        <stop offset="50%" stopColor="currentColor" stopOpacity="0.2" />
       </linearGradient>
     </defs>
     <path
@@ -40,11 +40,11 @@ const OptionCard = ({
       onClick={onClick}
       className={`
         relative group cursor-pointer transition-all duration-300 ease-out
-        rounded-2xl border-2 overflow-hidden bg-white
+        rounded-2xl border-2 overflow-hidden bg-ui-card
         ${
           selected
-            ? 'border-brand-blue ring-2 sm:ring-4 ring-blue-50 transform scale-[1.02] shadow-xl'
-            : 'border-transparent shadow-sm hover:shadow-md hover:border-gray-200'
+            ? 'border-brand-blue ring-2 sm:ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-xl'
+            : 'border-transparent shadow-sm hover:shadow-md hover:border-ui-border'
         }
       `}
     >
@@ -55,7 +55,7 @@ const OptionCard = ({
           ${
             selected
               ? 'bg-brand-blue text-white scale-100'
-              : 'bg-white/90 text-transparent border border-gray-200 group-hover:border-gray-300'
+              : 'bg-ui-card/90 text-transparent border border-ui-border group-hover:border-ui-muted'
           }
         `}
       >
@@ -74,7 +74,7 @@ const OptionCard = ({
       )}
 
       {/* Visual Area */}
-      <div className={`relative w-full overflow-hidden bg-gray-50 ${illustration ? 'h-32 sm:h-52 p-2 sm:p-6' : 'h-32 sm:h-48'}`}>
+      <div className={`relative w-full overflow-hidden bg-ui-bg ${illustration ? 'h-32 sm:h-52 p-2 sm:p-6' : 'h-32 sm:h-48'}`}>
         {illustration ? (
           <div className={`w-full h-full transition-transform duration-500 ${selected ? 'scale-105' : 'scale-100 group-hover:scale-105'}`}>
             {illustration}
@@ -94,7 +94,7 @@ const OptionCard = ({
       {/* Content Area */}
       <div className="p-3 sm:p-5">
         <div className="flex justify-between items-start mb-1 sm:mb-2">
-          <h3 className={`font-bold text-base sm:text-lg leading-tight ${selected ? 'text-brand-blue' : 'text-gray-900'}`}>
+          <h3 className={`font-bold text-base sm:text-lg leading-tight ${selected ? 'text-brand-blue' : 'text-ui-text'}`}>
             {title}
           </h3>
           {price && (
@@ -103,7 +103,7 @@ const OptionCard = ({
         </div>
 
         {description && (
-          <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-medium line-clamp-2 sm:line-clamp-none">
+          <p className="text-ui-muted text-xs sm:text-sm leading-relaxed font-medium line-clamp-2 sm:line-clamp-none">
             {description}
             {spicyLevel === 'MILD' && <MildFlameIcon />}
           </p>
@@ -115,5 +115,7 @@ const OptionCard = ({
     </div>
   )
 }
+
+export default OptionCard;
 
 export default OptionCard

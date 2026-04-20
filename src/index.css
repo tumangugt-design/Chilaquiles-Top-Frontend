@@ -5,58 +5,36 @@
    Tailwind CSS v4 Custom Theme
    ============================================ */
 
-:root {
-  /* Light Theme (Default) */
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #FFFFFF;
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --border-color: #E2E8F0;
-  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --brand-primary: #0000FF;
-  --brand-secondary: #FF6B00;
-  --brand-accent: #D90429;
-}
-
-[data-theme='dark'] {
-  /* Dark Theme */
-  --bg-primary: #0F172A;
-  --bg-secondary: #1E293B;
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --border-color: #334155;
-  --card-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
-  --brand-primary: #3B82F6;
-  --brand-secondary: #FB923C;
-  --brand-accent: #EF4444;
-}
-
 @theme {
-  /* Brand Colors Map */
-  --color-brand-blue: var(--brand-primary);
-  --color-brand-orange: var(--brand-secondary);
-  --color-brand-red: var(--brand-accent);
-  --color-brand-dark: var(--text-primary);
-  --color-brand-gray: var(--bg-primary);
+  /* UI Tokens - Default (Light) */
+  --color-ui-bg: #F8FAFC;
+  --color-ui-card: #FFFFFF;
+  --color-ui-text: #0F172A;
+  --color-ui-muted: #64748B;
+  --color-ui-border: #E2E8F0;
 
-  /* UI Tokens */
-  --color-ui-bg: var(--bg-primary);
-  --color-ui-card: var(--bg-secondary);
-  --color-ui-text: var(--text-primary);
-  --color-ui-muted: var(--text-secondary);
-  --color-ui-border: var(--border-color);
-
-  /* Font Family */
-  --font-family-sans: 'Inter', sans-serif;
+  /* Brand Colors */
+  --color-brand-blue: #0000FF;
+  --color-brand-orange: #FF6B00;
+  --color-brand-red: #D90429;
 
   /* Animations */
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-slide-up: slideUp 0.4s ease-out;
-  --animate-float: float 3s ease-in-out infinite;
-  --animate-cheer: cheer 0.6s ease-in-out;
-  --animate-blink: blink 4s infinite;
   --animate-pop-in: popIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Dark Theme Overrides */
+[data-theme='dark'] {
+  --color-ui-bg: #0F172A;
+  --color-ui-card: #1E293B;
+  --color-ui-text: #F8FAFC;
+  --color-ui-muted: #94A3B8;
+  --color-ui-border: #334155;
+
+  --color-brand-blue: #3B82F6;
+  --color-brand-orange: #FB923C;
+  --color-brand-red: #EF4444;
 }
 
 @keyframes fadeIn {
@@ -67,24 +45,6 @@
 @keyframes slideUp {
   0% { transform: translateY(100%); }
   100% { transform: translateY(0); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-@keyframes cheer {
-  0% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.2) rotate(-10deg); }
-  50% { transform: scale(1.2) rotate(10deg); }
-  75% { transform: scale(1.1) rotate(-5deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
-
-@keyframes blink {
-  0%, 96%, 100% { transform: scaleY(1); }
-  98% { transform: scaleY(0.1); }
 }
 
 @keyframes popIn {
@@ -105,44 +65,38 @@
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--color-ui-bg);
+  color: var(--color-ui-text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  margin: 0;
+}
+
+.glass-card {
+  background-color: var(--color-ui-card);
+  border: 1px solid var(--color-ui-border);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+[data-theme='dark'] .glass-card {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-ui-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-secondary);
+  background: var(--color-ui-muted);
   border-radius: 4px;
-  opacity: 0.5;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--brand-primary);
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.glass-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--card-shadow);
-  backdrop-filter: blur(8px);
+  background: var(--color-brand-blue);
 }
