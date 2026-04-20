@@ -154,8 +154,10 @@ const RepartidorPage = ({ authSession }) => {
                 <div className="space-y-2">
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-ui-bg p-2 rounded-xl border border-ui-border">
-                      <span className="text-xs font-bold text-ui-text">{item.name}</span>
-                      <span className="text-xs font-black text-brand-orange">x{item.quantity}</span>
+                      <span className="text-xs font-bold text-ui-text">
+                        {item.name || `${item.sauce} + ${item.protein}`}
+                      </span>
+                      <span className="text-xs font-black text-brand-orange">x{item.quantity || 1}</span>
                     </div>
                   ))}
                 </div>

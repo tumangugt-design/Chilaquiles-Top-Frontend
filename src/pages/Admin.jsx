@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
-import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, deleteInventoryItem, adjustInventoryStock } from '../shared/config/api.js';
+import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, deleteInventoryItem, adjustInventoryStock, getOrders } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
 
 const emptyItem = { name: '', unit: '', stock: 0, minimumStock: 0 };

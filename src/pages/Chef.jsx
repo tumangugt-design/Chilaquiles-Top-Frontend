@@ -145,26 +145,27 @@ const ChefPage = ({ authSession }) => {
             </div>
 
             <div className="space-y-3 mb-8">
-              <div className="p-4 bg-ui-bg rounded-2xl border border-ui-border">
-                <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Destino</p>
-                <p className="text-sm font-bold text-ui-text leading-tight">{order.address}</p>
-              </div>
-              
               <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
-                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Artículos Entregados</p>
-                <div className="space-y-1">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Artículos de la Orden</p>
+                <div className="space-y-2">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-[11px] font-bold">
-                      <span className="text-ui-text">{item.name}</span>
-                      <span className="text-brand-orange">x{item.quantity}</span>
+                    <div key={idx} className="flex flex-col bg-ui-bg p-3 rounded-xl border border-ui-border">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-black text-ui-text">
+                          {item.name || `${item.sauce} + ${item.protein}`}
+                        </span>
+                        <span className="bg-brand-blue/10 text-brand-blue px-2 py-0.5 rounded-lg text-xs font-black">
+                          x{item.quantity || 1}
+                        </span>
+                      </div>
+                      {item.extras?.length > 0 && (
+                        <p className="text-[10px] font-bold text-ui-muted mt-1 italic">
+                          Extras: {item.extras.join(', ')}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="p-4 bg-ui-bg rounded-2xl border border-ui-border">
-                <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Pago Recibido</p>
-                <p className="text-sm font-black text-brand-orange">Q{order.total}</p>
               </div>
             </div>
 
