@@ -146,19 +146,25 @@ const RepartidorPage = ({ authSession }) => {
               </div>
 
               <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
-                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Detalle de Productos</p>
-                <div className="space-y-3">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Resumen de Platos ({order.items.length})</p>
+                <div className="space-y-4">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex flex-col bg-ui-bg p-2 rounded-xl border border-ui-border">
+                    <div key={idx} className="flex flex-col bg-ui-bg p-3 rounded-2xl border border-ui-border space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-black text-ui-text">
-                          {item.sauce || 'Salsa'} + {item.protein || 'Proteína'}
-                        </span>
-                        <span className="text-[10px] font-black text-brand-orange">x{item.quantity || 1}</span>
+                        <p className="text-[9px] font-black text-brand-orange uppercase">Plato {idx + 1}</p>
+                        <span className="text-[10px] font-black text-brand-orange">x1</span>
                       </div>
-                      {item.extras?.length > 0 && (
-                        <p className="text-[9px] font-bold text-ui-muted mt-1">+ {item.extras.join(', ')}</p>
-                      )}
+                      <p className="text-xs font-black text-ui-text uppercase">
+                        {item.sauce} + {item.protein} + {item.complement}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                         <span className="text-[8px] font-bold text-ui-muted bg-ui-card px-1.5 py-0.5 rounded border border-ui-border">
+                            Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
+                         </span>
+                         {!item.baseRecipe?.onion && <span className="text-[8px] font-black text-red-500 uppercase">SIN CEBOLLA</span>}
+                         {!item.baseRecipe?.cilantro && <span className="text-[8px] font-black text-red-500 uppercase">SIN CILANTRO</span>}
+                         {!item.baseRecipe?.cream && <span className="text-[8px] font-black text-red-500 uppercase">SIN CREMA</span>}
+                      </div>
                     </div>
                   ))}
                 </div>

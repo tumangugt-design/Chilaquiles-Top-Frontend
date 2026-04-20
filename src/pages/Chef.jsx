@@ -140,55 +140,48 @@ const ChefPage = ({ authSession }) => {
               <StatusBadge value={order.status} />
             </div>
 
-            <div className="space-y-3 mb-8">
-              <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
-                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Artículos de la Orden</p>
-                <div className="space-y-2">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="bg-ui-bg p-4 rounded-2xl border border-ui-border space-y-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-sm font-black text-ui-text block uppercase">
-                            {item.sauce}
-                          </span>
-                          <span className="text-xs font-bold text-brand-blue uppercase">
-                            + {item.protein}
-                          </span>
-                          <p className="text-[10px] font-bold text-ui-muted uppercase mt-1">Guarnición: {item.complement}</p>
-                        </div>
-                        <span className="bg-brand-blue/10 text-brand-blue px-2.5 py-1 rounded-xl text-xs font-black">
-                          x{item.quantity || 1}
-                        </span>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-1 mt-1">
-                         {item.baseRecipe?.onion === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
-                         {item.baseRecipe?.cilantro === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
-                         {item.baseRecipe?.cream === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
-                      </div>
+            <div className="space-y-4 mb-8">
+              <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest border-b border-ui-border pb-2">Comanda Detallada ({order.items.length} Platos)</p>
+              {order.items.map((item, idx) => (
+                <div key={idx} className="bg-ui-bg p-5 rounded-3xl border border-ui-border space-y-3">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-black text-brand-blue uppercase">Plato {idx + 1}</p>
+                    <span className="bg-brand-blue/10 text-brand-blue px-2.5 py-1 rounded-xl text-[10px] font-black">x1</span>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-black text-ui-text block uppercase">
+                      {item.sauce}
+                    </span>
+                    <span className="text-xs font-bold text-brand-orange uppercase">
+                      + {item.protein}
+                    </span>
+                    <p className="text-[10px] font-bold text-ui-muted uppercase mt-1">Guarnición: {item.complement}</p>
+                  </div>
 
-                      {item.extras?.length > 0 && (
-                        <div className="pt-2 border-t border-ui-border/50">
-                          <p className="text-[9px] font-black text-ui-muted uppercase mb-1">Extras</p>
-                          <div className="flex flex-wrap gap-1">
-                            {item.extras.map((extra, eIdx) => (
-                              <span key={eIdx} className="text-[10px] font-bold text-ui-text bg-ui-card px-2 py-0.5 rounded-lg border border-ui-border">
-                                {extra}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                     <span className="text-[9px] font-bold text-ui-muted bg-ui-card px-2 py-0.5 rounded border border-ui-border">
+                        Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
+                     </span>
+                     {!item.baseRecipe?.onion && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
+                     {!item.baseRecipe?.cilantro && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
+                     {!item.baseRecipe?.cream && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
+                  </div>
 
-                      {item.notes && (
-                        <p className="text-[10px] font-medium text-ui-muted italic bg-brand-orange/5 p-2 rounded-lg border border-brand-orange/10">
-                          "{item.notes}"
-                        </p>
-                      )}
+                  {item.extras?.length > 0 && (
+                    <div className="pt-2 border-t border-ui-border/50">
+                      <p className="text-[9px] font-black text-ui-muted uppercase mb-1">Extras</p>
+                      <div className="flex flex-wrap gap-1">
+                        {item.extras.map((extra, eIdx) => (
+                          <span key={eIdx} className="text-[10px] font-bold text-ui-text bg-ui-card px-2 py-0.5 rounded-lg border border-ui-border">
+                            {extra}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
 
             {activeTab === 'active' && (
@@ -196,7 +189,7 @@ const ChefPage = ({ authSession }) => {
                 className={`w-full !py-4 font-black shadow-lg ${order.chefId ? 'shadow-brand-blue/20' : 'bg-ui-muted shadow-none'}`}
                 onClick={() => advance(order)}
               >
-                {!order.chefId ? 'Tomar Pedido' : order.status === 'RECIBIDO' ? 'Empezar Preparación' : 'Marcar como Listo'}
+                {!order.chefId ? 'Tomar Pedido' : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
               </Button>
             )}
             

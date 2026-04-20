@@ -250,11 +250,11 @@ const AdminPage = ({ authSession }) => {
           {/* Order Filters */}
           <div className="flex flex-wrap gap-2 justify-center mb-8">
             {[
-              { id: 'all', label: 'Todas' },
-              { id: 'RECIBIDO', label: 'Recibidas' },
-              { id: 'EN_PROCESO', label: 'En Preparación' },
-              { id: 'EN_CAMINO', label: 'En Camino' },
-              { id: 'ENTREGADO', label: 'Entregadas' }
+              { id: 'all', label: 'TODAS' },
+              { id: 'recibido', label: 'RECIBIDAS' },
+              { id: 'en_proceso', label: 'EN PREPARACIÓN' },
+              { id: 'en_camino', label: 'EN CAMINO' },
+              { id: 'entregado', label: 'ENTREGADAS' }
             ].map(filter => (
               <button
                 key={filter.id}
@@ -279,21 +279,46 @@ const AdminPage = ({ authSession }) => {
                   <StatusBadge value={order.status} />
                 </div>
                 
-                <div className="space-y-3 mb-4">
+                <div className="space-y-4 mb-8">
+                  <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest border-b border-ui-border pb-2">Comanda Detallada ({order.items.length} Platos)</p>
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-ui-bg rounded-2xl border border-ui-border">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-black text-ui-text">
-                          {item.sauce || 'Salsa'} + {item.protein || 'Proteína'}
+                    <div key={idx} className="bg-ui-bg p-5 rounded-3xl border border-ui-border space-y-3">
+                      <div className="flex justify-between items-center">
+                        <p className="text-[10px] font-black text-brand-blue uppercase">Plato {idx + 1}</p>
+                        <span className="bg-brand-blue/10 text-brand-blue px-2.5 py-1 rounded-xl text-[10px] font-black">x1</span>
+                      </div>
+                      
+                      <div>
+                        <span className="text-sm font-black text-ui-text block uppercase">
+                          {item.sauce}
                         </span>
-                        <span className="text-[10px] font-black text-brand-orange">x{item.quantity || 1}</span>
+                        <span className="text-xs font-bold text-brand-orange uppercase">
+                          + {item.protein}
+                        </span>
+                        <p className="text-[10px] font-bold text-ui-muted uppercase mt-1">Guarnición: {item.complement}</p>
                       </div>
-                      <p className="text-[10px] font-bold text-ui-muted uppercase">Guarnición: {item.complement}</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                         {item.baseRecipe?.onion === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CEBOLLA</span>}
-                         {item.baseRecipe?.cilantro === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CILANTRO</span>}
-                         {item.baseRecipe?.cream === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CREMA</span>}
+
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                         <span className="text-[9px] font-bold text-ui-muted bg-ui-card px-2 py-0.5 rounded border border-ui-border">
+                            Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
+                         </span>
+                         {!item.baseRecipe?.onion && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
+                         {!item.baseRecipe?.cilantro && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
+                         {!item.baseRecipe?.cream && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
                       </div>
+
+                      {item.extras?.length > 0 && (
+                        <div className="pt-2 border-t border-ui-border/50">
+                          <p className="text-[9px] font-black text-ui-muted uppercase mb-1">Extras</p>
+                          <div className="flex flex-wrap gap-1">
+                            {item.extras.map((extra, eIdx) => (
+                              <span key={eIdx} className="text-[10px] font-bold text-ui-text bg-ui-card px-2 py-0.5 rounded-lg border border-ui-border">
+                                {extra}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
