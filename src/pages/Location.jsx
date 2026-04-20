@@ -21,12 +21,12 @@ const LocationPage = ({ onConfirm }) => {
         </div>
 
         <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">
-          {error ? 'Ubicación no disponible' : '¿Estás en Hacienda Real?'}
+          {error ? 'Ubicación no disponible' : '¿Estás en Villa Nueva?'}
         </h2>
 
         <p className="text-gray-500 leading-relaxed">
           {error
-            ? 'Por el momento nuestro servicio es exclusivo para residentes y visitantes dentro de Hacienda Real.'
+            ? 'Por el momento nuestro servicio es exclusivo para residentes y visitantes dentro de Villa Nueva.'
             : 'Para asegurar que tus chilaquiles lleguen crujientes y calientes, necesitamos confirmar tu ubicación.'}
         </p>
       </div>
