@@ -38,6 +38,26 @@ const ChefPage = ({ authSession }) => {
     }
   };
 
+  if (session && session.status === 'pending') {
+    return (
+      <PanelShell title="Acceso en Espera" subtitle="Estamos validando tu perfil">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-24 h-24 bg-brand-blue/10 rounded-full flex items-center justify-center mb-8 animate-pulse">
+            <svg className="w-12 h-12 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-3xl font-black text-ui-text mb-4">Solicitud Recibida</h3>
+          <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">
+            Tu cuenta está en proceso de revisión por el equipo administrativo. 
+            Te notificaremos una vez que seas aprobado para entrar a cocina.
+          </p>
+          <Button variant="secondary" onClick={logout} className="!px-10">Cerrar Sesión</Button>
+        </div>
+      </PanelShell>
+    );
+  }
+
   if (!session) {
     return (
       <PanelShell title="Centro de Producción" subtitle="Gestión de Pedidos en Tiempo Real">

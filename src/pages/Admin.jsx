@@ -12,15 +12,18 @@ const AdminPage = ({ authSession }) => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [itemForm, setItemForm] = useState(emptyItem);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadData = async () => {
+    setIsRefreshing(true);
     try {
       const [pendingResponse, inventoryResponse] = await Promise.all([getPendingStaff(), getInventory()]);
       setPendingUsers(pendingResponse.data);
       setInventory(inventoryResponse.data);
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo cargar la información del panel.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -118,7 +121,21 @@ const AdminPage = ({ authSession }) => {
     <PanelShell
       title="Dashboard Administrativo"
       subtitle="Gestiona el corazón de la operación: Staff e Inventario"
-      actions={<div className="flex items-center space-x-4"><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Finalizar Sesión</Button></div>}
+      actions={
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={loadData} 
+            disabled={isRefreshing}
+            className={`p-2 rounded-full hover:bg-ui-card transition-all ${isRefreshing ? 'animate-spin opacity-50' : ''}`}
+          >
+            <svg className="w-5 h-5 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <StatusBadge value={session.status} />
+          <Button variant="secondary" onClick={logout}>Salir</Button>
+        </div>
+      }
     >
       <div className="grid lg:grid-cols-12 gap-8 items-start">
         
