@@ -42,6 +42,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     }
   };
 
+
   const prevStep = () => {
     const currentIndex = STEPS_ORDER.indexOf(currentStep);
     if (currentIndex > 0) {
@@ -70,7 +71,12 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   const renderStep = () => {
     switch (currentStep) {
       case 'LOCATION':
-        return <LocationPage onConfirm={nextStep} />;
+        return <LocationPage onConfirm={(verifiedPhone) => {
+          if (verifiedPhone) {
+            updateOrder({ customer: { ...order.customer, phone: verifiedPhone } });
+          }
+          nextStep();
+        }} />;
       case 'SAUCE':
         return <SaucePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
       case 'PROTEIN':
@@ -82,7 +88,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />;
       case 'CUSTOMER':
-        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} />;
+        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} phoneVerified={!!order.customer?.phone} />;
       case 'CONFIRMATION':
         return <ConfirmationPage order={order} onReset={handleResetApp} />;
       default:

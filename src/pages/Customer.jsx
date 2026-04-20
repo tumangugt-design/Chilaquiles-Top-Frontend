@@ -1,19 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Button from '../components/ui/Button.jsx';
-import OTPModal from '../components/ui/OTPModal.jsx';
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from '../shared/config/firebase.js';
 import { authClientLogin, createOrder } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
-
-const normalizeGtPhone = (raw = '') => {
-  const digits = String(raw).replace(/\D/g, '');
-
-  if (digits.length === 8) return `+502${digits}`;
-  if (digits.startsWith('502') && digits.length === 11) return `+${digits}`;
-  if (digits.startsWith('502') && digits.length === 8) return `+${digits}`;
-
-  throw new Error('Ingresa un número de Guatemala de 8 dígitos.');
-};
 
 const toGtLocalDigits = (raw = '') => {
   let digits = String(raw).replace(/\D/g, '');
@@ -21,66 +9,21 @@ const toGtLocalDigits = (raw = '') => {
   return digits.slice(0, 8);
 };
 
-const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
+const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, phoneVerified }) => {
   const [localData, setLocalData] = useState({
-    ...order.customer,
-    phone: toGtLocalDigits(order.customer?.phone || '')
+    name: order.customer?.name || '',
+    address: order.customer?.address || '',
+    location: order.customer?.location || null
   });
-  const [touched, setTouched] = useState({ name: false, phone: false, address: false });
+  const [touched, setTouched] = useState({ name: false, address: false });
   const [loadingLoc, setLoadingLoc] = useState(false);
-  const [isSendingOTP, setIsSendingOTP] = useState(false);
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const recaptchaVerifierRef = useRef(null);
-  const recaptchaWidgetIdRef = useRef(null);
-  const isMountedRef = useRef(true);
-
-  const initRecaptcha = () => {
-    try {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-      }
-      
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          console.log('reCAPTCHA resolved');
-        },
-        'expired-callback': () => {
-          console.log('reCAPTCHA expired');
-          if (window.recaptchaVerifier) {
-            window.recaptchaVerifier.clear();
-            window.recaptchaVerifier = null;
-          }
-        }
-      });
-      return window.recaptchaVerifier;
-    } catch (err) {
-      console.error('Error initializing reCAPTCHA:', err);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear();
-        } catch (e) {}
-        window.recaptchaVerifier = null;
-      }
-    };
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const normalizedValue = name === 'phone' ? toGtLocalDigits(value) : value;
-    const newData = { ...localData, [name]: normalizedValue };
+    const newData = { ...localData, [name]: value };
     setLocalData(newData);
-    updateOrder({ customer: { ...newData, phone: normalizedValue } });
+    updateOrder({ customer: { ...order.customer, ...newData } });
   };
 
   const handleLocationClick = () => {
@@ -101,7 +44,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
           location: { lat, lng }
         };
         setLocalData(newData);
-        updateOrder({ customer: { ...newData, phone: localData.phone } });
+        updateOrder({ customer: { ...order.customer, ...newData } });
         setLoadingLoc(false);
         toast.success('Ubicación obtenida');
       },
@@ -112,50 +55,19 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
     );
   };
 
-  const isValid = localData.name.trim().length > 2 && toGtLocalDigits(localData.phone).length === 8 && localData.address.trim().length > 5;
+  const isValid = localData.name.trim().length > 2 && localData.address.trim().length > 5;
 
-  const handleSendOTP = async () => {
+  const handleSubmit = async () => {
     if (!isValid) return;
-    setIsSendingOTP(true);
+    setIsSubmitting(true);
 
     try {
-      const phoneNumber = normalizeGtPhone(localData.phone);
-      const verifier = initRecaptcha();
-      
-      if (!verifier) throw new Error('Error al inicializar el verificador de seguridad.');
-
-      console.log('Sending OTP to:', phoneNumber);
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-      
-      if (!isMountedRef.current) return;
-
-      setConfirmationResult(confirmation);
-      setShowOTPModal(true);
-      toast.success('Código enviado por SMS');
-    } catch (error) {
-      console.error('Error enviando SMS:', error);
-      
-      if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch(e){}
-        window.recaptchaVerifier = null;
-      }
-
-      toast.error(error?.message || 'Error al enviar el código. Revisa tu número.');
-    } finally {
-      if (isMountedRef.current) {
-        setIsSendingOTP(false);
-      }
-    }
-  };
-
-  const handleVerifyOTP = async (code) => {
-    if (!confirmationResult) return;
-    setIsSendingOTP(true);
-
-    try {
-      await confirmationResult.confirm(code);
-      const normalizedPhone = normalizeGtPhone(localData.phone);
-      const payloadCustomer = { ...localData, phone: normalizedPhone };
+      const payloadCustomer = {
+        ...order.customer,
+        name: localData.name,
+        address: localData.address,
+        location: localData.location
+      };
 
       await authClientLogin(payloadCustomer);
       const allItems = [...order.cart, order.currentPlate];
@@ -169,35 +81,46 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
         }))
       });
       setLastOrder(response.data.order);
-      setShowOTPModal(false);
-      toast.success('Pedido enviado con éxito');
+      toast.success('¡Pedido enviado con éxito! 🌮');
       onNext();
     } catch (error) {
-      console.error('Error verificando OTP o creando pedido:', error);
-      toast.error(error.response?.data?.message || error?.message || 'Código incorrecto o error al crear pedido.');
+      console.error('Error creando pedido:', error);
+      toast.error(error.response?.data?.message || error?.message || 'Error al crear pedido.');
     } finally {
-      if (isMountedRef.current) {
-        setIsSendingOTP(false);
-      }
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in relative">
-      <div id="recaptcha-container"></div>
       <div className="mb-4 sm:mb-8">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2">Tus datos</h2>
-        <p className="text-ui-muted">Tu sesión es invisible: solo verificamos OTP antes de guardar el pedido.</p>
+        <p className="text-ui-muted">
+          {phoneVerified
+            ? `Número verificado: ${toGtLocalDigits(order.customer?.phone || '')} ✅`
+            : 'Completa tus datos para finalizar el pedido.'}
+        </p>
       </div>
 
       <div className="space-y-4 sm:space-y-5">
+        {/* Verified phone badge */}
+        {phoneVerified && order.customer?.phone && (
+          <div className="flex items-center space-x-3 bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase">WhatsApp Verificado</p>
+              <p className="text-sm font-black text-green-800 dark:text-green-300">+502 {toGtLocalDigits(order.customer.phone)}</p>
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Nombre completo</label>
           <input type="text" name="name" value={localData.name} onChange={handleChange} onBlur={() => setTouched({ ...touched, name: true })} placeholder="Ej. Juan Pérez" className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.length <= 2 ? 'border-red-500' : 'border-ui-border'}`} />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Número de Whatsapp</label>
-          <input type="tel" name="phone" value={localData.phone} onChange={handleChange} onBlur={() => setTouched({ ...touched, phone: true })} placeholder="Ej. 33662977" maxLength={8} inputMode="numeric" className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.phone && toGtLocalDigits(localData.phone).length < 8 ? 'border-red-500' : 'border-ui-border'}`} />
         </div>
         <div>
           <div className="flex justify-between items-center mb-1.5 ml-1">
@@ -212,10 +135,8 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
 
       <div className="flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
         <Button variant="secondary" onClick={onBack}>Atrás</Button>
-        <Button onClick={handleSendOTP} disabled={!isValid || isSendingOTP}>{isSendingOTP ? 'Enviando...' : 'Confirmar Pedido →'}</Button>
+        <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>{isSubmitting ? 'Enviando...' : 'Confirmar Pedido →'}</Button>
       </div>
-
-      <OTPModal isOpen={showOTPModal} onClose={() => setShowOTPModal(false)} onVerify={handleVerifyOTP} isSending={isSendingOTP} phone={toGtLocalDigits(localData.phone || '')} />
     </div>
   );
 };
