@@ -8,13 +8,18 @@ import toast from 'react-hot-toast';
 const RepartidorPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [orders, setOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'delivered'
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadOrders = async () => {
+    setIsRefreshing(true);
     try {
-      const response = await getOrders();
+      const response = await getOrders(activeTab === 'delivered' ? 'delivered' : null);
       setOrders(response.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudieron cargar pedidos.');
+      toast.error('Error al cargar entregas');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -24,7 +29,7 @@ const RepartidorPage = ({ authSession }) => {
       const interval = setInterval(loadOrders, 5000);
       return () => clearInterval(interval);
     }
-  }, [session]);
+  }, [session, activeTab]);
 
   const advance = async (order) => {
     // Backend assigns courier automatically on first status update
@@ -94,15 +99,40 @@ const RepartidorPage = ({ authSession }) => {
   }
 
   return (
-    <PanelShell title="Panel de Reparto" subtitle="Optimiza tu tiempo: Gestiona tus entregas pendientes." actions={<div className="flex items-center space-x-4"><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Salir</Button></div>}>
-      <div className="grid md:grid-cols-2 gap-6">
+    <PanelShell
+      title="Logística de Entrega"
+      subtitle="Gestión de Rutas y Despacho"
+      actions={
+        <div className="flex items-center space-x-4">
+          <div className={`w-2 h-2 rounded-full bg-brand-orange ${isRefreshing ? 'animate-ping' : ''}`} />
+          <StatusBadge value={session.status} />
+          <Button variant="secondary" onClick={logout}>Salir</Button>
+        </div>
+      }
+    >
+      {/* Tab Switcher */}
+      <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
+        <button 
+          onClick={() => setActiveTab('active')}
+          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          En Ruta
+        </button>
+        <button 
+          onClick={() => setActiveTab('delivered')}
+          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'delivered' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          Entregadas
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
         {orders.map((order) => (
-          <div key={order._id} className="glass-card rounded-[2.5rem] p-6 animate-fade-in border-l-8 border-l-brand-blue overflow-hidden relative">
+          <div key={order._id} className={`glass-card rounded-[2.5rem] p-8 border-t-8 transition-all ${order.repartidorId ? 'border-brand-orange' : 'border-ui-border opacity-70'}`}>
             <div className="flex justify-between items-start mb-6">
               <div>
-                <p className="text-xs font-black text-ui-muted uppercase tracking-widest mb-1">Destino Final</p>
-                <p className="font-black text-2xl text-ui-text leading-tight">{order.name}</p>
-                <a href={`tel:${order.phone}`} className="text-sm font-bold text-brand-blue hover:underline">{order.phone}</a>
+                <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Guía #{order._id.slice(-4)}</p>
+                <h3 className="text-xl font-black text-ui-text">{order.name}</h3>
               </div>
               <StatusBadge value={order.status} />
             </div>

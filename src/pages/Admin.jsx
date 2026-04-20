@@ -9,8 +9,11 @@ const emptyItem = { name: '', unit: '', stock: 0, minimumStock: 0 };
 
 const AdminPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession;
+  const [activeTab, setActiveTab] = useState('staff'); // 'staff' | 'orders'
+  const [orderFilter, setOrderFilter] = useState('all');
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [itemForm, setItemForm] = useState(emptyItem);
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -18,9 +21,14 @@ const AdminPage = ({ authSession }) => {
   const loadData = async () => {
     setIsRefreshing(true);
     try {
-      const [pendingResponse, inventoryResponse] = await Promise.all([getPendingStaff(), getInventory()]);
-      setPendingUsers(pendingResponse.data);
-      setInventory(inventoryResponse.data);
+      if (activeTab === 'staff') {
+        const [pendingResponse, inventoryResponse] = await Promise.all([getPendingStaff(), getInventory()]);
+        setPendingUsers(pendingResponse.data);
+        setInventory(inventoryResponse.data);
+      } else {
+        const response = await getOrders(orderFilter);
+        setOrders(response.data);
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo cargar la información del panel.');
     } finally {
@@ -34,7 +42,7 @@ const AdminPage = ({ authSession }) => {
       const interval = setInterval(loadData, 5000);
       return () => clearInterval(interval);
     }
-  }, [session]);
+  }, [session, activeTab, orderFilter]);
 
   const changeStatus = async (userId, status, role) => {
     try {
@@ -129,143 +137,155 @@ const AdminPage = ({ authSession }) => {
         </div>
       }
     >
-      <div className="grid lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Lado Izquierdo: Staff Management */}
-        <section className="lg:col-span-5 space-y-6">
-          <div className="flex items-center justify-between border-b border-ui-border pb-4">
-            <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes de Staff</h2>
-            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">{pendingUsers.length} PENDIENTES</span>
-          </div>
+      {/* Tab Switcher */}
+      <div className="flex space-x-4 mb-10 p-1.5 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
+        <button 
+          onClick={() => setActiveTab('staff')}
+          className={`px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'staff' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          Staff & Inventario
+        </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className={`px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'orders' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          Centro de Órdenes
+        </button>
+      </div>
 
-          <div className="space-y-4">
-            {pendingUsers.length === 0 && (
-              <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
-                <p className="text-ui-muted text-sm font-medium">No hay solicitudes nuevas en este momento.</p>
-              </div>
-            )}
-            {pendingUsers.map((user) => (
-              <div key={user._id} className="glass-card rounded-[2rem] p-6 animate-fade-in">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
-                    <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
+      {activeTab === 'staff' ? (
+        <div className="grid lg:grid-cols-12 gap-8 items-start animate-fade-in">
+          {/* Lado Izquierdo: Staff Management */}
+          <section className="lg:col-span-5 space-y-6">
+            <div className="flex items-center justify-between border-b border-ui-border pb-4">
+              <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes de Staff</h2>
+              <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">{pendingUsers.length} PENDIENTES</span>
+            </div>
+
+            <div className="space-y-4">
+              {pendingUsers.length === 0 && (
+                <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
+                  <p className="text-ui-muted text-sm font-medium">No hay solicitudes nuevas en este momento.</p>
+                </div>
+              )}
+              {pendingUsers.map((user) => (
+                <div key={user._id} className="glass-card rounded-[2rem] p-6 animate-fade-in">
+                  <div className="flex items-start justify-between mb-6">
+                    <div>
+                      <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
+                      <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
+                    </div>
+                    <StatusBadge value={user.status} />
                   </div>
-                  <StatusBadge value={user.status} />
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button className="col-span-2" onClick={() => changeStatus(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
+                    <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'CHEF')}>CHEF</Button>
+                    <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'REPARTIDOR')}>REPARTIDOR</Button>
+                    <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => changeStatus(user._id, 'rejected', user.role)}>Denegar Acceso</Button>
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-2">
-                  <Button className="col-span-2" onClick={() => changeStatus(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
-                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'CHEF')}>CHEF</Button>
-                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'REPARTIDOR')}>REPARTIDOR</Button>
-                  <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => changeStatus(user._id, 'rejected', user.role)}>Denegar Acceso</Button>
+              ))}
+            </div>
+          </section>
+
+          {/* Lado Derecho: Inventory Control */}
+          <section className="lg:col-span-7 space-y-6">
+            <div className="flex items-center justify-between border-b border-ui-border pb-4">
+              <h2 className="text-xl font-black tracking-tight text-ui-text">Control de Inventario</h2>
+              <div className="flex space-x-2">
+                 <span className="bg-brand-orange/10 text-brand-orange px-3 py-1 rounded-full text-xs font-black uppercase">Stock Realtime</span>
+              </div>
+            </div>
+
+            <form onSubmit={submitInventory} className="glass-card rounded-[2.5rem] p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="col-span-2 space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Nombre del Insumo / Ingrediente</label>
+                  <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Unidad</label>
+                  <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Stock</label>
+                  <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" type="number" value={itemForm.stock} onChange={(e) => setItemForm({ ...itemForm, stock: e.target.value })} />
                 </div>
               </div>
+              <Button type="submit" className="w-full !py-5" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Actualizar Inventario'}</Button>
+            </form>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {inventory.map((item) => (
+                <div key={item._id} className="glass-card rounded-[2rem] p-5 border-l-4 border-l-brand-blue">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-black text-ui-text capitalize leading-none mb-1">{item.name}</h3>
+                      <p className="text-[10px] font-bold text-ui-muted uppercase tracking-widest">Medida: {item.unit}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between bg-ui-bg rounded-2xl p-4 border border-ui-border">
+                    <div className="flex items-center space-x-2">
+                      <button onClick={() => handleAdjustStock(item.name, -1)} className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center font-black">-</button>
+                      <div className="text-center min-w-[3rem]">
+                        <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red animate-pulse' : 'text-brand-blue'}`}>
+                          {Number(item.stock).toFixed(2)}
+                        </span>
+                      </div>
+                      <button onClick={() => handleAdjustStock(item.name, 1)} className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center font-black">+</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-fade-in">
+          {/* Order Filters */}
+          <div className="flex flex-wrap gap-2 justify-center mb-8">
+            {[
+              { id: 'all', label: 'Todas' },
+              { id: 'en_proceso', label: 'En Preparación' },
+              { id: 'en_camino', label: 'En Camino' },
+              { id: 'entregado', label: 'Entregadas' }
+            ].map(filter => (
+              <button
+                key={filter.id}
+                onClick={() => setOrderFilter(filter.id)}
+                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${orderFilter === filter.id ? 'bg-brand-orange text-white' : 'bg-ui-bg text-ui-muted border border-ui-border'}`}
+              >
+                {filter.label}
+              </button>
             ))}
           </div>
-        </section>
 
-        {/* Lado Derecho: Inventory Control */}
-        <section className="lg:col-span-7 space-y-6">
-          <div className="flex items-center justify-between border-b border-ui-border pb-4">
-            <h2 className="text-xl font-black tracking-tight text-ui-text">Control de Inventario</h2>
-            <div className="flex space-x-2">
-               <span className="bg-brand-orange/10 text-brand-orange px-3 py-1 rounded-full text-xs font-black uppercase">Stock Realtime</span>
-            </div>
-          </div>
-
-          {/* Formulario Estético */}
-          <form onSubmit={submitInventory} className="glass-card rounded-[2.5rem] p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="col-span-2 space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Nombre del Insumo / Ingrediente</label>
-                <input 
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
-                  placeholder="Ej: Salsa Roja, Totopos..." 
-                  value={itemForm.name} 
-                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Unidad (kg, lt, oz...)</label>
-                <input 
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
-                  placeholder="kg" 
-                  value={itemForm.unit} 
-                  onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Stock Inicial</label>
-                <input 
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
-                  type="number" 
-                  value={itemForm.stock} 
-                  onChange={(e) => setItemForm({ ...itemForm, stock: e.target.value })} 
-                />
-              </div>
-              <div className="col-span-2 space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Alerta de Stock Mínimo (Límite crítico)</label>
-                <input 
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold text-brand-red" 
-                  type="number" 
-                  value={itemForm.minimumStock} 
-                  onChange={(e) => setItemForm({ ...itemForm, minimumStock: e.target.value })} 
-                />
-              </div>
-            </div>
-            <Button type="submit" className="w-full !py-5 text-lg" disabled={isSaving}>
-              {isSaving ? 'Registrando...' : 'Actualizar Inventario'}
-            </Button>
-          </form>
-
-          {/* Listado de Inventario */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            {inventory.map((item) => (
-              <div key={item._id} className="glass-card rounded-[2rem] p-5 border-l-4 border-l-brand-blue hover:scale-[1.02] transition-all">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {orders.map(order => (
+              <div key={order._id} className="glass-card rounded-[2.5rem] p-6 border-t-4 border-brand-orange">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-black text-ui-text capitalize leading-none mb-1">{item.name}</h3>
-                    <p className="text-[10px] font-bold text-ui-muted uppercase tracking-widest">Medida: {item.unit}</p>
+                    <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest">ID: ...{order._id.slice(-6)}</p>
+                    <p className="font-black text-lg text-ui-text">{order.name}</p>
                   </div>
-                  <button 
-                    onClick={() => handleDeleteItem(item.name)}
-                    className="p-2 text-ui-muted hover:text-brand-red transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+                  <StatusBadge value={order.status} />
                 </div>
-                
-                <div className="flex items-center justify-between bg-ui-bg rounded-2xl p-4 border border-ui-border">
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => handleAdjustStock(item.name, -1)}
-                      className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center hover:bg-brand-red/10 hover:text-brand-red transition-all font-black"
-                    >
-                      -
-                    </button>
-                    <div className="text-center min-w-[3rem]">
-                      <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red animate-pulse' : 'text-brand-blue'}`}>
-                        {Number(item.stock).toFixed(2)}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={() => handleAdjustStock(item.name, 1)}
-                      className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center hover:bg-green-500/10 hover:text-green-600 transition-all font-black"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-ui-muted uppercase">Límite</p>
-                    <p className="text-xs font-bold text-brand-red leading-none">{item.minimumStock}</p>
-                  </div>
+                <div className="p-3 bg-ui-bg rounded-2xl border border-ui-border mb-4">
+                  <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Detalle</p>
+                  <p className="text-xs font-bold text-ui-text">{order.items.length} Chilaquiles • Q{order.total}</p>
                 </div>
+                <p className="text-[10px] font-medium text-ui-muted italic line-clamp-1">{order.address}</p>
               </div>
             ))}
+            {orders.length === 0 && (
+              <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed border-ui-border">
+                <p className="text-ui-muted font-bold">No hay pedidos que coincidan con este filtro.</p>
+              </div>
+            )}
           </div>
-        </section>
-      </div>
+        </div>
+      )}
     </PanelShell>
   );
 };

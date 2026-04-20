@@ -125,10 +125,13 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   );
 }
 
+import ProfileModal from './components/ui/ProfileModal.jsx';
+
 function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
   });
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const path = useMemo(() => window.location.pathname, []);
   
@@ -147,8 +150,24 @@ function App() {
 
   const renderPanel = (Component) => (
     <div className="min-h-screen bg-ui-bg transition-colors duration-300">
-      <Header isPanel onToggleTheme={toggleTheme} currentTheme={theme} />
+      <Header 
+        isPanel 
+        panelRole={panelRole}
+        userPhoto={authSession.session?.photoUrl}
+        onProfileClick={() => setIsProfileOpen(true)}
+        onToggleTheme={toggleTheme} 
+        currentTheme={theme} 
+      />
       <Component authSession={authSession} />
+      
+      {authSession.session && (
+        <ProfileModal 
+          isOpen={isProfileOpen} 
+          onClose={() => setIsProfileOpen(false)} 
+          user={authSession.session}
+          onUpdate={authSession.refreshSession}
+        />
+      )}
     </div>
   );
 

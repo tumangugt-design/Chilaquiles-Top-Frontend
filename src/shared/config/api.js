@@ -26,10 +26,11 @@ export const authClientLogin = (payload) => api.post('/auth/client', payload);
 export const authStaffLogin = (payload) => api.post('/auth/staff', payload);
 export const getSession = () => api.get('/auth/session');
 export const createOrder = (payload) => api.post('/orders', payload);
-export const getOrders = () => api.get(`/orders?t=${Date.now()}`);
+export const getOrders = (status) => api.get(`/orders?t=${Date.now()}${status ? `&status=${status}` : ''}`);
 export const updateOrderStatus = (orderId, status) => api.patch(`/orders/${orderId}/status`, { status });
 export const getPendingStaff = () => api.get('/users/pending-staff');
 export const updateStaffStatus = (userId, payload) => api.patch(`/users/staff/${userId}/status`, payload);
+export const updateProfile = (payload) => api.patch('/users/profile', payload);
 export const getInventory = () => api.get(`/inventory?t=${Date.now()}`);
 export const saveInventoryItem = (payload) => api.post('/inventory', payload);
 

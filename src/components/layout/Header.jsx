@@ -1,6 +1,12 @@
 import Logo from '../Logo.jsx';
 
-const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false }) => {
+const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false, panelRole = null, userPhoto = null, onProfileClick }) => {
+  const roleLabel = {
+    ADMIN: 'ADMIN MODE',
+    CHEF: 'CHEF MODE',
+    REPARTIDOR: 'DEALER MODE'
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
@@ -18,8 +24,15 @@ const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false }
         </div>
 
         {/* Actions Section */}
-        <div className="flex items-center space-x-3 sm:space-x-6">
+        <div className="flex items-center space-x-3 sm:space-x-4">
           
+          {isPanel && panelRole && (
+            <div className="flex items-center space-x-2 bg-ui-bg/50 px-3 py-1.5 rounded-full border border-ui-border">
+              <div className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
+              <span className="text-[10px] font-black text-ui-text uppercase tracking-tighter">{roleLabel[panelRole] || 'MODE'}</span>
+            </div>
+          )}
+
           {/* Theme Toggle */}
           <button 
             onClick={onToggleTheme}
@@ -37,6 +50,23 @@ const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false }
             )}
           </button>
 
+          {isPanel && (
+            <button 
+              onClick={onProfileClick}
+              className="w-10 h-10 rounded-full border-2 border-brand-blue/30 overflow-hidden hover:border-brand-blue transition-all"
+            >
+              {userPhoto ? (
+                <img src={userPhoto} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-brand-blue/10 flex items-center justify-center text-brand-blue">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              )}
+            </button>
+          )}
+
           {!isPanel && (
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="hidden sm:flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
@@ -50,13 +80,6 @@ const Header = ({ availableCount, onToggleTheme, currentTheme, isPanel = false }
                 </span>
                 <span className="text-sm font-extrabold text-brand-blue leading-none">{availableCount}</span>
               </div>
-            </div>
-          )}
-
-          {isPanel && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-brand-orange animate-pulse" />
-              <span className="text-[10px] font-black text-ui-text uppercase tracking-tighter">Admin Mode</span>
             </div>
           )}
         </div>

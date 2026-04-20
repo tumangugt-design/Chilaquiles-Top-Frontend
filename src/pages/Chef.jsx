@@ -8,13 +8,18 @@ import toast from 'react-hot-toast';
 const ChefPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [orders, setOrders] = useState([]);
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'finished'
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadOrders = async () => {
+    setIsRefreshing(true);
     try {
-      const response = await getOrders();
+      const response = await getOrders(activeTab === 'finished' ? 'finished' : null);
       setOrders(response.data);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudieron cargar pedidos.');
+      toast.error('Error al cargar pedidos');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -24,7 +29,7 @@ const ChefPage = ({ authSession }) => {
       const interval = setInterval(loadOrders, 5000);
       return () => clearInterval(interval);
     }
-  }, [session]);
+  }, [session, activeTab]);
 
   const advance = async (order) => {
     // If order has no chef assigned, the backend will assign it automatically on status update
@@ -95,41 +100,61 @@ const ChefPage = ({ authSession }) => {
   }
 
   return (
-    <PanelShell title="Panel de Cocina" subtitle="Mantén el ritmo: Transición de pedidos recibidos a listos." actions={<div className="flex items-center space-x-4"><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Salir</Button></div>}>
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <PanelShell
+      title="Centro de Producción"
+      subtitle="Gestión de Pedidos en Tiempo Real"
+      actions={
+        <div className="flex items-center space-x-4">
+          <div className={`w-2 h-2 rounded-full bg-brand-blue ${isRefreshing ? 'animate-ping' : ''}`} />
+          <StatusBadge value={session.status} />
+          <Button variant="secondary" onClick={logout}>Salir</Button>
+        </div>
+      }
+    >
+      {/* Tab Switcher */}
+      <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
+        <button 
+          onClick={() => setActiveTab('active')}
+          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          En Cocina
+        </button>
+        <button 
+          onClick={() => setActiveTab('finished')}
+          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'finished' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
+        >
+          Terminadas
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
         {orders.map((order) => (
-          <div key={order._id} className="glass-card rounded-[2.5rem] p-6 flex flex-col justify-between animate-fade-in border-t-8 border-t-brand-orange">
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-xs font-black text-ui-muted uppercase tracking-widest mb-1">ID: ...{order._id.slice(-6)}</p>
-                  <p className="font-black text-xl text-ui-text">{order.name}</p>
-                </div>
-                <StatusBadge value={order.status} />
+          <div key={order._id} className={`glass-card rounded-[2.5rem] p-8 border-t-8 transition-all ${order.chefId ? 'border-brand-blue' : 'border-ui-border opacity-70'}`}>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Orden #{order._id.slice(-4)}</p>
+                <h3 className="text-xl font-black text-ui-text">{order.name}</h3>
               </div>
-              
-              <div className="space-y-3 mb-6">
-                <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
-                  <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Detalle del Pedido</p>
-                  <ul className="space-y-1">
-                    {order.items.map((item, idx) => (
-                      <li key={idx} className="text-sm font-bold text-ui-text flex justify-between">
-                        <span>{item.sauce} • {item.protein}</span>
-                        <span className="text-brand-orange">x1</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="text-xs font-medium text-ui-muted italic">"{order.address}"</p>
-              </div>
+              <StatusBadge value={order.status} />
             </div>
 
-            {['recibido', 'en_proceso'].includes(order.status) && (
+            <div className="space-y-4 mb-8">
+              {order.items.map((item, idx) => (
+                <div key={idx} className="flex items-center space-x-3 p-3 bg-ui-bg rounded-2xl border border-ui-border">
+                  <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue font-black text-xs">
+                    {item.quantity}
+                  </div>
+                  <span className="font-bold text-sm text-ui-text">{item.name}</span>
+                </div>
+              ))}
+            </div>
+
+            {activeTab === 'active' && (
               <Button 
+                className={`w-full !py-4 font-black shadow-lg ${order.chefId ? 'shadow-brand-blue/20' : 'bg-ui-muted shadow-none'}`}
                 onClick={() => advance(order)}
-                className={`w-full !py-4 shadow-lg ${order.status === 'recibido' ? 'shadow-brand-blue/20 !bg-brand-blue' : 'shadow-brand-orange/20'}`}
               >
-                {order.status === 'recibido' ? 'Tomar Orden' : 'Marcar como Listo'}
+                {!order.chefId ? 'Tomar Pedido' : order.status === 'RECIBIDO' ? 'Empezar Preparación' : 'Marcar como Listo'}
               </Button>
             )}
             
