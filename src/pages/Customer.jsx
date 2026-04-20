@@ -185,31 +185,31 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
     <div className="space-y-6 animate-fade-in relative">
       <div id="recaptcha-container"></div>
       <div className="mb-4 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Tus datos</h2>
-        <p className="text-gray-500">Tu sesión es invisible: solo verificamos OTP antes de guardar el pedido.</p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2">Tus datos</h2>
+        <p className="text-ui-muted">Tu sesión es invisible: solo verificamos OTP antes de guardar el pedido.</p>
       </div>
 
       <div className="space-y-4 sm:space-y-5">
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Nombre completo</label>
-          <input type="text" name="name" value={localData.name} onChange={handleChange} onBlur={() => setTouched({ ...touched, name: true })} placeholder="Ej. Juan Pérez" className={`w-full p-3 sm:p-4 border rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.length <= 2 ? 'border-red-500' : 'border-gray-200'}`} />
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Nombre completo</label>
+          <input type="text" name="name" value={localData.name} onChange={handleChange} onBlur={() => setTouched({ ...touched, name: true })} placeholder="Ej. Juan Pérez" className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.length <= 2 ? 'border-red-500' : 'border-ui-border'}`} />
         </div>
         <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Número de Whatsapp</label>
-          <input type="tel" name="phone" value={localData.phone} onChange={handleChange} onBlur={() => setTouched({ ...touched, phone: true })} placeholder="Ej. 33662977" maxLength={8} inputMode="numeric" className={`w-full p-3 sm:p-4 border rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.phone && toGtLocalDigits(localData.phone).length < 8 ? 'border-red-500' : 'border-gray-200'}`} />
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Número de Whatsapp</label>
+          <input type="tel" name="phone" value={localData.phone} onChange={handleChange} onBlur={() => setTouched({ ...touched, phone: true })} placeholder="Ej. 33662977" maxLength={8} inputMode="numeric" className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.phone && toGtLocalDigits(localData.phone).length < 8 ? 'border-red-500' : 'border-ui-border'}`} />
         </div>
         <div>
           <div className="flex justify-between items-center mb-1.5 ml-1">
-            <label className="block text-sm font-bold text-gray-700">Dirección exacta</label>
-            <button type="button" onClick={handleLocationClick} disabled={loadingLoc} className="text-xs font-bold text-brand-blue hover:text-blue-700 flex items-center bg-blue-50 px-2 py-1 rounded-md transition-colors">
+            <label className="block text-sm font-bold text-ui-text">Dirección exacta</label>
+            <button type="button" onClick={handleLocationClick} disabled={loadingLoc} className="text-xs font-bold text-brand-blue hover:text-blue-700 flex items-center bg-brand-blue/10 px-2 py-1 rounded-md transition-colors">
               {loadingLoc ? 'Obteniendo...' : '📍 Usar mi ubicación'}
             </button>
           </div>
-          <textarea name="address" rows={3} value={localData.address} onChange={handleChange} onBlur={() => setTouched({ ...touched, address: true })} placeholder="Casa, calle, número, referencia..." className={`w-full p-3 sm:p-4 border rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.length <= 5 ? 'border-red-500' : 'border-gray-200'}`} />
+          <textarea name="address" rows={3} value={localData.address} onChange={handleChange} onBlur={() => setTouched({ ...touched, address: true })} placeholder="Casa, calle, número, referencia..." className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.length <= 5 ? 'border-red-500' : 'border-ui-border'}`} />
         </div>
       </div>
 
-      <div className="flex justify-between pt-6 border-t border-gray-100 mt-8 gap-3">
+      <div className="flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
         <Button variant="secondary" onClick={onBack}>Atrás</Button>
         <Button onClick={handleSendOTP} disabled={!isValid || isSendingOTP}>{isSendingOTP ? 'Enviando...' : 'Confirmar Pedido →'}</Button>
       </div>

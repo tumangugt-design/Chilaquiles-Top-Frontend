@@ -46,8 +46,8 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
     if (!value) return null
     return (
       <div className="flex justify-between items-start py-1">
-        <span className="text-gray-500 text-xs font-medium">{label}</span>
-        <span className="text-gray-900 text-xs font-bold text-right ml-4 max-w-[150px] leading-tight">{value}</span>
+        <span className="text-ui-muted text-xs font-medium">{label}</span>
+        <span className="text-ui-text text-xs font-bold text-right ml-4 max-w-[150px] leading-tight">{value}</span>
       </div>
     )
   }
@@ -71,22 +71,22 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-        <h3 className="font-extrabold text-gray-900 text-lg">Detalle de Costos</h3>
+      <div className="flex items-center justify-between border-b border-ui-border pb-4">
+        <h3 className="font-extrabold text-ui-text text-lg">Detalle de Costos</h3>
         <span className="bg-brand-blue text-white text-xs font-bold px-2 py-1 rounded-md">{totalItems} plato(s)</span>
       </div>
 
       <div className="space-y-4">
         {/* Cart Items */}
         {order.cart.map((plate, idx) => (
-          <div key={plate.id} className="bg-gray-50 rounded-lg p-3 opacity-75">
-            <div className="flex justify-between items-center mb-1 border-b border-gray-200 pb-1">
-              <span className="text-xs font-bold text-gray-500 uppercase">Plato #{idx + 1} (En carrito)</span>
-              <span className="text-xs font-bold text-gray-900">Q{getMarginalPrice(idx)}</span>
+          <div key={plate.id} className="bg-ui-bg rounded-lg p-3 opacity-75">
+            <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
+              <span className="text-xs font-bold text-ui-muted uppercase">Plato #{idx + 1} (En carrito)</span>
+              <span className="text-xs font-bold text-ui-text">Q{getMarginalPrice(idx)}</span>
             </div>
-            <div className="text-[10px] text-gray-500 leading-tight space-y-0.5">
+            <div className="text-[10px] text-ui-muted leading-tight space-y-0.5">
               <div>{getLabel(plate.sauce, OPTIONS_SAUCE)}, {getLabel(plate.protein, OPTIONS_PROTEIN)}</div>
-              <div className="italic text-gray-400">Base: {getBaseLabel(plate.baseRecipe)}</div>
+              <div className="italic text-ui-muted">Base: {getBaseLabel(plate.baseRecipe)}</div>
             </div>
           </div>
         ))}
@@ -130,7 +130,7 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
       {/* Desktop Panel */}
       <div className="hidden lg:block w-96 pl-8 flex-shrink-0">
         <div className="sticky top-28">
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-sm border border-white/20">
+          <div className="bg-ui-card rounded-3xl p-8 shadow-sm border border-ui-border">
             <SummaryContent />
           </div>
         </div>
@@ -149,7 +149,7 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
               onClick={() => setIsOpen(true)}
               className="flex flex-col cursor-pointer px-2 active:opacity-60 transition-opacity"
             >
-              <span className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Total</span>
+              <span className="text-[10px] uppercase font-bold text-ui-muted mb-0.5">Total</span>
               <div className="flex items-center text-brand-blue font-black text-2xl">
                 Q{grandTotal}
                 <div className="ml-1.5 bg-blue-50 rounded-full p-0.5 animate-bounce">
@@ -178,12 +178,12 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex items-end justify-center">
           <div
-            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300"
+            className="absolute inset-0 bg-ui-bg/60 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsOpen(false)}
           />
-          <div className="relative bg-white w-full rounded-t-[2rem] p-6 shadow-2xl animate-slide-up max-h-[85vh] overflow-y-auto">
+          <div className="relative bg-ui-card w-full rounded-t-[2rem] p-6 shadow-2xl animate-slide-up max-h-[85vh] overflow-y-auto">
             <div className="flex justify-center mb-6" onClick={() => setIsOpen(false)}>
-              <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+              <div className="w-12 h-1.5 bg-ui-border rounded-full" />
             </div>
             <SummaryContent />
           </div>

@@ -17,7 +17,7 @@ import AdminPage from './pages/Admin.jsx';
 import ChefPage from './pages/Chef.jsx';
 import RepartidorPage from './pages/Repartidor.jsx';
 
-function CustomerFlow() {
+function CustomerFlow({ onToggleTheme, currentTheme }) {
   const [currentStep, setCurrentStep] = useState('LOCATION');
   const {
     order,
@@ -93,21 +93,24 @@ function CustomerFlow() {
   const globalMascotClass = isSidebarVisible ? 'lg:hidden' : '';
 
   return (
-    <div className="min-h-screen bg-brand-gray font-sans text-gray-900 relative">
+    <div className="min-h-screen bg-ui-bg font-sans text-ui-text relative transition-colors duration-300">
       <Mascot currentStep={currentStep} variant="fixed" className={globalMascotClass} />
       {currentStep === 'LOCATION' ? (
-        <div className="min-h-screen flex items-center justify-center p-4">{renderStep()}</div>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <Header availableCount={availablePlates} onToggleTheme={onToggleTheme} currentTheme={currentTheme} />
+          {renderStep()}
+        </div>
       ) : (
         <div className="pb-32 lg:pb-12 pt-20 lg:pt-28">
-          <Header availableCount={availablePlates} />
+          <Header availableCount={availablePlates} onToggleTheme={onToggleTheme} currentTheme={currentTheme} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row items-start justify-center gap-8">
               <div className="flex-1 w-full max-w-3xl">
                 <Stepper currentStep={currentStep} />
-                <div className="bg-white rounded-[2rem] p-4 sm:p-10 shadow-xl shadow-gray-200/50 border border-gray-100 min-h-[500px] animate-fade-in transition-all">
+                <div className="bg-ui-card rounded-[2rem] p-4 sm:p-10 shadow-xl border border-ui-border min-h-[500px] animate-fade-in transition-all">
                   {renderStep()}
                 </div>
-                <div className="mt-8 text-center text-xs text-gray-400 font-medium space-y-1 mb-8">
+                <div className="mt-8 text-center text-xs text-ui-muted font-medium space-y-1 mb-8">
                   <p>© 2026 Chilaquiles TOP.</p>
                   <p className="opacity-75">Comida, Precios, Experiencia. Aquí todo es TOP</p>
                 </div>
@@ -138,7 +141,7 @@ function App() {
   };
 
   const renderPanel = (Component) => (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-ui-bg transition-colors duration-300">
       <Header isPanel onToggleTheme={toggleTheme} currentTheme={theme} />
       <Component />
     </div>
@@ -149,10 +152,7 @@ function App() {
   if (path === '/repartidor') return renderPanel(RepartidorPage);
 
   return (
-    <div className="transition-colors duration-300">
-      <Header onToggleTheme={toggleTheme} currentTheme={theme} />
-      <CustomerFlow />
-    </div>
+    <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
   );
 }
 
