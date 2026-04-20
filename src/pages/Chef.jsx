@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
-import { useAuthSession } from '../shared/hooks/useAuthSession.jsx';
 import { getOrders, updateOrderStatus } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
 
-const ChefPage = () => {
-  const { session, loading, error, loginWithGoogle, logout } = useAuthSession('CHEF');
+const ChefPage = ({ authSession }) => {
+  const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [orders, setOrders] = useState([]);
 
   const loadOrders = async () => {

@@ -8,8 +8,8 @@ import toast from 'react-hot-toast';
 
 const emptyItem = { name: '', unit: '', stock: 0, minimumStock: 0 };
 
-const AdminPage = () => {
-  const { session, loading, error, loginWithGoogle, logout } = useAuthSession('ADMIN');
+const AdminPage = ({ authSession }) => {
+  const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [itemForm, setItemForm] = useState(emptyItem);
@@ -238,7 +238,7 @@ const AdminPage = () => {
                     </button>
                     <div className="text-center min-w-[3rem]">
                       <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red animate-pulse' : 'text-brand-blue'}`}>
-                        {item.stock}
+                        {Number(item.stock).toFixed(2)}
                       </span>
                     </div>
                     <button 

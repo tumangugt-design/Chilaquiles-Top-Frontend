@@ -130,6 +130,10 @@ function App() {
   });
 
   const path = useMemo(() => window.location.pathname, []);
+  
+  // Determine current panel role based on path
+  const panelRole = path === '/admin' ? 'ADMIN' : path === '/chef' ? 'CHEF' : path === '/repartidor' ? 'REPARTIDOR' : null;
+  const authSession = useAuthSession(panelRole);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -143,7 +147,7 @@ function App() {
   const renderPanel = (Component) => (
     <div className="min-h-screen bg-ui-bg transition-colors duration-300">
       <Header isPanel onToggleTheme={toggleTheme} currentTheme={theme} />
-      <Component />
+      <Component authSession={authSession} />
     </div>
   );
 

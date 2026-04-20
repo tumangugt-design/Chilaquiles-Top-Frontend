@@ -6,8 +6,8 @@ import { useAuthSession } from '../shared/hooks/useAuthSession.jsx';
 import { getOrders, updateOrderStatus } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
 
-const RepartidorPage = () => {
-  const { session, loading, error, loginWithGoogle, logout } = useAuthSession('REPARTIDOR');
+const RepartidorPage = ({ authSession }) => {
+  const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [orders, setOrders] = useState([]);
 
   const loadOrders = async () => {
