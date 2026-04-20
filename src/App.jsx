@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Header from './components/layout/Header.jsx';
 import OrderSummary from './components/layout/OrderSummary.jsx';
 import Stepper from './components/ui/Stepper.jsx';
@@ -122,12 +122,38 @@ function CustomerFlow() {
 }
 
 function App() {
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
   const path = useMemo(() => window.location.pathname, []);
 
-  if (path === '/admin') return <AdminPage />;
-  if (path === '/chef') return <ChefPage />;
-  if (path === '/repartidor') return <RepartidorPage />;
-  return <CustomerFlow />;
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const renderPanel = (Component) => (
+    <div className="min-h-screen">
+      <Header isPanel onToggleTheme={toggleTheme} currentTheme={theme} />
+      <Component />
+    </div>
+  );
+
+  if (path === '/admin') return renderPanel(AdminPage);
+  if (path === '/chef') return renderPanel(ChefPage);
+  if (path === '/repartidor') return renderPanel(RepartidorPage);
+
+  return (
+    <div className="transition-colors duration-300">
+      <Header onToggleTheme={toggleTheme} currentTheme={theme} />
+      <CustomerFlow />
+    </div>
+  );
 }
 
 export default App;

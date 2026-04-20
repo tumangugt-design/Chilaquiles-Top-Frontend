@@ -31,7 +31,7 @@ const ChefPage = () => {
     const nextStatus = order.status === 'recibido' ? 'en_proceso' : 'listo_para_despacho';
     try {
       await updateOrderStatus(order._id, nextStatus);
-      toast.success('Estado actualizado');
+      toast.success('Orden actualizada');
       loadOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
@@ -40,31 +40,70 @@ const ChefPage = () => {
 
   if (!session) {
     return (
-      <PanelShell title="Panel Chef" subtitle="Pedidos en tiempo real para cocina" actions={<Button onClick={loginWithGoogle}>{loading ? 'Cargando...' : 'Entrar con Google'}</Button>}>
-        <p className="text-gray-500">Inicia sesión con Google para registrar o validar tu acceso como CHEF.</p>
-        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+      <PanelShell title="Centro de Producción" subtitle="Gestión de Pedidos en Tiempo Real" actions={<Button onClick={loginWithGoogle}>{loading ? 'Cargando...' : 'Acceder como Chef'}</Button>}>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 bg-brand-orange/10 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-10 h-10 text-brand-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          </div>
+          <h3 className="text-2xl font-black text-ui-text mb-2">Acceso a Cocina</h3>
+          <p className="text-ui-muted max-w-sm">Valida tus credenciales para visualizar las órdenes entrantes y gestionar la producción.</p>
+        </div>
       </PanelShell>
     );
   }
 
   return (
-    <PanelShell title="Panel Chef" subtitle="Flujo: recibido → en_proceso → listo_para_despacho" actions={<><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Salir</Button></>}>
-      <div className="space-y-4">
+    <PanelShell title="Panel de Cocina" subtitle="Mantén el ritmo: Transición de pedidos recibidos a listos." actions={<div className="flex items-center space-x-4"><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Salir</Button></div>}>
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
         {orders.map((order) => (
-          <div key={order._id} className="rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div>
-                <p className="font-bold text-gray-900">{order.name}</p>
-                <p className="text-sm text-gray-500">{order.phone}</p>
+          <div key={order._id} className="glass-card rounded-[2.5rem] p-6 flex flex-col justify-between animate-fade-in border-t-8 border-t-brand-orange">
+            <div>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-xs font-black text-ui-muted uppercase tracking-widest mb-1">ID: ...{order._id.slice(-6)}</p>
+                  <p className="font-black text-xl text-ui-text">{order.name}</p>
+                </div>
+                <StatusBadge value={order.status} />
               </div>
-              <StatusBadge value={order.status} />
+              
+              <div className="space-y-3 mb-6">
+                <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
+                  <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Detalle del Pedido</p>
+                  <ul className="space-y-1">
+                    {order.items.map((item, idx) => (
+                      <li key={idx} className="text-sm font-bold text-ui-text flex justify-between">
+                        <span>{item.sauce} • {item.protein}</span>
+                        <span className="text-brand-orange">x1</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <p className="text-xs font-medium text-ui-muted italic">"{order.address}"</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mb-3">{order.address}</p>
-            <p className="text-sm text-gray-500 mb-4">{order.items.length} orden(es) • Total Q{order.total}</p>
-            {['recibido', 'en_proceso'].includes(order.status) && <Button onClick={() => advance(order)}>Avanzar estado</Button>}
+
+            {['recibido', 'en_proceso'].includes(order.status) && (
+              <Button 
+                onClick={() => advance(order)}
+                className="w-full !py-4 shadow-lg shadow-brand-orange/20"
+              >
+                {order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
+              </Button>
+            )}
+            
+            {order.status === 'listo_para_despacho' && (
+              <div className="text-center py-4 bg-green-500/10 rounded-2xl border border-green-500/20">
+                <span className="text-xs font-black text-green-600 uppercase">Esperando Repartidor</span>
+              </div>
+            )}
           </div>
         ))}
-        {orders.length === 0 && <p className="text-gray-500">No hay pedidos para cocina.</p>}
+        
+        {orders.length === 0 && (
+          <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed">
+            <p className="text-ui-muted font-bold">¡Buen trabajo! No hay pedidos pendientes en cocina.</p>
+          </div>
+        )}
       </div>
     </PanelShell>
   );

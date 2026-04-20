@@ -33,4 +33,7 @@ export const updateStaffStatus = (userId, payload) => api.patch(`/users/staff/${
 export const getInventory = () => api.get('/inventory');
 export const saveInventoryItem = (payload) => api.post('/inventory', payload);
 
+export const deleteInventoryItem = (name) => api.delete(`/inventory/${name}`);
+export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount });
+
 export default api;

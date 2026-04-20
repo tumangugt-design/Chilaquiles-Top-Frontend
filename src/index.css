@@ -5,13 +5,46 @@
    Tailwind CSS v4 Custom Theme
    ============================================ */
 
+:root {
+  /* Light Theme (Default) */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border-color: #E2E8F0;
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --brand-primary: #0000FF;
+  --brand-secondary: #FF6B00;
+  --brand-accent: #D90429;
+}
+
+[data-theme='dark'] {
+  /* Dark Theme */
+  --bg-primary: #0F172A;
+  --bg-secondary: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --border-color: #334155;
+  --card-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --brand-primary: #3B82F6;
+  --brand-secondary: #FB923C;
+  --brand-accent: #EF4444;
+}
+
 @theme {
-  /* Brand Colors */
-  --color-brand-blue: #0000FF;
-  --color-brand-orange: #FF6B00;
-  --color-brand-red: #D90429;
-  --color-brand-dark: #111827;
-  --color-brand-gray: #F3F4F6;
+  /* Brand Colors Map */
+  --color-brand-blue: var(--brand-primary);
+  --color-brand-orange: var(--brand-secondary);
+  --color-brand-red: var(--brand-accent);
+  --color-brand-dark: var(--text-primary);
+  --color-brand-gray: var(--bg-primary);
+
+  /* UI Tokens */
+  --color-ui-bg: var(--bg-primary);
+  --color-ui-card: var(--bg-secondary);
+  --color-ui-text: var(--text-primary);
+  --color-ui-muted: var(--text-secondary);
+  --color-ui-border: var(--border-color);
 
   /* Font Family */
   --font-family-sans: 'Inter', sans-serif;
@@ -66,13 +99,16 @@
 
 * {
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F3F4F6;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: 'Inter', sans-serif;
+  min-height: 100vh;
 }
 
 /* Custom Scrollbar */
@@ -86,12 +122,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--text-secondary);
   border-radius: 4px;
+  opacity: 0.5;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--brand-primary);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -101,4 +138,11 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.glass-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px);
 }

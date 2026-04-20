@@ -3,7 +3,7 @@ import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import { useAuthSession } from '../shared/hooks/useAuthSession.jsx';
-import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory } from '../shared/config/api.js';
+import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, deleteInventoryItem, adjustInventoryStock } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
 
 const emptyItem = { name: '', unit: '', stock: 0, minimumStock: 0 };
@@ -13,6 +13,7 @@ const AdminPage = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [itemForm, setItemForm] = useState(emptyItem);
+  const [isSaving, setIsSaving] = useState(false);
 
   const loadData = async () => {
     try {
@@ -42,6 +43,8 @@ const AdminPage = () => {
 
   const submitInventory = async (e) => {
     e.preventDefault();
+    if (!itemForm.name || !itemForm.unit) return toast.error('Nombre y unidad son obligatorios');
+    setIsSaving(true);
     try {
       await saveInventoryItem({ ...itemForm, stock: Number(itemForm.stock), minimumStock: Number(itemForm.minimumStock) });
       toast.success('Inventario guardado');
@@ -49,69 +52,183 @@ const AdminPage = () => {
       loadData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo guardar inventario.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteItem = async (name) => {
+    if (!window.confirm(`¿Seguro que quieres eliminar "${name}" del inventario?`)) return;
+    try {
+      await deleteInventoryItem(name);
+      toast.success('Item eliminado');
+      loadData();
+    } catch (err) {
+      toast.error('Error al eliminar');
+    }
+  };
+
+  const handleAdjustStock = async (name, amount) => {
+    try {
+      await adjustInventoryStock(name, amount);
+      loadData();
+    } catch (err) {
+      toast.error('Error al ajustar stock');
     }
   };
 
   if (!session) {
     return (
-      <PanelShell title="Panel Admin" subtitle="Aprobación de staff e inventario" actions={<Button onClick={loginWithGoogle}>{loading ? 'Cargando...' : 'Entrar con Google'}</Button>}>
-        <p className="text-gray-500">Accede con la cuenta Google autorizada como ADMIN.</p>
-        {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
+      <PanelShell title="Panel de Administración" subtitle="Workspace Seguro • Gestión de Personal e Insumos" actions={<Button onClick={loginWithGoogle}>{loading ? 'Cargando...' : 'Acceder con Google Admin'}</Button>}>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-20 h-20 bg-brand-blue/10 rounded-full flex items-center justify-center mb-6">
+            <svg className="w-10 h-10 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          </div>
+          <h3 className="text-2xl font-black text-ui-text mb-2">Acceso Restringido</h3>
+          <p className="text-ui-muted max-w-sm">Inicia sesión con una cuenta corporativa autorizada para gestionar la operación de Chilaquiles TOP.</p>
+          {error && <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-brand-red text-sm font-bold">{error}</div>}
+        </div>
       </PanelShell>
     );
   }
 
   return (
     <PanelShell
-      title="Panel Admin"
-      subtitle="Aprobación de usuarios staff y control de inventario."
-      actions={<><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Salir</Button></>}
+      title="Dashboard Administrativo"
+      subtitle="Gestiona el corazón de la operación: Staff e Inventario"
+      actions={<div className="flex items-center space-x-4"><StatusBadge value={session.status} /><Button variant="secondary" onClick={logout}>Finalizar Sesión</Button></div>}
     >
-      <div className="grid lg:grid-cols-2 gap-8">
-        <section>
-          <h2 className="text-xl font-bold mb-4">Solicitudes pendientes</h2>
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Lado Izquierdo: Staff Management */}
+        <section className="lg:col-span-5 space-y-6">
+          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes de Staff</h2>
+            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">{pendingUsers.length} PENDIENTES</span>
+          </div>
+
           <div className="space-y-4">
-            {pendingUsers.length === 0 && <p className="text-sm text-gray-500">No hay usuarios pendientes.</p>}
+            {pendingUsers.length === 0 && (
+              <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
+                <p className="text-ui-muted text-sm font-medium">No hay solicitudes nuevas en este momento.</p>
+              </div>
+            )}
             {pendingUsers.map((user) => (
-              <div key={user._id} className="border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div key={user._id} className="glass-card rounded-[2rem] p-6 animate-fade-in">
+                <div className="flex items-start justify-between mb-6">
                   <div>
-                    <p className="font-bold text-gray-900">{user.name || 'Sin nombre'}</p>
-                    <p className="text-sm text-gray-500">{user.email || user.phone || 'Sin contacto'}</p>
+                    <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
+                    <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
                   </div>
                   <StatusBadge value={user.status} />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => changeStatus(user._id, 'approved', user.role)}>Aprobar</Button>
-                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'rejected', user.role)}>Rechazar</Button>
-                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'CHEF')}>Aprobar como CHEF</Button>
-                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'REPARTIDOR')}>Aprobar como REPARTIDOR</Button>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Button className="col-span-2" onClick={() => changeStatus(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
+                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'CHEF')}>CHEF</Button>
+                  <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'REPARTIDOR')}>REPARTIDOR</Button>
+                  <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => changeStatus(user._id, 'rejected', user.role)}>Denegar Acceso</Button>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section>
-          <h2 className="text-xl font-bold mb-4">Inventario</h2>
-          <form onSubmit={submitInventory} className="grid grid-cols-2 gap-3 bg-gray-50 rounded-2xl p-5 border border-gray-100 mb-6">
-            <input className="col-span-2 p-3 rounded-xl border border-gray-200" placeholder="Nombre del insumo" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} />
-            <input className="p-3 rounded-xl border border-gray-200" placeholder="Unidad" value={itemForm.unit} onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} />
-            <input className="p-3 rounded-xl border border-gray-200" placeholder="Stock" type="number" value={itemForm.stock} onChange={(e) => setItemForm({ ...itemForm, stock: e.target.value })} />
-            <input className="col-span-2 p-3 rounded-xl border border-gray-200" placeholder="Stock mínimo" type="number" value={itemForm.minimumStock} onChange={(e) => setItemForm({ ...itemForm, minimumStock: e.target.value })} />
-            <div className="col-span-2"><Button type="submit">Guardar insumo</Button></div>
+        {/* Lado Derecho: Inventory Control */}
+        <section className="lg:col-span-7 space-y-6">
+          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Control de Inventario</h2>
+            <div className="flex space-x-2">
+               <span className="bg-brand-orange/10 text-brand-orange px-3 py-1 rounded-full text-xs font-black uppercase">Stock Realtime</span>
+            </div>
+          </div>
+
+          {/* Formulario Estético */}
+          <form onSubmit={submitInventory} className="glass-card rounded-[2.5rem] p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="col-span-2 space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Nombre del Insumo / Ingrediente</label>
+                <input 
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
+                  placeholder="Ej: Salsa Roja, Totopos..." 
+                  value={itemForm.name} 
+                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Unidad (kg, lt, oz...)</label>
+                <input 
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
+                  placeholder="kg" 
+                  value={itemForm.unit} 
+                  onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })} 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Stock Inicial</label>
+                <input 
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold" 
+                  type="number" 
+                  value={itemForm.stock} 
+                  onChange={(e) => setItemForm({ ...itemForm, stock: e.target.value })} 
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-4 tracking-widest">Alerta de Stock Mínimo (Límite crítico)</label>
+                <input 
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold text-brand-red" 
+                  type="number" 
+                  value={itemForm.minimumStock} 
+                  onChange={(e) => setItemForm({ ...itemForm, minimumStock: e.target.value })} 
+                />
+              </div>
+            </div>
+            <Button type="submit" className="w-full !py-5 text-lg" disabled={isSaving}>
+              {isSaving ? 'Registrando...' : 'Actualizar Inventario'}
+            </Button>
           </form>
 
-          <div className="space-y-3">
+          {/* Listado de Inventario */}
+          <div className="grid sm:grid-cols-2 gap-4">
             {inventory.map((item) => (
-              <div key={item._id} className="flex items-center justify-between rounded-2xl border border-gray-100 p-4">
-                <div>
-                  <p className="font-bold capitalize">{item.name}</p>
-                  <p className="text-sm text-gray-500">Unidad: {item.unit}</p>
+              <div key={item._id} className="glass-card rounded-[2rem] p-5 border-l-4 border-l-brand-blue hover:scale-[1.02] transition-all">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black text-ui-text capitalize leading-none mb-1">{item.name}</h3>
+                    <p className="text-[10px] font-bold text-ui-muted uppercase tracking-widest">Medida: {item.unit}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteItem(item.name)}
+                    className="p-2 text-ui-muted hover:text-brand-red transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
-                <div className="text-right">
-                  <p className="font-extrabold text-brand-blue">{item.stock}</p>
-                  <p className="text-xs text-gray-400">mínimo {item.minimumStock}</p>
+                
+                <div className="flex items-center justify-between bg-ui-bg rounded-2xl p-4 border border-ui-border">
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={() => handleAdjustStock(item.name, -1)}
+                      className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center hover:bg-brand-red/10 hover:text-brand-red transition-all font-black"
+                    >
+                      -
+                    </button>
+                    <div className="text-center min-w-[3rem]">
+                      <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red animate-pulse' : 'text-brand-blue'}`}>
+                        {item.stock}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleAdjustStock(item.name, 1)}
+                      className="w-8 h-8 rounded-full border border-ui-border flex items-center justify-center hover:bg-green-500/10 hover:text-green-600 transition-all font-black"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-ui-muted uppercase">Límite</p>
+                    <p className="text-xs font-bold text-brand-red leading-none">{item.minimumStock}</p>
+                  </div>
                 </div>
               </div>
             ))}
