@@ -275,6 +275,33 @@ const AdminPage = ({ authSession }) => {
                   <div>
                     <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest">ID: ...{order._id.slice(-6)}</p>
                     <p className="font-black text-lg text-ui-text">{order.name}</p>
+                    
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      {order.chefId && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 rounded-full bg-brand-blue/10 flex items-center justify-center overflow-hidden">
+                             {order.chefId.photoUrl ? (
+                               <img src={order.chefId.photoUrl} alt="" className="w-full h-full object-cover" />
+                             ) : (
+                               <span className="text-[7px] font-black text-brand-blue">{order.chefId.name?.charAt(0)}</span>
+                             )}
+                          </div>
+                          <span className="text-[9px] font-black text-brand-blue uppercase">Chef: {order.chefId.name?.split(' ')[0]}</span>
+                        </div>
+                      )}
+                      {order.repartidorId && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 rounded-full bg-brand-orange/10 flex items-center justify-center overflow-hidden">
+                             {order.repartidorId.photoUrl ? (
+                               <img src={order.repartidorId.photoUrl} alt="" className="w-full h-full object-cover" />
+                             ) : (
+                               <span className="text-[7px] font-black text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
+                             )}
+                          </div>
+                          <span className="text-[9px] font-black text-brand-orange uppercase">Reparto: {order.repartidorId.name?.split(' ')[0]}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <StatusBadge value={order.status} />
                 </div>
