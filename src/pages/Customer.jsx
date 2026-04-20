@@ -208,7 +208,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
         <Button onClick={handleSendOTP} disabled={!isValid || isSendingOTP}>{isSendingOTP ? 'Enviando...' : 'Confirmar Pedido →'}</Button>
       </div>
 
-      <OTPModal open={showOTPModal} onClose={() => setShowOTPModal(false)} onVerify={handleVerifyOTP} loading={isSendingOTP} phone={toGtLocalDigits(localData.phone || '')} />
+      <OTPModal isOpen={showOTPModal} onClose={() => setShowOTPModal(false)} onVerify={handleVerifyOTP} isSending={isSendingOTP} phone={toGtLocalDigits(localData.phone || '')} />
     </div>
   );
 };
