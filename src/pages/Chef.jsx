@@ -145,18 +145,44 @@ const ChefPage = ({ authSession }) => {
                 <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Artículos de la Orden</p>
                 <div className="space-y-2">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex flex-col bg-ui-bg p-3 rounded-xl border border-ui-border">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-black text-ui-text">
-                          {item.name || `${item.sauce} + ${item.protein}`}
-                        </span>
-                        <span className="bg-brand-blue/10 text-brand-blue px-2 py-0.5 rounded-lg text-xs font-black">
+                    <div key={idx} className="bg-ui-bg p-4 rounded-2xl border border-ui-border space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-sm font-black text-ui-text block uppercase">
+                            {item.sauce}
+                          </span>
+                          <span className="text-xs font-bold text-brand-blue uppercase">
+                            + {item.protein}
+                          </span>
+                          <p className="text-[10px] font-bold text-ui-muted uppercase mt-1">Guarnición: {item.complement}</p>
+                        </div>
+                        <span className="bg-brand-blue/10 text-brand-blue px-2.5 py-1 rounded-xl text-xs font-black">
                           x{item.quantity || 1}
                         </span>
                       </div>
+                      
+                      <div className="flex flex-wrap gap-1 mt-1">
+                         {item.baseRecipe?.onion === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
+                         {item.baseRecipe?.cilantro === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
+                         {item.baseRecipe?.cream === false && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
+                      </div>
+
                       {item.extras?.length > 0 && (
-                        <p className="text-[10px] font-bold text-ui-muted mt-1 italic">
-                          Extras: {item.extras.join(', ')}
+                        <div className="pt-2 border-t border-ui-border/50">
+                          <p className="text-[9px] font-black text-ui-muted uppercase mb-1">Extras</p>
+                          <div className="flex flex-wrap gap-1">
+                            {item.extras.map((extra, eIdx) => (
+                              <span key={eIdx} className="text-[10px] font-bold text-ui-text bg-ui-card px-2 py-0.5 rounded-lg border border-ui-border">
+                                {extra}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {item.notes && (
+                        <p className="text-[10px] font-medium text-ui-muted italic bg-brand-orange/5 p-2 rounded-lg border border-brand-orange/10">
+                          "{item.notes}"
                         </p>
                       )}
                     </div>

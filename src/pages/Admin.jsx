@@ -259,7 +259,6 @@ const AdminPage = ({ authSession }) => {
               <button
                 key={filter.id}
                 onClick={() => {
-                  setOrders([]);
                   setOrderFilter(filter.id);
                 }}
                 className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${orderFilter === filter.id ? 'bg-brand-orange text-white' : 'bg-ui-bg text-ui-muted border border-ui-border'}`}
@@ -285,15 +284,16 @@ const AdminPage = ({ authSession }) => {
                     <div key={idx} className="p-3 bg-ui-bg rounded-2xl border border-ui-border">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-xs font-black text-ui-text">
-                          {item.name || `${item.sauce} + ${item.protein}`}
+                          {item.sauce || 'Salsa'} + {item.protein || 'Proteína'}
                         </span>
                         <span className="text-[10px] font-black text-brand-orange">x{item.quantity || 1}</span>
                       </div>
-                      {item.extras?.length > 0 && (
-                        <p className="text-[9px] font-bold text-ui-muted uppercase tracking-tighter">
-                          + {item.extras.join(' • ')}
-                        </p>
-                      )}
+                      <p className="text-[10px] font-bold text-ui-muted uppercase">Guarnición: {item.complement}</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                         {item.baseRecipe?.onion === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CEBOLLA</span>}
+                         {item.baseRecipe?.cilantro === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CILANTRO</span>}
+                         {item.baseRecipe?.cream === false && <span className="text-[8px] bg-red-500/10 text-red-600 px-1.5 rounded-md font-black">SIN CREMA</span>}
+                      </div>
                     </div>
                   ))}
                 </div>

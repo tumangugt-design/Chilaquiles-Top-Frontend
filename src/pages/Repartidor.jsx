@@ -202,9 +202,9 @@ const RepartidorPage = ({ authSession }) => {
           </div>
         ))}
         
-        {orders.length === 0 && (
+        {currentOrders.length === 0 && !isRefreshing && (
           <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed">
-            <p className="text-ui-muted font-bold italic">No hay entregas asignadas. ¡Buen momento para descansar!</p>
+            <p className="text-ui-muted font-bold italic">No hay entregas en este estado. ¡Buen momento para descansar!</p>
           </div>
         )}
       </div>
