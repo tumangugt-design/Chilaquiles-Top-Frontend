@@ -12,6 +12,7 @@ const AdminPage = ({ authSession }) => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [itemForm, setItemForm] = useState(emptyItem);
+  const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadData = async () => {
