@@ -3,19 +3,36 @@ import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import { getOrders, updateOrderStatus } from '../shared/config/api.js';
+import { playNotificationSound } from '../shared/utils/notifications.js';
 import toast from 'react-hot-toast';
+import { useRef } from 'react';
 
 const ChefPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession;
   const [ordersCache, setOrdersCache] = useState({ active: [], finished: [] });
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'finished'
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const knownOrderIds = useRef(new Set());
 
   const loadOrders = async () => {
     setIsRefreshing(true);
     try {
       const response = await getOrders(activeTab === 'finished' ? 'finished' : null);
-      setOrdersCache(prev => ({ ...prev, [activeTab]: response.data }));
+      const orders = response.data;
+
+      // Sound notification logic
+      if (activeTab === 'active') {
+        let hasNewOrder = false;
+        orders.forEach(o => {
+          if (!knownOrderIds.current.has(o._id)) {
+            if (knownOrderIds.current.size > 0) hasNewOrder = true;
+            knownOrderIds.current.add(o._id);
+          }
+        });
+        if (hasNewOrder) playNotificationSound();
+      }
+
+      setOrdersCache(prev => ({ ...prev, [activeTab]: orders }));
     } catch (err) {
       toast.error('Error al cargar pedidos');
     } finally {

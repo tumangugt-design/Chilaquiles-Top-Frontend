@@ -3,7 +3,9 @@ import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, deleteInventoryItem, adjustInventoryStock, getOrders } from '../shared/config/api.js';
+import { playNotificationSound } from '../shared/utils/notifications.js';
 import toast from 'react-hot-toast';
+import { useRef } from 'react';
 
 const emptyItem = { name: '', unit: '', stock: 0, minimumStock: 0 };
 
@@ -17,6 +19,7 @@ const AdminPage = ({ authSession }) => {
   const [itemForm, setItemForm] = useState(emptyItem);
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const knownOrderIds = useRef(new Set());
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -27,7 +30,19 @@ const AdminPage = ({ authSession }) => {
         setInventory(inventoryResponse.data);
       } else {
         const response = await getOrders(orderFilter);
-        setOrdersCache(prev => ({ ...prev, [orderFilter]: response.data }));
+        const orders = response.data;
+
+        // Sound notification logic
+        let hasNewOrder = false;
+        orders.forEach(o => {
+          if (!knownOrderIds.current.has(o._id)) {
+            if (knownOrderIds.current.size > 0) hasNewOrder = true;
+            knownOrderIds.current.add(o._id);
+          }
+        });
+        if (hasNewOrder) playNotificationSound();
+
+        setOrdersCache(prev => ({ ...prev, [orderFilter]: orders }));
       }
     } catch (err) {
       console.error('Error loading Admin data:', err);
