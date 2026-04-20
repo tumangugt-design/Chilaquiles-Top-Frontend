@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import PanelShell from '../components/ui/PanelShell.jsx';
 import Button from '../components/ui/Button.jsx';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
-import { useAuthSession } from '../shared/hooks/useAuthSession.jsx';
 import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, deleteInventoryItem, adjustInventoryStock } from '../shared/config/api.js';
 import toast from 'react-hot-toast';
 

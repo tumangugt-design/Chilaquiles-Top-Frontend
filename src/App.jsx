@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useAuthSession } from './shared/hooks/useAuthSession.jsx';
 import Header from './components/layout/Header.jsx';
 import OrderSummary from './components/layout/OrderSummary.jsx';
 import Stepper from './components/ui/Stepper.jsx';
