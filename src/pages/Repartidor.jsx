@@ -57,7 +57,7 @@ const RepartidorPage = ({ authSession }) => {
     );
   }
 
-  if (!session) {
+  if (!session || session.role !== 'REPARTIDOR') {
     return (
       <PanelShell title="Logística de Entrega" subtitle="Gestión de Rutas y Despacho">
         <div className="flex flex-col items-center justify-center py-20 text-center">

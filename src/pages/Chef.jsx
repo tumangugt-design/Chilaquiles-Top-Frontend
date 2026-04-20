@@ -58,7 +58,7 @@ const ChefPage = ({ authSession }) => {
     );
   }
 
-  if (!session) {
+  if (!session || session.role !== 'CHEF') {
     return (
       <PanelShell title="Centro de Producción" subtitle="Gestión de Pedidos en Tiempo Real">
         <div className="flex flex-col items-center justify-center py-20 text-center">
