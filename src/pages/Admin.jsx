@@ -13,7 +13,7 @@ const AdminPage = ({ authSession }) => {
   const [orderFilter, setOrderFilter] = useState('all');
   const [pendingUsers, setPendingUsers] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [orders, setOrders] = useState([]);
+  const [ordersCache, setOrdersCache] = useState({}); // { [filter]: orders[] }
   const [itemForm, setItemForm] = useState(emptyItem);
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -27,7 +27,7 @@ const AdminPage = ({ authSession }) => {
         setInventory(inventoryResponse.data);
       } else {
         const response = await getOrders(orderFilter);
-        setOrders(response.data);
+        setOrdersCache(prev => ({ ...prev, [orderFilter]: response.data }));
       }
     } catch (err) {
       console.error('Error loading Admin data:', err);
@@ -37,6 +37,8 @@ const AdminPage = ({ authSession }) => {
       setIsRefreshing(false);
     }
   };
+
+  const currentOrders = ordersCache[orderFilter] || [];
 
   useEffect(() => {
     if (session?.role === 'ADMIN' && session?.status === 'approved') {
@@ -268,7 +270,7 @@ const AdminPage = ({ authSession }) => {
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {orders.map(order => (
+            {currentOrders.map(order => (
               <div key={order._id} className="glass-card rounded-[2.5rem] p-6 border-t-4 border-brand-orange">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -277,16 +279,34 @@ const AdminPage = ({ authSession }) => {
                   </div>
                   <StatusBadge value={order.status} />
                 </div>
-                <div className="p-3 bg-ui-bg rounded-2xl border border-ui-border mb-4">
-                  <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Detalle</p>
-                  <p className="text-xs font-bold text-ui-text">{order.items.length} Chilaquiles • Q{order.total}</p>
+                
+                <div className="space-y-3 mb-4">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="p-3 bg-ui-bg rounded-2xl border border-ui-border">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-black text-ui-text">
+                          {item.name || `${item.sauce} + ${item.protein}`}
+                        </span>
+                        <span className="text-[10px] font-black text-brand-orange">x{item.quantity || 1}</span>
+                      </div>
+                      {item.extras?.length > 0 && (
+                        <p className="text-[9px] font-bold text-ui-muted uppercase tracking-tighter">
+                          + {item.extras.join(' • ')}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-[10px] font-medium text-ui-muted italic line-clamp-1">{order.address}</p>
+
+                <div className="flex justify-between items-center pt-4 border-t border-ui-border">
+                   <p className="text-[10px] font-medium text-ui-muted italic max-w-[60%] line-clamp-1">{order.address}</p>
+                   <p className="text-sm font-black text-brand-orange">Q{order.total}</p>
+                </div>
               </div>
             ))}
-            {orders.length === 0 && (
+            {currentOrders.length === 0 && !isRefreshing && (
               <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed border-ui-border">
-                <p className="text-ui-muted font-bold">No hay pedidos que coincidan con este filtro.</p>
+                <p className="text-ui-muted font-bold">No hay pedidos en este estado.</p>
               </div>
             )}
           </div>

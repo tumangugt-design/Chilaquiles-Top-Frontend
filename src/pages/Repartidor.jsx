@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 const RepartidorPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession;
-  const [orders, setOrders] = useState([]);
+  const [ordersCache, setOrdersCache] = useState({ active: [], delivered: [] });
   const [activeTab, setActiveTab] = useState('active'); // 'active' | 'delivered'
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -15,13 +15,15 @@ const RepartidorPage = ({ authSession }) => {
     setIsRefreshing(true);
     try {
       const response = await getOrders(activeTab === 'delivered' ? 'delivered' : null);
-      setOrders(response.data);
+      setOrdersCache(prev => ({ ...prev, [activeTab]: response.data }));
     } catch (err) {
       toast.error('Error al cargar entregas');
     } finally {
       setIsRefreshing(false);
     }
   };
+
+  const currentOrders = ordersCache[activeTab] || [];
 
   useEffect(() => {
     if (session?.role === 'REPARTIDOR' && session?.status === 'approved') {
@@ -113,19 +115,13 @@ const RepartidorPage = ({ authSession }) => {
       {/* Tab Switcher */}
       <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
         <button 
-          onClick={() => {
-            setOrders([]);
-            setActiveTab('active');
-          }}
+          onClick={() => setActiveTab('active')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           En Ruta
         </button>
         <button 
-          onClick={() => {
-            setOrders([]);
-            setActiveTab('delivered');
-          }}
+          onClick={() => setActiveTab('delivered')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'delivered' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           Entregadas
@@ -133,7 +129,7 @@ const RepartidorPage = ({ authSession }) => {
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
-        {orders.map((order) => (
+        {currentOrders.map((order) => (
           <div key={order._id} className={`glass-card rounded-[2.5rem] p-8 border-t-8 transition-all ${order.repartidorId ? 'border-brand-orange' : 'border-ui-border opacity-70'}`}>
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -151,13 +147,18 @@ const RepartidorPage = ({ authSession }) => {
 
               <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
                 <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Detalle de Productos</p>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-ui-bg p-2 rounded-xl border border-ui-border">
-                      <span className="text-xs font-bold text-ui-text">
-                        {item.name || `${item.sauce} + ${item.protein}`}
-                      </span>
-                      <span className="text-xs font-black text-brand-orange">x{item.quantity || 1}</span>
+                    <div key={idx} className="flex flex-col bg-ui-bg p-2 rounded-xl border border-ui-border">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black text-ui-text">
+                          {item.sauce || 'Salsa'} + {item.protein || 'Proteína'}
+                        </span>
+                        <span className="text-[10px] font-black text-brand-orange">x{item.quantity || 1}</span>
+                      </div>
+                      {item.extras?.length > 0 && (
+                        <p className="text-[9px] font-bold text-ui-muted mt-1">+ {item.extras.join(', ')}</p>
+                      )}
                     </div>
                   ))}
                 </div>
