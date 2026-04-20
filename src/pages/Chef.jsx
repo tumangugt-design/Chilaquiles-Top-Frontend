@@ -114,13 +114,19 @@ const ChefPage = ({ authSession }) => {
       {/* Tab Switcher */}
       <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
         <button 
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setOrders([]);
+            setActiveTab('active');
+          }}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           En Cocina
         </button>
         <button 
-          onClick={() => setActiveTab('finished')}
+          onClick={() => {
+            setOrders([]);
+            setActiveTab('finished');
+          }}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'finished' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           Terminadas

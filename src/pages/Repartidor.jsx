@@ -113,13 +113,19 @@ const RepartidorPage = ({ authSession }) => {
       {/* Tab Switcher */}
       <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
         <button 
-          onClick={() => setActiveTab('active')}
+          onClick={() => {
+            setOrders([]);
+            setActiveTab('active');
+          }}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           En Ruta
         </button>
         <button 
-          onClick={() => setActiveTab('delivered')}
+          onClick={() => {
+            setOrders([]);
+            setActiveTab('delivered');
+          }}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'delivered' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           Entregadas
@@ -141,6 +147,18 @@ const RepartidorPage = ({ authSession }) => {
               <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
                 <p className="text-[10px] font-black text-ui-muted uppercase mb-1">Dirección de Entrega</p>
                 <p className="text-sm font-bold text-ui-text leading-relaxed">{order.address}</p>
+              </div>
+
+              <div className="p-4 bg-ui-bg/50 rounded-2xl border border-ui-border">
+                <p className="text-[10px] font-black text-ui-muted uppercase mb-2">Detalle de Productos</p>
+                <div className="space-y-2">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-ui-bg p-2 rounded-xl border border-ui-border">
+                      <span className="text-xs font-bold text-ui-text">{item.name}</span>
+                      <span className="text-xs font-black text-brand-orange">x{item.quantity}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Botones de Navegación PRO */}

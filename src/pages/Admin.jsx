@@ -247,13 +247,17 @@ const AdminPage = ({ authSession }) => {
           <div className="flex flex-wrap gap-2 justify-center mb-8">
             {[
               { id: 'all', label: 'Todas' },
-              { id: 'en_proceso', label: 'En Preparación' },
-              { id: 'en_camino', label: 'En Camino' },
-              { id: 'entregado', label: 'Entregadas' }
+              { id: 'RECIBIDO', label: 'Recibidas' },
+              { id: 'EN_PROCESO', label: 'En Preparación' },
+              { id: 'EN_CAMINO', label: 'En Camino' },
+              { id: 'ENTREGADO', label: 'Entregadas' }
             ].map(filter => (
               <button
                 key={filter.id}
-                onClick={() => setOrderFilter(filter.id)}
+                onClick={() => {
+                  setOrders([]);
+                  setOrderFilter(filter.id);
+                }}
                 className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${orderFilter === filter.id ? 'bg-brand-orange text-white' : 'bg-ui-bg text-ui-muted border border-ui-border'}`}
               >
                 {filter.label}
