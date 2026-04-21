@@ -100,9 +100,9 @@ const RepartidorPage = ({ authSession }) => {
           </div>
           <h3 className="text-2xl font-black text-ui-text mb-2">Acceso a Reparto</h3>
           <p className="text-ui-muted max-w-sm mb-8">Inicia sesión para gestionar tus rutas y confirmar las entregas a nuestros clientes.</p>
-          
-          <Button 
-            onClick={loginWithGoogle} 
+
+          <Button
+            onClick={loginWithGoogle}
             className="flex items-center space-x-3 !py-4 !px-8 shadow-xl shadow-brand-blue/20"
             disabled={loading}
           >
@@ -141,13 +141,13 @@ const RepartidorPage = ({ authSession }) => {
     >
       {/* Tab Switcher */}
       <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
-        <button 
+        <button
           onClick={() => setActiveTab('active')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           En Ruta
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('delivered')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'delivered' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
@@ -165,11 +165,11 @@ const RepartidorPage = ({ authSession }) => {
                 {order.repartidorId && (
                   <div className="flex items-center space-x-2 mt-2">
                     <div className="w-5 h-5 rounded-full bg-brand-orange/10 flex items-center justify-center overflow-hidden">
-                       {order.repartidorId.photoUrl ? (
-                         <img src={order.repartidorId.photoUrl} alt="" className="w-full h-full object-cover" />
-                       ) : (
-                         <span className="text-[8px] font-bold text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
-                       )}
+                      {order.repartidorId.photoUrl ? (
+                        <img src={order.repartidorId.photoUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] font-bold text-brand-orange">{order.repartidorId.name?.charAt(0)}</span>
+                      )}
                     </div>
                     <span className="text-[10px] font-black text-brand-orange uppercase">Asignado a {order.repartidorId.name}</span>
                   </div>
@@ -197,12 +197,12 @@ const RepartidorPage = ({ authSession }) => {
                         {item.sauce} + {item.protein} + {item.complement}
                       </p>
                       <div className="flex flex-wrap gap-1.5 mt-1">
-                         <span className="text-[8px] font-bold text-ui-muted bg-ui-card px-1.5 py-0.5 rounded border border-ui-border">
-                            Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
-                         </span>
-                         {!item.baseRecipe?.onion && <span className="text-[8px] font-black text-red-500 uppercase">SIN CEBOLLA</span>}
-                         {!item.baseRecipe?.cilantro && <span className="text-[8px] font-black text-red-500 uppercase">SIN CILANTRO</span>}
-                         {!item.baseRecipe?.cream && <span className="text-[8px] font-black text-red-500 uppercase">SIN CREMA</span>}
+                        <span className="text-[8px] font-bold text-ui-muted bg-ui-card px-1.5 py-0.5 rounded border border-ui-border">
+                          Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
+                        </span>
+                        {!item.baseRecipe?.onion && <span className="text-[8px] font-black text-red-500 uppercase">SIN CEBOLLA</span>}
+                        {!item.baseRecipe?.cilantro && <span className="text-[8px] font-black text-red-500 uppercase">SIN CILANTRO</span>}
+                        {!item.baseRecipe?.cream && <span className="text-[8px] font-black text-red-500 uppercase">SIN CREMA</span>}
                       </div>
                     </div>
                   ))}
@@ -211,30 +211,38 @@ const RepartidorPage = ({ authSession }) => {
 
               {/* Logística: Botón Waze Exclusivo */}
               {order.navigationLinks?.waze && (
-                <a 
-                  href={order.navigationLinks.waze} 
-                  target="_blank" 
-                  rel="noreferrer" 
+                <a
+                  href={order.navigationLinks.waze}
+                  target="_blank"
+                  rel="noreferrer"
                   className="flex items-center justify-center space-x-3 py-4 rounded-[1.5rem] bg-[#33ccff] text-white font-black text-sm hover:opacity-90 transition-all shadow-lg shadow-[#33ccff]/20 mb-4"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16.4 12.2c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm-4.4.4c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm5.2 6.1c-.2-.6-.8-1.1-1.4-1.1h-8.4c-.7 0-1.2.4-1.4 1.1-.1.3 0 .6.3.8.1.1.2.1.3.1.2 0 .4-.1.5-.2.1-.1.2-.2.4-.2h8.4c.2 0 .3.1.4.2.1.1.3.2.5.2.1 0 .2 0 .3-.1.3-.2.4-.5.3-.8zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/></svg>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16.4 12.2c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm-4.4.4c-.3-.3-.7-.3-1 0s-.3.7 0 1c.3.3.7.3 1 0s.3-.7 0-1zm5.2 6.1c-.2-.6-.8-1.1-1.4-1.1h-8.4c-.7 0-1.2.4-1.4 1.1-.1.3 0 .6.3.8.1.1.2.1.3.1.2 0 .4-.1.5-.2.1-.1.2-.2.4-.2h8.4c.2 0 .3.1.4.2.1.1.3.2.5.2.1 0 .2 0 .3-.1.3-.2.4-.5.3-.8zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z" /></svg>
                   <span>ABRIR LOCALIZACIÓN (WAZE)</span>
                 </a>
               )}
             </div>
 
             {['listo_para_despacho', 'recolectado', 'en_camino'].includes(order.status) && (
-              <Button 
+              <Button
                 onClick={() => (!order.repartidorId || order.repartidorId._id === session._id) && advance(order)}
-                disabled={order.repartidorId && order.repartidorId._id !== session.id}
-                className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session.id) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
+                disabled={order.repartidorId && order.repartidorId._id !== session._id}
+                className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session._id) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
               >
-                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.id ? `En Ruta (${order.repartidorId.name})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
+                {!order.repartidorId
+                  ? 'Recolectar Pedido'
+                  : order.repartidorId._id !== session._id
+                    ? `En Ruta (${order.repartidorId.name})`
+                    : order.status === 'listo_para_despacho'
+                      ? 'Recolectar Pedido'
+                      : order.status === 'recolectado'
+                        ? 'Iniciar Ruta'
+                        : 'Confirmar Entrega'}
               </Button>
             )}
           </div>
         ))}
-        
+
         {currentOrders.length === 0 && !isRefreshing && (
           <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed">
             <p className="text-ui-muted font-bold italic">No hay entregas en este estado. ¡Buen momento para descansar!</p>
