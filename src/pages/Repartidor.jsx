@@ -50,6 +50,20 @@ const RepartidorPage = ({ authSession }) => {
     }
   }, [session, activeTab]);
 
+  const openWazeRoute = (order) => {
+    const directUrl = order.navigationLinks?.waze;
+    if (directUrl) {
+      window.open(directUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (!order.address) return;
+
+    const encodedAddress = encodeURIComponent(order.address.trim());
+    const fallbackUrl = `https://waze.com/ul?q=${encodedAddress}&navigate=yes`;
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const advance = async (order) => {
     let nextStatus = '';
     if (order.status === 'listo_para_despacho') nextStatus = 'recolectado';
@@ -60,13 +74,19 @@ const RepartidorPage = ({ authSession }) => {
 
     try {
       await updateOrderStatus(order._id, nextStatus);
+
       const messages = {
-        recolectado: '¡Pedido Recolectado!',
-        en_camino: '¡Ruta Iniciada!',
-        entregado: '¡Pedido Entregado!'
+        recolectado: '¡Pedido recolectado!',
+        en_camino: '¡Ruta iniciada!',
+        entregado: '¡Pedido entregado!'
       };
+
       toast.success(messages[nextStatus]);
       loadOrders();
+
+      if (nextStatus === 'en_camino') {
+        openWazeRoute(order);
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
     }
