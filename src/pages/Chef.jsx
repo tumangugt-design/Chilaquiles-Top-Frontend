@@ -78,7 +78,7 @@ const ChefPage = ({ authSession }) => {
           </div>
           <h3 className="text-3xl font-black text-ui-text mb-4">Solicitud Recibida</h3>
           <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">
-            Tu cuenta está en proceso de revisión por el equipo administrativo. 
+            Tu cuenta está en proceso de revisión por el equipo administrativo.
             Te notificaremos una vez que seas aprobado para entrar a cocina.
           </p>
           <Button variant="secondary" onClick={logout} className="!px-10">Cerrar Sesión</Button>
@@ -96,9 +96,9 @@ const ChefPage = ({ authSession }) => {
           </div>
           <h3 className="text-2xl font-black text-ui-text mb-2">Acceso a Cocina</h3>
           <p className="text-ui-muted max-w-sm mb-8">Valida tus credenciales para visualizar las órdenes entrantes y gestionar la producción.</p>
-          
-          <Button 
-            onClick={loginWithGoogle} 
+
+          <Button
+            onClick={loginWithGoogle}
             className="flex items-center space-x-3 !py-4 !px-8 shadow-xl shadow-brand-orange/20 !bg-brand-orange"
             disabled={loading}
           >
@@ -137,13 +137,13 @@ const ChefPage = ({ authSession }) => {
     >
       {/* Tab Switcher */}
       <div className="flex space-x-4 mb-8 p-1 bg-ui-bg/50 rounded-2xl border border-ui-border w-fit mx-auto">
-        <button 
+        <button
           onClick={() => setActiveTab('active')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'active' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
           En Cocina
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('finished')}
           className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'finished' ? 'bg-brand-blue text-white shadow-lg' : 'text-ui-muted hover:text-ui-text'}`}
         >
@@ -161,11 +161,11 @@ const ChefPage = ({ authSession }) => {
                 {order.chefId && (
                   <div className="flex items-center space-x-2 mt-2">
                     <div className="w-5 h-5 rounded-full bg-brand-blue/10 flex items-center justify-center overflow-hidden">
-                       {order.chefId.photoUrl ? (
-                         <img src={order.chefId.photoUrl} alt="" className="w-full h-full object-cover" />
-                       ) : (
-                         <span className="text-[8px] font-bold text-brand-blue">{order.chefId.name?.charAt(0)}</span>
-                       )}
+                      {order.chefId.photoUrl ? (
+                        <img src={order.chefId.photoUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] font-bold text-brand-blue">{order.chefId.name?.charAt(0)}</span>
+                      )}
                     </div>
                     <span className="text-[10px] font-black text-brand-blue uppercase">Orden de {order.chefId.name}</span>
                   </div>
@@ -182,7 +182,7 @@ const ChefPage = ({ authSession }) => {
                     <p className="text-[10px] font-black text-brand-blue uppercase">Plato {idx + 1}</p>
                     <span className="bg-brand-blue/10 text-brand-blue px-2.5 py-1 rounded-xl text-[10px] font-black">x1</span>
                   </div>
-                  
+
                   <div>
                     <span className="text-sm font-black text-ui-text block uppercase">
                       {item.sauce}
@@ -194,12 +194,12 @@ const ChefPage = ({ authSession }) => {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                     <span className="text-[9px] font-bold text-ui-muted bg-ui-card px-2 py-0.5 rounded border border-ui-border">
-                        Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
-                     </span>
-                     {!item.baseRecipe?.onion && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
-                     {!item.baseRecipe?.cilantro && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
-                     {!item.baseRecipe?.cream && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
+                    <span className="text-[9px] font-bold text-ui-muted bg-ui-card px-2 py-0.5 rounded border border-ui-border">
+                      Base: {item.baseRecipe?.onion ? 'Cebolla' : ''} {item.baseRecipe?.cilantro ? 'Cilantro' : ''} {item.baseRecipe?.cream ? 'Crema' : ''}
+                    </span>
+                    {!item.baseRecipe?.onion && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CEBOLLA</span>}
+                    {!item.baseRecipe?.cilantro && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CILANTRO</span>}
+                    {!item.baseRecipe?.cream && <span className="text-[9px] bg-red-500/10 text-red-600 px-2 py-0.5 rounded-lg font-black border border-red-500/20">SIN CREMA</span>}
                   </div>
 
                   {item.extras?.length > 0 && (
@@ -219,15 +219,21 @@ const ChefPage = ({ authSession }) => {
             </div>
 
             {activeTab === 'active' && (
-              <Button 
-                className={`w-full !py-4 font-black shadow-lg ${(!order.chefId || order.chefId._id === session.uid) ? 'shadow-brand-blue/20' : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
-                onClick={() => (!order.chefId || order.chefId._id === session.uid) && advance(order)}
-                disabled={order.chefId && order.chefId._id !== session.uid}
+              <Button
+                className={`w-full !py-4 font-black shadow-lg ${(!order.chefId || order.chefId._id === session._id) ? 'shadow-brand-blue/20' : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
+                onClick={() => (!order.chefId || order.chefId._id === session._id) && advance(order)}
+                disabled={order.chefId && order.chefId._id !== session._id}
               >
-                {!order.chefId ? 'Tomar Pedido' : order.chefId._id !== session.uid ? `En Cocina (${order.chefId.name})` : order.status === 'recibido' ? 'Empezar Preparación' : 'Marcar como Listo'}
+                {!order.chefId
+                  ? 'Tomar Pedido'
+                  : order.chefId._id !== session._id
+                    ? `En Cocina (${order.chefId.name})`
+                    : order.status === 'recibido'
+                      ? 'Empezar Preparación'
+                      : 'Marcar como Listo'}
               </Button>
             )}
-            
+
             {order.status === 'listo_para_despacho' && (
               <div className="text-center py-4 bg-green-500/10 rounded-2xl border border-green-500/20">
                 <span className="text-xs font-black text-green-600 uppercase">Esperando Repartidor</span>
@@ -235,7 +241,7 @@ const ChefPage = ({ authSession }) => {
             )}
           </div>
         ))}
-        
+
         {currentOrders.length === 0 && (
           <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed">
             <p className="text-ui-muted font-bold">¡Buen trabajo! No hay pedidos pendientes en cocina.</p>

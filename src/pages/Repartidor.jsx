@@ -225,11 +225,11 @@ const RepartidorPage = ({ authSession }) => {
 
             {['listo_para_despacho', 'recolectado', 'en_camino'].includes(order.status) && (
               <Button 
-                onClick={() => (!order.repartidorId || order.repartidorId._id === session.uid) && advance(order)}
-                disabled={order.repartidorId && order.repartidorId._id !== session.uid}
-                className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session.uid) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
+                onClick={() => (!order.repartidorId || order.repartidorId._id === session._id) && advance(order)}
+                disabled={order.repartidorId && order.repartidorId._id !== session.id}
+                className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session.id) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
               >
-                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.uid ? `En Ruta (${order.repartidorId.name})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
+                {!order.repartidorId ? 'Recolectar Pedido' : order.repartidorId._id !== session.id ? `En Ruta (${order.repartidorId.name})` : order.status === 'listo_para_despacho' ? 'Recolectar Pedido' : order.status === 'recolectado' ? 'Iniciar Ruta' : 'Confirmar Entrega'}
               </Button>
             )}
           </div>
