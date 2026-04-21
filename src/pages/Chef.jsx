@@ -236,7 +236,7 @@ const ChefPage = ({ authSession }) => {
           </div>
         ))}
         
-        {orders.length === 0 && (
+        {currentOrders.length === 0 && (
           <div className="col-span-full py-20 text-center glass-card rounded-[3rem] border-dashed">
             <p className="text-ui-muted font-bold">¡Buen trabajo! No hay pedidos pendientes en cocina.</p>
           </div>
