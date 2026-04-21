@@ -36,6 +36,8 @@ export const getMarginalPrice = (idx) => {
 
 // Orden de los pasos del wizard
 export const STEPS_ORDER = [
+  'LOCATION',
+  'SIZE',
   'SAUCE',
   'PROTEIN',
   'COMPLEMENT',
@@ -48,6 +50,7 @@ export const STEPS_ORDER = [
 // Etiquetas de los pasos
 export const STEP_LABELS = {
   LOCATION: 'Ubicación',
+  SIZE: 'Tamaño',
   SAUCE: 'Salsa',
   PROTEIN: 'Proteína',
   COMPLEMENT: 'Complemento',
@@ -56,6 +59,37 @@ export const STEP_LABELS = {
   CUSTOMER: 'Datos',
   CONFIRMATION: 'Confirmación',
 }
+
+// Opciones de cantidad de platos
+export const OPTIONS_COUNT = [
+  {
+    id: '1',
+    label: '1 Plato',
+    value: 1,
+    description: 'Perfecto para una persona.',
+    price: 50,
+    illustration: React.createElement(IllustrationMedia),
+    badge: 'Individual',
+  },
+  {
+    id: '2',
+    label: '2 Platos',
+    value: 2,
+    description: 'Ideal para compartir en pareja.',
+    price: 90,
+    illustration: React.createElement(IllustrationCompleta),
+    badge: 'Popular',
+  },
+  {
+    id: '3',
+    label: '3 Platos',
+    value: 3,
+    description: 'Para los que tienen mucha hambre.',
+    price: 120,
+    illustration: React.createElement(IllustrationCompleta),
+    badge: 'Ahorro TOP',
+  },
+]
 
 
 

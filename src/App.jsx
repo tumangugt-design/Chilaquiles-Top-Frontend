@@ -7,6 +7,7 @@ import Mascot from './components/Mascot.jsx';
 import { STEPS_ORDER } from './shared/constants/index.jsx';
 import { useOrder } from './shared/hooks/useOrder.jsx';
 import LocationPage from './pages/Location.jsx';
+import SizePage from './pages/Size.jsx';
 import SaucePage from './pages/Sauce.jsx';
 import ProteinPage from './pages/Protein.jsx';
 import ComplementPage from './pages/Complement.jsx';
@@ -31,10 +32,6 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   } = useOrder();
 
   const nextStep = () => {
-    if (currentStep === 'LOCATION') {
-      setCurrentStep('SAUCE');
-      return;
-    }
     const currentIndex = STEPS_ORDER.indexOf(currentStep);
     if (currentIndex >= 0 && currentIndex < STEPS_ORDER.length - 1) {
       setCurrentStep(STEPS_ORDER[currentIndex + 1]);
@@ -77,6 +74,8 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
           }
           nextStep();
         }} />;
+      case 'SIZE':
+        return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />;
       case 'SAUCE':
         return <SaucePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
       case 'PROTEIN':
@@ -96,7 +95,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     }
   };
 
-  const isSidebarVisible = !['LOCATION', 'SUMMARY', 'CONFIRMATION'].includes(currentStep);
+  const isSidebarVisible = !['LOCATION', 'SIZE', 'SUMMARY', 'CONFIRMATION'].includes(currentStep);
   const globalMascotClass = isSidebarVisible ? 'lg:hidden' : '';
 
   return (

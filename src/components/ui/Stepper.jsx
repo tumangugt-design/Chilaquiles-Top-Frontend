@@ -6,6 +6,7 @@ const Stepper = ({ currentStep }) => {
   const currentIndex = STEPS_ORDER.indexOf(currentStep)
 
   const milestones = [
+    { label: 'Tamaño', step: 'SIZE' },
     { label: 'Salsa', step: 'SAUCE' },
     { label: 'Proteína', step: 'PROTEIN' },
     { label: 'Complemento', step: 'COMPLEMENT' },

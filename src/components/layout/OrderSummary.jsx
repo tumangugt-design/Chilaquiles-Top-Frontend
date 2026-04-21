@@ -14,7 +14,7 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
 
   const currentPlate = order.currentPlate
   const totalItems = order.cart.length + 1
-  const grandTotal = calculateTotal(totalItems)
+  const grandTotal = calculateTotal(Math.max(order.requestedCount || 0, totalItems))
   const MAX_PLATES = 4
   const canAddMore = totalItems < MAX_PLATES
 
@@ -24,7 +24,10 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
       case 'PROTEIN': return !!currentPlate.protein
       case 'COMPLEMENT': return !!currentPlate.complement
       case 'BASE_RECIPE': return true
-      case 'SUMMARY': return true
+      case 'SUMMARY': 
+        // If we need more plates, we can only continue if the current one is somewhat "complete"
+        // (though in this app, sauce/protein/complement are required)
+        return !!currentPlate.sauce && !!currentPlate.protein && !!currentPlate.complement
       case 'CUSTOMER':
         return order.customer.name.length > 2 && order.customer.phone.length >= 8 && order.customer.address.length > 5
       default: return false
@@ -32,13 +35,20 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
   }
 
   const getButtonLabel = () => {
-    if (currentStep === 'SUMMARY') return 'Finalizar Pedido'
+    if (currentStep === 'SUMMARY') {
+      if (totalItems < (order.requestedCount || 1)) return 'Personalizar Siguiente'
+      return 'Finalizar Pedido'
+    }
     if (currentStep === 'CUSTOMER') return 'Confirmar Datos'
     return 'Siguiente'
   }
 
   const handleMainAction = () => {
-    if (onNext) onNext()
+    if (currentStep === 'SUMMARY' && totalItems < (order.requestedCount || 1)) {
+      if (onAddAnother) onAddAnother()
+    } else {
+      if (onNext) onNext()
+    }
     setIsOpen(false)
   }
 
@@ -94,7 +104,9 @@ const OrderSummary = ({ order, currentStep, onEdit, onNext, onAddAnother }) => {
         {/* Current Plate */}
         <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
           <div className="flex justify-between items-center mb-2 border-b border-blue-100 pb-1">
-            <span className="text-xs font-bold text-brand-blue uppercase">Plato Actual (Editando)</span>
+            <span className="text-xs font-bold text-brand-blue uppercase">
+              Plato Actual {order.requestedCount > 1 ? `(${totalItems} de ${order.requestedCount})` : '(Editando)'}
+            </span>
             <span className="text-xs font-bold text-brand-blue">Q{getMarginalPrice(order.cart.length)}</span>
           </div>
           {currentPlate.sauce || currentPlate.protein ? (

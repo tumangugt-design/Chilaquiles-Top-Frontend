@@ -95,9 +95,15 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
   // Combine all plates into a single list for display
   const allPlates = [...order.cart, order.currentPlate]
-  const MAX_PLATES = 4
   const platesCount = allPlates.length
-  const canAddMore = platesCount < MAX_PLATES
+  const requestedCount = order.requestedCount || 1
+  const isComplete = platesCount >= requestedCount
+
+  const getAddAnotherLabel = () => {
+    if (platesCount === 1) return 'Personalizar Segundo Plato'
+    if (platesCount === 2) return 'Personalizar Tercer Plato'
+    return 'Agregar otro plato'
+  }
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
@@ -127,7 +133,7 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
 
       {/* ADD ANOTHER PLATE BUTTON OR LIMIT MESSAGE */}
       <div className="mt-6">
-        {canAddMore ? (
+        {!isComplete ? (
           <Button
             variant="secondary"
             fullWidth
@@ -135,24 +141,19 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
             className="py-4 border-2 border-dashed border-brand-orange text-brand-orange hover:bg-orange-50 hover:border-solid transition-all group"
           >
             <span className="text-xl mr-2 font-bold group-hover:scale-110 transition-transform">+</span>
-            Agregar otro plato
+            {getAddAnotherLabel()}
           </Button>
-        ) : (
-          <div className="bg-brand-orange/5 border border-brand-orange/20 rounded-xl p-4 text-center animate-fade-in">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-brand-orange/10 text-brand-orange mb-2">
-              <span className="font-bold text-lg">!</span>
-            </div>
-            <p className="text-ui-text font-bold text-sm">Has alcanzado el límite de {MAX_PLATES} platos.</p>
-            <p className="text-ui-muted text-xs mt-1">
-              Para pedidos más grandes, por favor realiza una segunda orden o contáctanos.
-            </p>
-          </div>
-        )}
+        ) : null}
       </div>
 
       {/* Action Buttons - Desktop */}
       <div className="hidden lg:block space-y-4 pt-6 border-t border-ui-border mt-6">
-        <Button fullWidth onClick={onNext} className="py-4 shadow-xl shadow-brand-orange/20">
+        <Button 
+          fullWidth 
+          onClick={onNext} 
+          disabled={!isComplete}
+          className="py-4 shadow-xl shadow-brand-orange/20"
+        >
           Finalizar Pedido
           <span className="ml-2">→</span>
         </Button>
