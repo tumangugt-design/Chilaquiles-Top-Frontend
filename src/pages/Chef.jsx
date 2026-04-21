@@ -60,7 +60,13 @@ const ChefPage = ({ authSession }) => {
 
     try {
       await updateOrderStatus(order._id, nextStatus);
-      toast.success(nextStatus === 'en_proceso' ? '¡Orden Tomada!' : '¡Orden Lista!');
+
+      const messages = {
+        en_proceso: '¡Pedido en proceso!',
+        listo_para_despacho: '¡Pedido listo para despacho!'
+      };
+
+      toast.success(messages[nextStatus]);
       loadOrders();
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.');
@@ -225,12 +231,12 @@ const ChefPage = ({ authSession }) => {
                 disabled={order.chefId && order.chefId._id !== session._id}
               >
                 {!order.chefId
-                  ? 'Tomar Pedido'
+                  ? 'Tomar orden'
                   : order.chefId._id !== session._id
-                    ? `En Cocina (${order.chefId.name})`
+                    ? `En cocina (${order.chefId.name})`
                     : order.status === 'recibido'
-                      ? 'Empezar Preparación'
-                      : 'Marcar como Listo'}
+                      ? 'Pasar a En Proceso'
+                      : 'Pasar a Listo para Despacho'}
               </Button>
             )}
 

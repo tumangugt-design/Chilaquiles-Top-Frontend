@@ -230,14 +230,14 @@ const RepartidorPage = ({ authSession }) => {
                 className={`w-full !py-5 text-lg shadow-xl ${(!order.repartidorId || order.repartidorId._id === session._id) ? (order.status === 'en_camino' ? '!bg-green-600 shadow-green-500/20' : 'shadow-brand-blue/20') : 'bg-ui-muted opacity-50 shadow-none cursor-not-allowed'}`}
               >
                 {!order.repartidorId
-                  ? 'Recolectar Pedido'
+                  ? 'Tomar pedido'
                   : order.repartidorId._id !== session._id
-                    ? `En Ruta (${order.repartidorId.name})`
+                    ? `En ruta (${order.repartidorId.name})`
                     : order.status === 'listo_para_despacho'
-                      ? 'Recolectar Pedido'
+                      ? 'Marcar como Recolectado'
                       : order.status === 'recolectado'
-                        ? 'Iniciar Ruta'
-                        : 'Confirmar Entrega'}
+                        ? 'Pasar a En Camino'
+                        : 'Confirmar Entregado'}
               </Button>
             )}
           </div>
