@@ -5,7 +5,7 @@ const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfile
     <header className={`fixed top-0 inset-x-0 z-50 ${isPanel ? 'backdrop-blur-xl bg-ui-bg/80 border-b border-ui-border/50' : 'bg-gradient-to-b from-ui-bg via-ui-bg/80 to-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3 sm:space-x-4">
-          <Logo className="w-11 h-11 sm:w-14 sm:h-14 drop-shadow-lg transition-transform hover:scale-105" />
+          <Logo className="w-15 h-15 sm:w-14 sm:h-14 drop-shadow-lg transition-transform hover:scale-105" />
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
