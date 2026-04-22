@@ -218,11 +218,19 @@ const StaffRequestCard = ({ user, onApprove }) => (
 )
 
 const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpenHistory }) => {
-  const addressText =
-    user.address?.trim() ||
-      user.location?.lat && user.location?.lng
-      ? `Ubicación compartida: https://www.google.com/maps/search/?api=1&query=${user.location.lat},${user.location.lng}`
-      : 'Sin dirección registrada'
+  const isClient = user?.role === 'CLIENT'
+  const hasCoordinates =
+    typeof user?.location?.lat === 'number' &&
+    typeof user?.location?.lng === 'number'
+
+  const addressText = isClient
+    ? (
+      user?.address?.trim() ||
+      (hasCoordinates
+        ? `Ubicación compartida: https://www.google.com/maps/search/?api=1&query=${user.location.lat},${user.location.lng}`
+        : 'Sin dirección registrada')
+    )
+    : null
 
   return (
     <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 h-full min-h-[22rem] flex flex-col">
@@ -241,22 +249,26 @@ const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpe
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 text-sm text-ui-muted font-medium mb-6 flex flex-col">
-        <div className="rounded-2xl border border-ui-border bg-white/60 px-4 py-3 h-[105px] overflow-y-auto">
-          <p className="text-[10px] uppercase tracking-widest font-black text-ui-muted mb-1">
-            Dirección
-          </p>
-          <p className="text-ui-text font-bold whitespace-normal break-words break-all leading-snug">
-            {addressText}
-          </p>
-        </div>
+      <div className="flex-1 flex flex-col">
+        {isClient ? (
+          <div className="rounded-2xl border border-ui-border bg-white/60 px-4 py-3 h-[105px] overflow-y-auto mb-4">
+            <p className="text-[10px] uppercase tracking-widest font-black text-ui-muted mb-1">
+              Dirección
+            </p>
+            <p className="text-ui-text font-bold whitespace-normal break-words break-all leading-snug">
+              {addressText}
+            </p>
+          </div>
+        ) : (
+          <div className="h-[105px] mb-4" />
+        )}
 
         <div className="flex flex-wrap gap-3">
           <div className="rounded-full bg-brand-blue/10 text-brand-blue px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-            {user.role}
+            {user?.role}
           </div>
 
-          {user.createdAt && (
+          {user?.createdAt && (
             <div className="rounded-full bg-ui-card border border-ui-border px-3 py-1 text-[10px] font-black uppercase tracking-widest">
               {formatDate(user.createdAt)}
             </div>
@@ -264,7 +276,7 @@ const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpe
         </div>
       </div>
 
-      <Button className="w-full mt-auto" onClick={() => onOpenHistory(user)}>
+      <Button className="w-full mt-6" onClick={() => onOpenHistory(user)}>
         Historial de órdenes
       </Button>
     </div>
