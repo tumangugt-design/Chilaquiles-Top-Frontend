@@ -6,14 +6,6 @@ const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfile
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Logo className="w-11 h-11 sm:w-14 sm:h-14 drop-shadow-lg transition-transform hover:scale-105" />
-          <div>
-            <span className="text-xs sm:text-sm font-black tracking-tight block text-ui-text">
-              {isPanel ? `Panel ${panelRole || ''}` : 'Chilaquiles TOP'}
-            </span>
-            <span className="text-[10px] sm:text-xs text-ui-muted font-bold uppercase tracking-[0.25em]">
-              {isPanel ? 'Staff Portal' : 'Fast Casual Experience'}
-            </span>
-          </div>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -56,7 +48,7 @@ const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfile
             <div className="flex items-center space-x-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">
-                Live Villa Nueva{typeof availableCount === 'number' ? ` · ${availableCount} plato${availableCount === 1 ? '' : 's'} disponible${availableCount === 1 ? '' : 's'}` : ''}
+                {typeof availableCount === 'number' ? ` · ${availableCount} plato${availableCount === 1 ? '' : 's'} disponible${availableCount === 1 ? '' : 's'}` : ''}
               </span>
             </div>
           )}

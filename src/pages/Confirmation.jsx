@@ -8,30 +8,6 @@ const ConfirmationPage = ({ order, onReset }) => {
   const total = confirmedOrder?.total || calculateTotal(allPlates.length)
   const orderNumber = confirmedOrder?.orderNumber || 'N/A'
 
-  const handleWhatsAppShare = () => {
-    let message = `*ORDEN CHILAQUILES TOP*
-`
-    message += `*Número de orden:* ${orderNumber}
-`
-    message += `
-*Resumen de la comanda*
-`
-
-    allPlates.forEach((plate, i) => {
-      const base = formatBaseRecipe(plate.baseRecipe)
-      message += `Plato ${i + 1}: ${plate.sauce} • ${plate.protein} • ${plate.complement}${base ? ` • ${base}` : ''}
-`
-    })
-
-    message += `
-*Total a pagar:* Q${total}
-`
-    message += `*Entrega estimada:* 20-30 min
-`
-    const encoded = encodeURIComponent(message)
-    window.open(`https://wa.me/?text=${encoded}`, '_blank')
-  }
-
   return (
     <div className="text-center py-8 space-y-8 animate-fade-in max-w-lg mx-auto">
       <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
@@ -79,13 +55,6 @@ const ConfirmationPage = ({ order, onReset }) => {
       </div>
 
       <div className="space-y-4">
-        <Button fullWidth onClick={handleWhatsAppShare} className="bg-[#25D366] hover:bg-[#128C7E] text-white border-none shadow-xl shadow-green-500/20 py-4 flex items-center justify-center space-x-2">
-          <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.48 5.228 3.48 8.404c0 6.556-5.332 11.888-11.888 11.888-2.096 0-4.141-.547-5.945-1.587L0 24zm6.549-3.328c1.611.956 3.204 1.442 4.887 1.442 5.305 0 9.623-4.317 9.623-9.623 0-2.569-1-4.985-2.817-6.802-1.817-1.817-4.233-2.817-6.806-2.817-5.305 0-9.623 4.318-9.623 9.623 0 1.685.487 3.279 1.445 4.887l-.953 3.483 3.644-.953zm10.158-6.55c-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.668.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-          </svg>
-          <span className="font-black text-lg">Compartir por WhatsApp</span>
-        </Button>
-
         <Button fullWidth onClick={onReset} variant="secondary" className="border-2 border-ui-border">
           Volver al inicio
         </Button>

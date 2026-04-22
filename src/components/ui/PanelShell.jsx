@@ -15,7 +15,7 @@ const PanelShell = ({ title, subtitle, actions, children }) => {
           {children}
         </div>
         <div className="mt-12 text-center text-xs text-ui-muted font-bold opacity-50 uppercase tracking-widest">
-          Chilaquiles TOP • Enterprise Management System
+          Chilaquiles TOP
         </div>
       </main>
     </div>
