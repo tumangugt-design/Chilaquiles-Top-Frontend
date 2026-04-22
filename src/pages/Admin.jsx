@@ -10,9 +10,15 @@ import toast from 'react-hot-toast'
 const emptyItem = { name: '', amount: '', unit: '' }
 
 const getCardTone = (status) => {
-  if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFFDE7]'
-  if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFF3E0]'
-  return 'border-[#2E7D32] bg-[#E8F5E9]'
+  if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
+  if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFE8D1]'
+  return 'border-[#2E7D32] bg-[#DFF5E2]'
+}
+
+const getCardTextTone = (status) => {
+  if (status === 'recibido') return 'text-[#5C4400]'
+  if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'text-[#7A2E00]'
+  return 'text-[#14532D]'
 }
 
 const AdminPage = ({ authSession }) => {
@@ -292,35 +298,35 @@ const AdminPage = ({ authSession }) => {
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             {currentOrders.map((order) => (
-              <div key={order._id} className={`rounded-[2.5rem] border-2 p-6 shadow-sm ${getCardTone(order.status)}`}>
+              <div key={order._id} className={`rounded-[2.5rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
                 <div className="flex justify-between items-start mb-4 gap-4">
                   <div>
-                    <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest">Número de orden</p>
-                    <p className="font-black text-lg text-ui-text">{order.orderNumber || order._id.slice(-6)}</p>
-                    <p className="text-sm font-bold text-ui-text mt-2">{order.name}</p>
+                    <p className="text-[10px] font-black text-black/55 uppercase tracking-widest">Número de orden</p>
+                    <p className="font-black text-lg text-black/80">{order.orderNumber || order._id.slice(-6)}</p>
+                    <p className="text-sm font-bold text-black/80 mt-2">{order.name}</p>
                   </div>
                   <StatusBadge value={order.status} />
                 </div>
 
                 <div className="space-y-4 mb-6">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="rounded-3xl border border-ui-border/60 bg-white/60 p-4">
+                    <div key={idx} className="rounded-3xl border border-black/15 bg-white/70 p-4">
                       <p className="text-[10px] font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
                       <div className="space-y-1">
-                        <div className="text-sm font-black text-ui-text">{item.sauce}</div>
-                        <div className="text-sm font-black text-ui-text">{item.protein}</div>
-                        <div className="text-sm font-black text-ui-text">{item.complement}</div>
-                        <div className="pt-2 mt-2 border-t border-ui-border/60 space-y-1">
-                          {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base} className="text-sm font-black text-ui-text">{base}</div>)}
+                        <div className="text-sm font-black text-black/80">{item.sauce}</div>
+                        <div className="text-sm font-black text-black/80">{item.protein}</div>
+                        <div className="text-sm font-black text-black/80">{item.complement}</div>
+                        <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
+                          {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base} className="text-sm font-black text-black/75">{base}</div>)}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-ui-border text-sm">
-                  <p className="font-medium text-ui-muted max-w-[60%] line-clamp-2">{order.address}</p>
-                  <p className="font-black text-brand-orange">Q{order.total}</p>
+                <div className="flex justify-between items-center pt-4 border-t border-black/15 text-sm">
+                  <p className="font-medium text-black/65 max-w-[60%] line-clamp-2">{order.address}</p>
+                  <p className="font-black text-black/80">Q{order.total}</p>
                 </div>
               </div>
             ))}

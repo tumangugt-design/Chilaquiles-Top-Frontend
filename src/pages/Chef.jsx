@@ -8,17 +8,35 @@ import { getBaseRecipeParts } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 
 const getCardTone = (status) => {
-  if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFFDE7]'
-  if (status === 'en_proceso') return 'border-[#E65100] bg-[#FFF3E0]'
-  return 'border-[#2E7D32] bg-[#E8F5E9]'
+  if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
+  if (status === 'en_proceso') return 'border-[#E65100] bg-[#FFE8D1]'
+  return 'border-[#2E7D32] bg-[#DFF5E2]'
+}
+
+const getCardTextTone = (status) => {
+  if (status === 'recibido') return 'text-[#5C4400]'
+  if (status === 'en_proceso') return 'text-[#7A2E00]'
+  return 'text-[#14532D]'
+}
+
+const getActionButtonTone = (status) => {
+  if (status === 'recibido') {
+    return '!bg-[#FBC02D] !text-[#3D2F00] hover:!bg-[#E0AA00] border border-[#D39E00]'
+  }
+
+  if (status === 'en_proceso') {
+    return '!bg-[#FB8C00] !text-white hover:!bg-[#EF6C00] border border-[#E65100]'
+  }
+
+  return '!bg-[#4CAF50] !text-white hover:!bg-[#388E3C] border border-[#2E7D32]'
 }
 
 const ChefOrderCard = ({ order, onAdvance }) => (
-  <div className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)}`}>
+  <div className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
     <div className="flex items-start justify-between gap-4 mb-5">
       <div>
-        <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Número de Orden</p>
-        <h3 className="text-2xl font-black text-ui-text">{order.orderNumber || order._id.slice(-6)}</h3>
+        <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de Orden</p>
+        <h3 className="text-2xl font-black text-black/80">{order.orderNumber || order._id.slice(-6)}</h3>
       </div>
       <StatusBadge value={order.status} />
     </div>
@@ -27,16 +45,16 @@ const ChefOrderCard = ({ order, onAdvance }) => (
       {order.items.map((item, idx) => {
         const bases = getBaseRecipeParts(item.baseRecipe)
         return (
-          <div key={idx} className="rounded-2xl border border-ui-border/60 bg-white/60 p-4">
+          <div key={idx} className="rounded-2xl border border-black/15 bg-white/70 p-4">
             <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
             <div className="space-y-1 text-sm">
-              <div className="font-bold text-ui-text">{item.sauce}</div>
-              <div className="font-bold text-ui-text">{item.protein}</div>
-              <div className="font-bold text-ui-text">{item.complement}</div>
+              <div className="font-bold text-black/80">{item.sauce}</div>
+              <div className="font-bold text-black/80">{item.protein}</div>
+              <div className="font-bold text-black/80">{item.complement}</div>
               {bases.length > 0 && (
-                <div className="pt-2 mt-2 border-t border-ui-border/60 space-y-1">
+                <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
                   {bases.map((base) => (
-                    <div key={base} className="text-ui-text font-bold">{base}</div>
+                    <div key={base} className="text-black/75 font-bold">{base}</div>
                   ))}
                 </div>
               )}
@@ -48,7 +66,11 @@ const ChefOrderCard = ({ order, onAdvance }) => (
 
     {order.status !== 'listo_para_despacho' && order.status !== 'recolectado' && order.status !== 'en_camino' && order.status !== 'entregado' && (
       <div className="mt-6">
-        <Button fullWidth onClick={() => onAdvance(order)}>
+        <Button
+          fullWidth
+          onClick={() => onAdvance(order)}
+          className={getActionButtonTone(order.status)}
+        >
           {order.status === 'recibido' ? 'Tomar pedido' : 'Listo para despacho'}
         </Button>
       </div>

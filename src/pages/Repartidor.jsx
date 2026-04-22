@@ -8,9 +8,27 @@ import { getBaseRecipeParts } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 
 const getCardTone = (status) => {
-  if (status === 'listo_para_despacho') return 'border-[#FBC02D] bg-[#FFFDE7]'
-  if (status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFF3E0]'
-  return 'border-[#2E7D32] bg-[#E8F5E9]'
+  if (status === 'listo_para_despacho') return 'border-[#FBC02D] bg-[#FFF8D6]'
+  if (status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFE8D1]'
+  return 'border-[#2E7D32] bg-[#DFF5E2]'
+}
+
+const getCardTextTone = (status) => {
+  if (status === 'listo_para_despacho') return 'text-[#5C4400]'
+  if (status === 'recolectado' || status === 'en_camino') return 'text-[#7A2E00]'
+  return 'text-[#14532D]'
+}
+
+const getActionButtonTone = (status) => {
+  if (status === 'listo_para_despacho') {
+    return '!bg-[#FBC02D] !text-[#3D2F00] hover:!bg-[#E0AA00] border border-[#D39E00]'
+  }
+
+  if (status === 'recolectado' || status === 'en_camino') {
+    return '!bg-[#FB8C00] !text-white hover:!bg-[#EF6C00] border border-[#E65100]'
+  }
+
+  return '!bg-[#4CAF50] !text-white hover:!bg-[#388E3C] border border-[#2E7D32]'
 }
 
 const RepartidorPage = ({ authSession }) => {
@@ -129,44 +147,56 @@ const RepartidorPage = ({ authSession }) => {
     const bases = order.items.flatMap((item) => getBaseRecipeParts(item.baseRecipe))
 
     return (
-      <div key={order._id} className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)}`}>
+      <div key={order._id} className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
-            <p className="text-[10px] font-black text-ui-muted uppercase tracking-widest mb-1">Número de orden</p>
-            <h3 className="text-2xl font-black text-ui-text">{order.orderNumber || order._id.slice(-6)}</h3>
+            <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de orden</p>
+            <h3 className="text-2xl font-black text-black/80">{order.orderNumber || order._id.slice(-6)}</h3>
           </div>
           <StatusBadge value={order.status} />
         </div>
 
         <div className="space-y-3 text-sm mb-5">
-          <div><span className="text-ui-muted font-black uppercase text-[10px] tracking-widest block mb-1">Nombre del cliente</span><span className="font-bold text-ui-text">{order.name}</span></div>
-          <div><span className="text-ui-muted font-black uppercase text-[10px] tracking-widest block mb-1">Teléfono del cliente</span><span className="font-bold text-ui-text">{order.phone}</span></div>
-          <div><span className="text-ui-muted font-black uppercase text-[10px] tracking-widest block mb-1">Dirección</span><span className="font-bold text-ui-text">{order.address}</span></div>
-          <div><span className="text-ui-muted font-black uppercase text-[10px] tracking-widest block mb-1">Código de acceso</span><span className="font-bold text-ui-text">{order.accessCode || 'Sin código'}</span></div>
+          <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Nombre del cliente</span><span className="font-bold text-black/80">{order.name}</span></div>
+          <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Teléfono del cliente</span><span className="font-bold text-black/80">{order.phone}</span></div>
+          <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Dirección</span><span className="font-bold text-black/80">{order.address}</span></div>
+          <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Código de acceso</span><span className="font-bold text-black/80">{order.accessCode || 'Sin código'}</span></div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 mb-5">
           <Button variant="secondary" onClick={() => openWazeRoute(order)} disabled={!order.navigationLinks?.waze && !order.location?.lat}>
             Ubicación
           </Button>
-          {order.status === 'listo_para_despacho' && <Button onClick={() => advance(order)}>Tomar pedido</Button>}
-          {order.status === 'recolectado' && <Button onClick={() => advance(order)}>Iniciar viaje</Button>}
-          {order.status === 'en_camino' && <Button onClick={() => advance(order)}>Marcar entregado</Button>}
+          {order.status === 'listo_para_despacho' && (
+            <Button className={getActionButtonTone(order.status)} onClick={() => advance(order)}>
+              Tomar pedido
+            </Button>
+          )}
+          {order.status === 'recolectado' && (
+            <Button className={getActionButtonTone(order.status)} onClick={() => advance(order)}>
+              Iniciar viaje
+            </Button>
+          )}
+          {order.status === 'en_camino' && (
+            <Button className={getActionButtonTone(order.status)} onClick={() => advance(order)}>
+              Marcar entregado
+            </Button>
+          )}
         </div>
 
         {(order.status === 'en_camino' || order.status === 'entregado') && (
-          <details className="rounded-2xl border border-ui-border/60 bg-white/60 p-4">
+          <details className="rounded-2xl border border-black/15 bg-white/70 p-4">
             <summary className="cursor-pointer font-black text-sm text-brand-blue uppercase">Comanda</summary>
             <div className="mt-4 space-y-4 text-sm">
               {order.items.map((item, idx) => (
-                <div key={idx} className="rounded-2xl border border-ui-border/60 bg-ui-bg/40 p-4">
+                <div key={idx} className="rounded-2xl border border-black/15 bg-white/60 p-4">
                   <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
-                  <div className="space-y-1 font-bold text-ui-text">
+                  <div className="space-y-1 font-bold text-black/80">
                     <div>{item.sauce}</div>
                     <div>{item.protein}</div>
                     <div>{item.complement}</div>
-                    <div className="pt-2 mt-2 border-t border-ui-border/60 space-y-1">
-                      {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base}>{base}</div>)}
+                    <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
+                      {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base} className="text-black/75">{base}</div>)}
                     </div>
                   </div>
                 </div>

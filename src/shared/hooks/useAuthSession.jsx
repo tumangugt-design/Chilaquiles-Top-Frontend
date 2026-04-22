@@ -8,22 +8,42 @@ export const useAuthSession = (panelRole) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const refreshSession = async () => {
+  const refreshSession = async ({ showUnauthorizedAlert = false } = {}) => {
     try {
       const response = await getSession();
-      setSession(response.data.user);
-      setError('');
-    } catch (err) {
-      setSession(null);
-      if (auth.currentUser) {
-        setError(err.response?.data?.message || 'No se pudo validar la sesión.');
+      const user = response?.data?.user || null;
+
+      setSession(user);
+
+      if (!user && panelRole === 'ADMIN') {
+        const message =
+          'Esta cuenta no es administrador y no tiene permitido acceder a este panel.';
+
+        setSession(null);
+        setFirebaseUser(null);
+        setError(message);
+
+        if (showUnauthorizedAlert) {
+          window.alert(message);
+        }
+
+        await signOut(auth);
+        return null;
       }
+
+      setError('');
+      return user;
+    } catch (error) {
+      setSession(null);
+      setError('No se pudo validar la sesión.');
+      return null;
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setFirebaseUser(currentUser);
+
       if (!currentUser) {
         setSession(null);
         setLoading(false);
@@ -35,21 +55,22 @@ export const useAuthSession = (panelRole) => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [panelRole]);
 
   const loginWithGoogle = async () => {
-    setLoading(true);
     try {
+      setError('');
+
       await signInWithPopup(auth, googleProvider);
+
       if (panelRole && panelRole !== 'ADMIN') {
         await authStaffLogin({ role: panelRole });
       }
-      await refreshSession();
-      setError('');
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'No se pudo iniciar sesión.');
-    } finally {
-      setLoading(false);
+
+      await refreshSession({ showUnauthorizedAlert: true });
+    } catch (error) {
+      console.error('Error en loginWithGoogle:', error);
+      setError('No se pudo iniciar sesión con Google.');
     }
   };
 
