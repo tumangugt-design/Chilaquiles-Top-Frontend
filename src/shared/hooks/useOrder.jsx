@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
-const generateId = () => Math.random().toString(36).slice(2, 11);
+const generateId = () => Math.random().toString(36).slice(2, 11)
 
 const createInitialPlate = () => ({
   id: generateId(),
@@ -10,9 +10,9 @@ const createInitialPlate = () => ({
   baseRecipe: {
     onion: true,
     cilantro: true,
-    cream: true
-  }
-});
+    cream: true,
+  },
+})
 
 const createInitialOrder = () => ({
   cart: [],
@@ -22,49 +22,51 @@ const createInitialOrder = () => ({
     name: '',
     phone: '',
     address: '',
-    location: null
+    location: null,
+    accessCode: '',
   },
-  lastOrder: null
-});
+  lastOrder: null,
+})
 
 export const useOrder = () => {
-  const [order, setOrder] = useState(createInitialOrder());
-  const [availablePlates] = useState(25);
+  const [order, setOrder] = useState(createInitialOrder())
+  const [availablePlates, setAvailablePlates] = useState(0)
 
   const updateOrder = (updates) => {
-    setOrder((prev) => ({ ...prev, ...updates }));
-  };
+    setOrder((prev) => ({ ...prev, ...updates }))
+  }
 
   const updateCurrentPlate = (updates) => {
     setOrder((prev) => ({
       ...prev,
-      currentPlate: { ...prev.currentPlate, ...updates }
-    }));
-  };
+      currentPlate: { ...prev.currentPlate, ...updates },
+    }))
+  }
 
   const addCurrentPlateToCart = () => {
     setOrder((prev) => ({
       ...prev,
       cart: [...prev.cart, prev.currentPlate],
-      currentPlate: createInitialPlate()
-    }));
-  };
+      currentPlate: createInitialPlate(),
+    }))
+  }
 
   const setLastOrder = (backendOrder) => {
-    setOrder((prev) => ({ ...prev, lastOrder: backendOrder }));
-  };
+    setOrder((prev) => ({ ...prev, lastOrder: backendOrder }))
+  }
 
   const resetOrder = () => {
-    setOrder(createInitialOrder());
-  };
+    setOrder(createInitialOrder())
+  }
 
   return {
     order,
     availablePlates,
+    setAvailablePlates,
     updateOrder,
     updateCurrentPlate,
     addCurrentPlateToCart,
     setLastOrder,
-    resetOrder
-  };
-};
+    resetOrder,
+  }
+}

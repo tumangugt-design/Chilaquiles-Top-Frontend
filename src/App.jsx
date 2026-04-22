@@ -1,113 +1,137 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useAuthSession } from './shared/hooks/useAuthSession.jsx';
-import Header from './components/layout/Header.jsx';
-import OrderSummary from './components/layout/OrderSummary.jsx';
-import Stepper from './components/ui/Stepper.jsx';
-import Mascot from './components/Mascot.jsx';
-import { STEPS_ORDER } from './shared/constants/index.jsx';
-import { useOrder } from './shared/hooks/useOrder.jsx';
-import LocationPage from './pages/Location.jsx';
-import SizePage from './pages/Size.jsx';
-import SaucePage from './pages/Sauce.jsx';
-import ProteinPage from './pages/Protein.jsx';
-import ComplementPage from './pages/Complement.jsx';
-import BaseRecipePage from './pages/BaseRecipe.jsx';
-import SummaryPage from './pages/Summary.jsx';
-import CustomerPage from './pages/Customer.jsx';
-import ConfirmationPage from './pages/Confirmation.jsx';
-import AdminPage from './pages/Admin.jsx';
-import ChefPage from './pages/Chef.jsx';
-import RepartidorPage from './pages/Repartidor.jsx';
+import { useMemo, useState, useEffect } from 'react'
+import { useAuthSession } from './shared/hooks/useAuthSession.jsx'
+import Header from './components/layout/Header.jsx'
+import OrderSummary from './components/layout/OrderSummary.jsx'
+import Stepper from './components/ui/Stepper.jsx'
+import { STEPS_ORDER } from './shared/constants/index.jsx'
+import { useOrder } from './shared/hooks/useOrder.jsx'
+import { getAvailablePlates } from './shared/config/api.js'
+import LocationPage from './pages/Location.jsx'
+import SizePage from './pages/Size.jsx'
+import SaucePage from './pages/Sauce.jsx'
+import ProteinPage from './pages/Protein.jsx'
+import ComplementPage from './pages/Complement.jsx'
+import BaseRecipePage from './pages/BaseRecipe.jsx'
+import SummaryPage from './pages/Summary.jsx'
+import CustomerPage from './pages/Customer.jsx'
+import ConfirmationPage from './pages/Confirmation.jsx'
+import AdminPage from './pages/Admin.jsx'
+import ChefPage from './pages/Chef.jsx'
+import RepartidorPage from './pages/Repartidor.jsx'
+import ProfileModal from './components/ui/ProfileModal.jsx'
 
 function CustomerFlow({ onToggleTheme, currentTheme }) {
-  const [currentStep, setCurrentStep] = useState('LOCATION');
+  const [currentStep, setCurrentStep] = useState('LOCATION')
   const {
     order,
     availablePlates,
+    setAvailablePlates,
     updateOrder,
     updateCurrentPlate,
     addCurrentPlateToCart,
     setLastOrder,
-    resetOrder
-  } = useOrder();
+    resetOrder,
+  } = useOrder()
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadAvailablePlates = async () => {
+      try {
+        const response = await getAvailablePlates()
+        if (mounted) {
+          setAvailablePlates(Number(response.data?.count || 0))
+        }
+      } catch {
+        if (mounted) setAvailablePlates(0)
+      }
+    }
+
+    loadAvailablePlates()
+    const interval = setInterval(loadAvailablePlates, 15000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [setAvailablePlates])
 
   const nextStep = () => {
-    const currentIndex = STEPS_ORDER.indexOf(currentStep);
+    const currentIndex = STEPS_ORDER.indexOf(currentStep)
     if (currentIndex >= 0 && currentIndex < STEPS_ORDER.length - 1) {
-      setCurrentStep(STEPS_ORDER[currentIndex + 1]);
-      window.scrollTo(0, 0);
+      setCurrentStep(STEPS_ORDER[currentIndex + 1])
+      window.scrollTo(0, 0)
     }
-  };
-
+  }
 
   const prevStep = () => {
-    const currentIndex = STEPS_ORDER.indexOf(currentStep);
+    const currentIndex = STEPS_ORDER.indexOf(currentStep)
     if (currentIndex > 0) {
-      setCurrentStep(STEPS_ORDER[currentIndex - 1]);
-      window.scrollTo(0, 0);
+      setCurrentStep(STEPS_ORDER[currentIndex - 1])
+      window.scrollTo(0, 0)
     }
-  };
+  }
 
   const handleResetApp = () => {
-    resetOrder();
-    setCurrentStep('LOCATION');
-    window.scrollTo(0, 0);
-  };
+    resetOrder()
+    setCurrentStep('LOCATION')
+    window.scrollTo(0, 0)
+  }
 
   const handleAddCurrentPlateToCart = () => {
-    addCurrentPlateToCart();
-    setCurrentStep('SAUCE');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    addCurrentPlateToCart()
+    setCurrentStep('SAUCE')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const goToStep = (step) => {
-    setCurrentStep(step);
-    window.scrollTo(0, 0);
-  };
+    setCurrentStep(step)
+    window.scrollTo(0, 0)
+  }
 
   const renderStep = () => {
     switch (currentStep) {
       case 'LOCATION':
-        return <LocationPage onConfirm={(verifiedPhone) => {
-          if (verifiedPhone) {
-            updateOrder({ customer: { ...order.customer, phone: verifiedPhone } });
-          }
-          nextStep();
-        }} />;
+        return (
+          <LocationPage
+            onConfirm={(verifiedPhone) => {
+              if (verifiedPhone) {
+                updateOrder({ customer: { ...order.customer, phone: verifiedPhone } })
+              }
+              nextStep()
+            }}
+          />
+        )
       case 'SIZE':
-        return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />;
+        return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'SAUCE':
-        return <SaucePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
+        return <SaucePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'PROTEIN':
-        return <ProteinPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
+        return <ProteinPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'COMPLEMENT':
-        return <ComplementPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
+        return <ComplementPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'BASE_RECIPE':
-        return <BaseRecipePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />;
+        return <BaseRecipePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'SUMMARY':
-        return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />;
+        return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
       case 'CUSTOMER':
-        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} phoneVerified={!!order.customer?.phone} />;
+        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} phoneVerified={!!order.customer?.phone} />
       case 'CONFIRMATION':
-        return <ConfirmationPage order={order} onReset={handleResetApp} />;
+        return <ConfirmationPage order={order} onReset={handleResetApp} />
       default:
-        return <div>Paso desconocido</div>;
+        return <div>Paso desconocido</div>
     }
-  };
-
-  const isSidebarVisible = !['LOCATION', 'SIZE', 'SUMMARY', 'CONFIRMATION'].includes(currentStep);
-  const globalMascotClass = isSidebarVisible ? 'lg:hidden' : '';
+  }
 
   return (
     <div className="min-h-screen bg-ui-bg font-sans text-ui-text relative transition-colors duration-300">
       {currentStep === 'LOCATION' ? (
         <div className="min-h-screen flex flex-col items-center justify-center p-4">
-          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} />
+          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
           {renderStep()}
         </div>
       ) : (
         <div className="pb-32 lg:pb-12 pt-20 lg:pt-28">
-          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} />
+          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row items-start justify-center gap-8">
               <div className="flex-1 w-full max-w-3xl">
@@ -120,68 +144,60 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                   <p className="opacity-75">Comida, Precios, Experiencia. Aquí todo es TOP</p>
                 </div>
               </div>
-              <OrderSummary order={order} currentStep={currentStep} onEdit={goToStep} onNext={currentStep === 'CUSTOMER' ? nextStep : nextStep} onAddAnother={handleAddCurrentPlateToCart} />
+              <OrderSummary order={order} currentStep={currentStep} onEdit={goToStep} onNext={nextStep} onAddAnother={handleAddCurrentPlateToCart} />
             </div>
           </main>
         </div>
       )}
     </div>
-  );
+  )
 }
 
-import ProfileModal from './components/ui/ProfileModal.jsx';
-
 function App() {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light';
-  });
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
-  const path = useMemo(() => window.location.pathname, []);
-  
-  // Determine current panel role based on path
-  const panelRole = path === '/admin' ? 'ADMIN' : path === '/chef' ? 'CHEF' : path === '/repartidor' ? 'REPARTIDOR' : null;
-  const authSession = useAuthSession(panelRole);
+  const path = useMemo(() => window.location.pathname, [])
+  const panelRole = path === '/admin' ? 'ADMIN' : path === '/chef' ? 'CHEF' : path === '/repartidor' ? 'REPARTIDOR' : null
+  const authSession = useAuthSession(panelRole)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
 
   const renderPanel = (Component) => (
     <div className="min-h-screen bg-ui-bg transition-colors duration-300">
-      <Header 
-        isPanel 
+      <Header
+        isPanel
         panelRole={panelRole}
         userPhoto={authSession.session?.photoUrl}
         onProfileClick={() => setIsProfileOpen(true)}
-        onToggleTheme={toggleTheme} 
-        currentTheme={theme} 
+        onToggleTheme={toggleTheme}
+        currentTheme={theme}
       />
       <Component authSession={authSession} />
-      
+
       {authSession.session && (
-        <ProfileModal 
-          isOpen={isProfileOpen} 
-          onClose={() => setIsProfileOpen(false)} 
+        <ProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
           user={authSession.session}
           onUpdate={authSession.refreshSession}
         />
       )}
     </div>
-  );
+  )
 
-  if (path === '/admin') return renderPanel(AdminPage);
-  if (path === '/chef') return renderPanel(ChefPage);
-  if (path === '/repartidor') return renderPanel(RepartidorPage);
+  if (path === '/admin') return renderPanel(AdminPage)
+  if (path === '/chef') return renderPanel(ChefPage)
+  if (path === '/repartidor') return renderPanel(RepartidorPage)
 
-  return (
-    <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
-  );
+  return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
 }
 
-export default App;
+export default App

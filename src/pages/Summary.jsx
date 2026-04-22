@@ -2,21 +2,10 @@
 // PÁGINA: Summary (Resumen del pedido)
 // ============================================
 
-import { getMarginalPrice } from '../shared/constants/index.jsx'
+import { getMarginalPrice, formatBaseRecipe } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const getBaseLabel = (base) => {
-  const parts = []
-  if (base.onion) parts.push('Cebolla')
-  if (base.cilantro) parts.push('Cilantro')
-  if (base.cream) parts.push('Crema')
-
-  if (parts.length === 0) return 'Sin verdura ni crema'
-  return parts.join(', ')
-}
-
 const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
-  const price = getMarginalPrice(idx)
 
   return (
     <div className="bg-ui-card border border-ui-border shadow-sm rounded-xl p-5 mb-4 relative overflow-hidden">
@@ -25,7 +14,6 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
       <div className="mb-3 pb-2 border-b border-ui-border flex justify-between items-center pl-3">
         <h3 className="font-bold text-ui-text text-lg">{title}</h3>
-        <span className="font-bold text-brand-blue text-xl">Q{price}</span>
       </div>
 
       <div className="space-y-2 pl-3">
@@ -78,7 +66,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
         {/* Base Recipe Section */}
         <div className="flex justify-between items-center text-sm text-ui-muted pt-1 border-t border-ui-border mt-1">
-          <span className="italic text-ui-muted">Base: {getBaseLabel(plate.baseRecipe)}</span>
+          <span className="italic text-ui-muted">{formatBaseRecipe(plate.baseRecipe)}</span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('BASE_RECIPE')}
                 className="text-brand-orange text-xs font-bold uppercase hover:bg-brand-orange/10 px-2 py-1 rounded transition-colors"
