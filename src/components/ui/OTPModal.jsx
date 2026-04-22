@@ -15,14 +15,14 @@ const OTPModal = ({ isOpen, onClose, onVerify, phone, isSending }) => {
   if (!isOpen) return null;
 
   const handleChange = (index, value) => {
-    if (isNaN(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+    const cleanValue = String(value).replace(/\D/g, '').slice(0, 1)
 
-    // Auto-focus next input
-    if (value !== '' && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+    const newOtp = [...otp]
+    newOtp[index] = cleanValue
+    setOtp(newOtp)
+
+    if (cleanValue !== '' && index < 5) {
+      inputRefs.current[index + 1]?.focus()
     }
   };
 
@@ -71,10 +71,13 @@ const OTPModal = ({ isOpen, onClose, onVerify, phone, isSending }) => {
               <input
                 key={index}
                 ref={(el) => (inputRefs.current[index] = el)}
-                type="text"
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
                 maxLength={1}
                 value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
+                onChange={(e) => handleChange(index, e.target.value.replace(/\D/g, ''))}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 className="w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-black text-ui-text bg-ui-bg border border-ui-border rounded-2xl focus:bg-ui-card focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 outline-none transition-all shadow-sm"
                 disabled={isSending}
@@ -82,9 +85,9 @@ const OTPModal = ({ isOpen, onClose, onVerify, phone, isSending }) => {
             ))}
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full !py-5 text-base shadow-xl shadow-brand-blue/20" 
+          <Button
+            type="submit"
+            className="w-full !py-5 text-base shadow-xl shadow-brand-blue/20"
             disabled={otp.join('').length !== 6 || isSending}
           >
             {isSending ? 'Verificando...' : 'Confirmar Acceso'}
