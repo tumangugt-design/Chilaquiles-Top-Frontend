@@ -217,40 +217,59 @@ const StaffRequestCard = ({ user, onApprove }) => (
   </div>
 )
 
-const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpenHistory }) => (
-  <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6">
-    <div className="flex items-start justify-between gap-4 mb-5">
-      <div className="min-w-0">
-        <p className="font-black text-lg text-ui-text leading-tight truncate">{titleLabel}</p>
-        <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1 break-all">{subtitleLabel}</p>
-      </div>
-      <StatusBadge value={badgeValue} />
-    </div>
+const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpenHistory }) => {
+  const addressText =
+    user.address?.trim() ||
+      user.location?.lat && user.location?.lng
+      ? `Ubicación compartida: https://www.google.com/maps/search/?api=1&query=${user.location.lat},${user.location.lng}`
+      : 'Sin dirección registrada'
 
-    <div className="space-y-3 text-sm text-ui-muted font-medium mb-6">
-      {user.address && (
-        <div className="rounded-2xl border border-ui-border bg-white/60 px-4 py-3">
-          <p className="text-[10px] uppercase tracking-widest font-black text-ui-muted mb-1">Dirección</p>
-          <p className="text-ui-text font-bold">{user.address}</p>
+  return (
+    <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 h-full min-h-[22rem] flex flex-col">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="min-w-0 flex-1">
+          <p className="font-black text-lg text-ui-text leading-tight truncate">
+            {titleLabel}
+          </p>
+          <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1 break-all">
+            {subtitleLabel}
+          </p>
         </div>
-      )}
-      <div className="flex flex-wrap gap-3">
-        <div className="rounded-full bg-brand-blue/10 text-brand-blue px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-          {user.role}
+
+        <div className="shrink-0">
+          <StatusBadge value={badgeValue} />
         </div>
-        {user.createdAt && (
-          <div className="rounded-full bg-ui-card border border-ui-border px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-            {formatDate(user.createdAt)}
+      </div>
+
+      <div className="flex-1 space-y-3 text-sm text-ui-muted font-medium mb-6 flex flex-col">
+        <div className="rounded-2xl border border-ui-border bg-white/60 px-4 py-3 h-[105px] overflow-y-auto">
+          <p className="text-[10px] uppercase tracking-widest font-black text-ui-muted mb-1">
+            Dirección
+          </p>
+          <p className="text-ui-text font-bold whitespace-normal break-words break-all leading-snug">
+            {addressText}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <div className="rounded-full bg-brand-blue/10 text-brand-blue px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+            {user.role}
           </div>
-        )}
-      </div>
-    </div>
 
-    <Button className="w-full" onClick={() => onOpenHistory(user)}>
-      Historial de órdenes
-    </Button>
-  </div>
-)
+          {user.createdAt && (
+            <div className="rounded-full bg-ui-card border border-ui-border px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+              {formatDate(user.createdAt)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Button className="w-full mt-auto" onClick={() => onOpenHistory(user)}>
+        Historial de órdenes
+      </Button>
+    </div>
+  )
+}
 
 const AdminPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession
@@ -545,7 +564,7 @@ const AdminPage = ({ authSession }) => {
               <p className="text-ui-muted text-sm font-medium">No hay clientes registrados todavía.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
               {clientUsers.map((user) => (
                 <ManagementUserCard
                   key={user._id}
@@ -575,7 +594,7 @@ const AdminPage = ({ authSession }) => {
               <p className="text-ui-muted text-sm font-medium">No hay cocineros aprobados todavía.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
               {chefUsers.map((user) => (
                 <ManagementUserCard
                   key={user._id}
@@ -605,7 +624,7 @@ const AdminPage = ({ authSession }) => {
               <p className="text-ui-muted text-sm font-medium">No hay repartidores aprobados todavía.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
               {driverUsers.map((user) => (
                 <ManagementUserCard
                   key={user._id}
