@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import PanelShell from '../components/ui/PanelShell.jsx'
 import Button from '../components/ui/Button.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
-import { getPendingStaff, saveInventoryItem, updateStaffStatus, getInventory, getOrders } from '../shared/config/api.js'
+import {
+  getPendingStaff,
+  getUsersByRole,
+  getUserOrderHistory,
+  saveInventoryItem,
+  updateStaffStatus,
+  getInventory,
+  getOrders
+} from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { getBaseRecipeParts, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
@@ -21,37 +29,293 @@ const getCardTextTone = (status) => {
   return 'text-[#14532D]'
 }
 
+const formatDate = (value) => {
+  if (!value) return 'Sin fecha'
+  try {
+    return new Intl.DateTimeFormat('es-GT', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value))
+  } catch (error) {
+    return 'Sin fecha'
+  }
+}
+
+const formatUserSubtitle = (user) => {
+  if (user.phone) return user.phone
+  if (user.email) return user.email
+  return 'Sin contacto'
+}
+
+const getHistoryMeta = (type) => {
+  if (type === 'client') {
+    return {
+      title: 'Historial de órdenes del cliente',
+      empty: 'Este cliente todavía no tiene órdenes registradas.'
+    }
+  }
+
+  if (type === 'chef') {
+    return {
+      title: 'Historial de órdenes preparadas',
+      empty: 'Este cocinero todavía no tiene órdenes preparadas.'
+    }
+  }
+
+  return {
+    title: 'Historial de órdenes entregadas',
+    empty: 'Este repartidor todavía no tiene órdenes entregadas.'
+  }
+}
+
+const OrderHistoryCard = ({ order, type = 'client' }) => {
+  const basesByPlate = order.items.map((item) => getBaseRecipeParts(item.baseRecipe))
+  const showCustomer = type !== 'client'
+  const showChef = type === 'client' && order.chefId?.name
+  const showRepartidor = type === 'client' && order.repartidorId?.name
+
+  return (
+    <div className={`rounded-[2rem] border-2 p-5 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
+      <div className="flex justify-between items-start gap-4 mb-4">
+        <div>
+          <p className="text-[10px] font-black text-black/55 uppercase tracking-widest">Número de orden</p>
+          <p className="font-black text-xl text-black/80">{order.orderNumber || order._id?.slice(-6)}</p>
+          <p className="text-xs font-bold text-black/60 mt-1">{formatDate(order.createdAt)}</p>
+        </div>
+        <StatusBadge value={order.status} />
+      </div>
+
+      <div className="space-y-3 mb-4">
+        {showCustomer && (
+          <div className="rounded-2xl border border-black/15 bg-white/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/55">Cliente</p>
+            <p className="font-black text-black/80 mt-1">{order.name || order.userId?.name || 'Cliente sin nombre'}</p>
+            <p className="text-sm text-black/65">{order.phone || order.userId?.phone || 'Sin teléfono'}</p>
+          </div>
+        )}
+
+        {showChef && (
+          <div className="rounded-2xl border border-black/15 bg-white/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/55">Cocinero</p>
+            <p className="font-black text-black/80 mt-1">{order.chefId.name}</p>
+          </div>
+        )}
+
+        {showRepartidor && (
+          <div className="rounded-2xl border border-black/15 bg-white/60 px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/55">Repartidor</p>
+            <p className="font-black text-black/80 mt-1">{order.repartidorId.name}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {order.items.map((item, idx) => (
+          <div key={`${order._id}-item-${idx}`} className="rounded-2xl border border-black/15 bg-white/70 p-4">
+            <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest mb-2">Plato {idx + 1}</p>
+            <div className="space-y-1 text-sm font-bold text-black/80">
+              <div>{item.sauce}</div>
+              <div>{item.protein}</div>
+              <div>{item.complement}</div>
+            </div>
+            <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
+              {basesByPlate[idx].length > 0 ? (
+                basesByPlate[idx].map((base) => (
+                  <div key={`${order._id}-base-${idx}-${base}`} className="text-sm font-bold text-black/70">
+                    {base}
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm font-bold text-black/50">Sin base adicional</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-black/15 flex items-center justify-between gap-4">
+        <p className="text-sm font-medium text-black/65 line-clamp-2">{order.address}</p>
+        <p className="font-black text-black/80 whitespace-nowrap">Q{order.total}</p>
+      </div>
+    </div>
+  )
+}
+
+const UserHistoryModal = ({ modal, onClose, onSearchChange }) => {
+  if (!modal.isOpen) return null
+
+  const meta = getHistoryMeta(modal.type)
+  const filteredOrders = modal.orders.filter((order) =>
+    (order.orderNumber || '').toLowerCase().includes(modal.search.toLowerCase())
+  )
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[2.5rem] border border-ui-border bg-ui-card shadow-2xl">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 px-6 sm:px-8 py-6 border-b border-ui-border">
+          <div>
+            <h3 className="text-2xl sm:text-3xl font-black text-ui-text tracking-tight">{meta.title}</h3>
+            <p className="text-ui-muted font-medium mt-2">
+              {modal.user?.name || 'Usuario'} · {formatUserSubtitle(modal.user)}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="w-full lg:w-72">
+              <input
+                value={modal.search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Buscar por número de orden"
+                className="w-full rounded-2xl border border-ui-border bg-ui-bg px-4 py-3 font-bold text-ui-text outline-none"
+              />
+            </div>
+            <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          </div>
+        </div>
+
+        <div className="px-6 sm:px-8 py-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {modal.loading ? (
+            <div className="py-20 text-center">
+              <p className="text-ui-muted font-bold">Cargando historial...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-20 text-center rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/40">
+              <p className="text-ui-muted font-bold">
+                {modal.orders.length === 0 ? meta.empty : 'No se encontraron órdenes con ese número.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid xl:grid-cols-2 gap-6">
+              {filteredOrders.map((order) => (
+                <OrderHistoryCard key={order._id} order={order} type={modal.type} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const StaffRequestCard = ({ user, onApprove }) => (
+  <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6">
+    <div className="flex items-start justify-between mb-6">
+      <div>
+        <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
+        <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
+      </div>
+      <StatusBadge value={user.status} />
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <Button className="col-span-2" onClick={() => onApprove(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
+      <Button variant="secondary" onClick={() => onApprove(user._id, 'approved', 'CHEF')}>Chef</Button>
+      <Button variant="secondary" onClick={() => onApprove(user._id, 'approved', 'REPARTIDOR')}>Repartidor</Button>
+      <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => onApprove(user._id, 'rejected', user.role)}>
+        Denegar Acceso
+      </Button>
+    </div>
+  </div>
+)
+
+const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpenHistory }) => (
+  <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6">
+    <div className="flex items-start justify-between gap-4 mb-5">
+      <div className="min-w-0">
+        <p className="font-black text-lg text-ui-text leading-tight truncate">{titleLabel}</p>
+        <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1 break-all">{subtitleLabel}</p>
+      </div>
+      <StatusBadge value={badgeValue} />
+    </div>
+
+    <div className="space-y-3 text-sm text-ui-muted font-medium mb-6">
+      {user.address && (
+        <div className="rounded-2xl border border-ui-border bg-white/60 px-4 py-3">
+          <p className="text-[10px] uppercase tracking-widest font-black text-ui-muted mb-1">Dirección</p>
+          <p className="text-ui-text font-bold">{user.address}</p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-3">
+        <div className="rounded-full bg-brand-blue/10 text-brand-blue px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+          {user.role}
+        </div>
+        {user.createdAt && (
+          <div className="rounded-full bg-ui-card border border-ui-border px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+            {formatDate(user.createdAt)}
+          </div>
+        )}
+      </div>
+    </div>
+
+    <Button className="w-full" onClick={() => onOpenHistory(user)}>
+      Historial de órdenes
+    </Button>
+  </div>
+)
+
 const AdminPage = ({ authSession }) => {
   const { session, loading, error, loginWithGoogle, logout } = authSession
   const [activeTab, setActiveTab] = useState('staff')
   const [orderFilter, setOrderFilter] = useState('all')
   const [pendingUsers, setPendingUsers] = useState([])
   const [inventory, setInventory] = useState([])
+  const [clientUsers, setClientUsers] = useState([])
+  const [chefUsers, setChefUsers] = useState([])
+  const [driverUsers, setDriverUsers] = useState([])
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [historyModal, setHistoryModal] = useState({
+    isOpen: false,
+    loading: false,
+    search: '',
+    type: 'client',
+    user: null,
+    orders: []
+  })
   const knownOrderIds = useRef(new Set())
+
+  const loadRoleUsers = async (role) => {
+    const response = await getUsersByRole(role)
+    if (role === 'CLIENT') setClientUsers(response.data)
+    if (role === 'CHEF') setChefUsers(response.data)
+    if (role === 'REPARTIDOR') setDriverUsers(response.data)
+  }
 
   const loadData = async () => {
     setIsRefreshing(true)
+
     try {
       if (activeTab === 'orders') {
         const response = await getOrders(orderFilter)
         const orders = response.data
+
         let hasNewOrder = false
         orders.forEach((order) => {
           if (!knownOrderIds.current.has(order._id)) {
-            if (knownOrderIds.current.size > 0 && order.status === 'recibido') hasNewOrder = true
+            if (knownOrderIds.current.size > 0 && order.status === 'recibido') {
+              hasNewOrder = true
+            }
             knownOrderIds.current.add(order._id)
           }
         })
+
         if (hasNewOrder) playNotificationSound()
         setOrdersCache((prev) => ({ ...prev, [orderFilter]: orders }))
-      } else {
-        const [pendingResponse, inventoryResponse] = await Promise.all([getPendingStaff(), getInventory()])
+      } else if (['staff', 'entries', 'inventory'].includes(activeTab)) {
+        const [pendingResponse, inventoryResponse] = await Promise.all([
+          getPendingStaff(),
+          getInventory()
+        ])
+
         setPendingUsers(pendingResponse.data)
         setInventory(inventoryResponse.data)
+      } else if (activeTab === 'clients') {
+        await loadRoleUsers('CLIENT')
+      } else if (activeTab === 'chefs') {
+        await loadRoleUsers('CHEF')
+      } else if (activeTab === 'drivers') {
+        await loadRoleUsers('REPARTIDOR')
       }
     } catch (err) {
       console.error('Error loading Admin data:', err)
@@ -84,10 +348,19 @@ const AdminPage = ({ authSession }) => {
 
   const submitInventory = async (e) => {
     e.preventDefault()
-    if (!itemForm.name || !itemForm.amount) return toast.error('Selecciona un producto y una cantidad')
+    if (!itemForm.name || !itemForm.amount) {
+      return toast.error('Selecciona un producto y una cantidad')
+    }
+
     setIsSaving(true)
+
     try {
-      await saveInventoryItem({ name: itemForm.name, unit: itemForm.unit, amount: Number(itemForm.amount) })
+      await saveInventoryItem({
+        name: itemForm.name,
+        unit: itemForm.unit,
+        amount: Number(itemForm.amount)
+      })
+
       toast.success('Entrada de inventario registrada')
       setItemForm(emptyItem)
       loadData()
@@ -107,19 +380,97 @@ const AdminPage = ({ authSession }) => {
     })
   }
 
+  const openHistoryModal = async (type, user) => {
+    setHistoryModal({
+      isOpen: true,
+      loading: true,
+      search: '',
+      type,
+      user,
+      orders: []
+    })
+
+    try {
+      const response = await getUserOrderHistory(type, user._id)
+      setHistoryModal({
+        isOpen: true,
+        loading: false,
+        search: '',
+        type,
+        user,
+        orders: response.data
+      })
+    } catch (err) {
+      const message = err.response?.data?.message || 'No se pudo cargar el historial.'
+      toast.error(message)
+      setHistoryModal({
+        isOpen: false,
+        loading: false,
+        search: '',
+        type,
+        user: null,
+        orders: []
+      })
+    }
+  }
+
+  const closeHistoryModal = () => {
+    setHistoryModal({
+      isOpen: false,
+      loading: false,
+      search: '',
+      type: 'client',
+      user: null,
+      orders: []
+    })
+  }
+
+  const updateHistorySearch = (value) => {
+    setHistoryModal((prev) => ({
+      ...prev,
+      search: value
+    }))
+  }
+
   if (!session || session.role !== 'ADMIN') {
     return (
-      <PanelShell title="Panel de Administración" subtitle="Gestión de staff, inventario y pedidos">
+      <PanelShell title="Panel de Administración" subtitle="Gestión de staff, inventario, pedidos y usuarios">
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-20 h-20 bg-brand-blue/10 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-10 h-10 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            <svg className="w-10 h-10 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
           </div>
           <h3 className="text-2xl font-black text-ui-text mb-2">Acceso Administrativo</h3>
-          <p className="text-ui-muted max-w-sm mb-8">Inicia sesión con una cuenta autorizada para gestionar la operación.</p>
-          <Button onClick={loginWithGoogle} className="flex items-center space-x-3 !py-4 !px-8 shadow-xl shadow-brand-blue/20" disabled={loading}>
-            {loading ? <span>Cargando...</span> : <><svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg><span className="font-black">Entrar con Google</span></>}
+          <p className="text-ui-muted max-w-sm mb-8">
+            Inicia sesión con una cuenta autorizada para gestionar la operación.
+          </p>
+
+          <Button
+            onClick={loginWithGoogle}
+            className="flex items-center space-x-3 !py-4 !px-8 shadow-xl shadow-brand-blue/20"
+            disabled={loading}
+          >
+            {loading ? (
+              <span>Cargando...</span>
+            ) : (
+              <>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                <span className="font-black">Entrar con Google</span>
+              </>
+            )}
           </Button>
-          {error && <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-brand-red text-sm font-bold">{error}</div>}
+
+          {error && (
+            <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-brand-red text-sm font-bold">
+              {error}
+            </div>
+          )}
         </div>
       </PanelShell>
     )
@@ -128,7 +479,7 @@ const AdminPage = ({ authSession }) => {
   return (
     <PanelShell
       title="Dashboard Administrativo"
-      subtitle="Staff, entradas de inventario, inventario y pedidos"
+      subtitle="Staff, usuarios, entradas de inventario, inventario y pedidos"
       actions={
         <div className="flex items-center space-x-4">
           <div className={`w-2 h-2 rounded-full bg-brand-blue ${isRefreshing ? 'animate-ping' : ''}`} />
@@ -140,6 +491,9 @@ const AdminPage = ({ authSession }) => {
       <div className="flex flex-wrap gap-3 mb-10 justify-center">
         {[
           ['staff', 'Staff'],
+          ['clients', 'Clientes'],
+          ['chefs', 'Usuarios Cocineros'],
+          ['drivers', 'Usuarios Repartidores'],
           ['entries', 'Entrada Inventario'],
           ['inventory', 'Inventario'],
           ['orders', 'Pedidos'],
@@ -158,8 +512,11 @@ const AdminPage = ({ authSession }) => {
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between border-b border-ui-border pb-4">
             <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes de Staff</h2>
-            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">{pendingUsers.length} pendientes</span>
+            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
+              {pendingUsers.length} pendientes
+            </span>
           </div>
+
           <div className="space-y-4">
             {pendingUsers.length === 0 ? (
               <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
@@ -167,24 +524,100 @@ const AdminPage = ({ authSession }) => {
               </div>
             ) : (
               pendingUsers.map((user) => (
-                <div key={user._id} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6">
-                  <div className="flex items-start justify-between mb-6">
-                    <div>
-                      <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
-                      <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
-                    </div>
-                    <StatusBadge value={user.status} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button className="col-span-2" onClick={() => changeStatus(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
-                    <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'CHEF')}>Chef</Button>
-                    <Button variant="secondary" onClick={() => changeStatus(user._id, 'approved', 'REPARTIDOR')}>Repartidor</Button>
-                    <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => changeStatus(user._id, 'rejected', user.role)}>Denegar Acceso</Button>
-                  </div>
-                </div>
+                <StaffRequestCard key={user._id} user={user} onApprove={changeStatus} />
               ))
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'clients' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Clientes</h2>
+            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
+              {clientUsers.length} registrados
+            </span>
+          </div>
+
+          {clientUsers.length === 0 ? (
+            <div className="text-center py-16 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
+              <p className="text-ui-muted text-sm font-medium">No hay clientes registrados todavía.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {clientUsers.map((user) => (
+                <ManagementUserCard
+                  key={user._id}
+                  user={user}
+                  titleLabel={user.name || 'Cliente sin nombre'}
+                  subtitleLabel={formatUserSubtitle(user)}
+                  badgeValue={user.status}
+                  onOpenHistory={(selectedUser) => openHistoryModal('client', selectedUser)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'chefs' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Usuarios Cocineros</h2>
+            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
+              {chefUsers.length} aprobados
+            </span>
+          </div>
+
+          {chefUsers.length === 0 ? (
+            <div className="text-center py-16 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
+              <p className="text-ui-muted text-sm font-medium">No hay cocineros aprobados todavía.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {chefUsers.map((user) => (
+                <ManagementUserCard
+                  key={user._id}
+                  user={user}
+                  titleLabel={user.name || 'Cocinero sin nombre'}
+                  subtitleLabel={formatUserSubtitle(user)}
+                  badgeValue={user.status}
+                  onOpenHistory={(selectedUser) => openHistoryModal('chef', selectedUser)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'drivers' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Usuarios Repartidores</h2>
+            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
+              {driverUsers.length} aprobados
+            </span>
+          </div>
+
+          {driverUsers.length === 0 ? (
+            <div className="text-center py-16 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
+              <p className="text-ui-muted text-sm font-medium">No hay repartidores aprobados todavía.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {driverUsers.map((user) => (
+                <ManagementUserCard
+                  key={user._id}
+                  user={user}
+                  titleLabel={user.name || 'Repartidor sin nombre'}
+                  subtitleLabel={formatUserSubtitle(user)}
+                  badgeValue={user.status}
+                  onOpenHistory={(selectedUser) => openHistoryModal('repartidor', selectedUser)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -219,17 +652,27 @@ const AdminPage = ({ authSession }) => {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Cantidad</label>
-                <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" type="number" min="0" step="0.01" value={itemForm.amount} onChange={(e) => setItemForm({ ...itemForm, amount: e.target.value })} />
+                <input
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={itemForm.amount}
+                  onChange={(e) => setItemForm({ ...itemForm, amount: e.target.value })}
+                />
               </div>
             </div>
 
-            <Button type="submit" className="w-full !py-5" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Registrar entrada'}</Button>
+            <Button type="submit" className="w-full !py-5" disabled={isSaving}>
+              {isSaving ? 'Guardando...' : 'Registrar entrada'}
+            </Button>
           </form>
 
           <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 space-y-4">
             <div className="border-b border-ui-border pb-4">
               <h3 className="text-xl font-black text-ui-text">Consumo por plato</h3>
             </div>
+
             <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
               {INVENTORY_PRODUCT_OPTIONS.map((product) => (
                 <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4">
@@ -238,7 +681,9 @@ const AdminPage = ({ authSession }) => {
                       <p className="font-black text-ui-text">{product.label}</p>
                       <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">{product.category}</p>
                     </div>
-                    <span className="text-sm font-black text-brand-blue">{product.usedPerPlate} {product.unit}</span>
+                    <span className="text-sm font-black text-brand-blue">
+                      {product.usedPerPlate} {product.unit}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -253,6 +698,7 @@ const AdminPage = ({ authSession }) => {
             <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
             <span className="text-xs font-black uppercase tracking-widest text-ui-muted">Solo lectura</span>
           </div>
+
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {inventory.map((item) => {
               const meta = INVENTORY_PRODUCT_MAP[item.name]
@@ -263,8 +709,11 @@ const AdminPage = ({ authSession }) => {
                       <h3 className="font-black text-ui-text capitalize leading-tight">{meta?.label || item.name}</h3>
                       <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1">{meta?.category || 'Inventario'}</p>
                     </div>
-                    <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>{Number(item.stock).toFixed(2)}</span>
+                    <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
+                      {Number(item.stock).toFixed(2)}
+                    </span>
                   </div>
+
                   <div className="flex items-center justify-between text-xs text-ui-muted font-bold uppercase tracking-widest border-t border-ui-border pt-3">
                     <span>Unidad</span>
                     <span>{item.unit}</span>
@@ -298,38 +747,9 @@ const AdminPage = ({ authSession }) => {
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             {currentOrders.map((order) => (
-              <div key={order._id} className={`rounded-[2.5rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
-                <div className="flex justify-between items-start mb-4 gap-4">
-                  <div>
-                    <p className="text-[10px] font-black text-black/55 uppercase tracking-widest">Número de orden</p>
-                    <p className="font-black text-lg text-black/80">{order.orderNumber || order._id.slice(-6)}</p>
-                    <p className="text-sm font-bold text-black/80 mt-2">{order.name}</p>
-                  </div>
-                  <StatusBadge value={order.status} />
-                </div>
-
-                <div className="space-y-4 mb-6">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="rounded-3xl border border-black/15 bg-white/70 p-4">
-                      <p className="text-[10px] font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
-                      <div className="space-y-1">
-                        <div className="text-sm font-black text-black/80">{item.sauce}</div>
-                        <div className="text-sm font-black text-black/80">{item.protein}</div>
-                        <div className="text-sm font-black text-black/80">{item.complement}</div>
-                        <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
-                          {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base} className="text-sm font-black text-black/75">{base}</div>)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t border-black/15 text-sm">
-                  <p className="font-medium text-black/65 max-w-[60%] line-clamp-2">{order.address}</p>
-                  <p className="font-black text-black/80">Q{order.total}</p>
-                </div>
-              </div>
+              <OrderHistoryCard key={order._id} order={order} type="admin" />
             ))}
+
             {currentOrders.length === 0 && !isRefreshing && (
               <div className="col-span-full py-20 text-center rounded-[3rem] border border-dashed border-ui-border">
                 <p className="text-ui-muted font-bold">No hay pedidos en este estado.</p>
@@ -338,6 +758,12 @@ const AdminPage = ({ authSession }) => {
           </div>
         </div>
       )}
+
+      <UserHistoryModal
+        modal={historyModal}
+        onClose={closeHistoryModal}
+        onSearchChange={updateHistorySearch}
+      />
     </PanelShell>
   )
 }

@@ -30,6 +30,8 @@ export const getOrders = (status) => api.get(`/orders?t=${Date.now()}${status ? 
 export const updateOrderStatus = (orderId, status) => api.patch(`/orders/${orderId}/status`, { status })
 export const getPendingStaff = () => api.get('/users/pending-staff')
 export const updateStaffStatus = (userId, payload) => api.patch(`/users/staff/${userId}/status`, payload)
+export const getUsersByRole = (role) => api.get(`/users/role/${encodeURIComponent(role)}?t=${Date.now()}`)
+export const getUserOrderHistory = (type, userId) => api.get(`/orders/history?type=${encodeURIComponent(type)}&userId=${encodeURIComponent(userId)}&t=${Date.now()}`)
 export const updateProfile = (payload) => api.patch('/users/profile', payload)
 export const getInventory = () => api.get(`/inventory?t=${Date.now()}`)
 export const getAvailablePlates = () => api.get('/inventory/available')
