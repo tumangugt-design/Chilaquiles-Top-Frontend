@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
@@ -8,36 +7,36 @@ import {
   confirmClientSignUp,
   loginClient,
   resendClientConfirmationCode,
+  sendExistingClientOtp,
+  confirmExistingClientOtp,
   normalizeGtPhone,
   toGtLocalDigits,
 } from '../shared/config/cognito.js'
-import { authClientSync, setClientToken } from '../shared/config/api.js'
+import { authClientSync, clearClientToken, setClientToken } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
-
-const DEFAULT_PASSWORD_HINT = 'Usa al menos 8 caracteres.'
 
 const getFriendlyError = (error) => {
   const message = error?.message || ''
-  if (message.includes('UsernameExistsException')) return 'Este número ya está registrado. Inicia sesión.'
+  if (message.includes('UsernameExistsException')) return 'Este número ya existe. Te enviaremos un código SMS para continuar.'
   if (message.includes('UserNotFoundException')) return 'No encontramos una cuenta con ese número.'
   if (message.includes('CodeMismatchException')) return 'El código ingresado no es correcto.'
   if (message.includes('ExpiredCodeException')) return 'El código expiró. Solicita uno nuevo.'
-  if (message.includes('NotAuthorizedException')) return 'Número o contraseña incorrectos.'
-  if (message.includes('UserNotConfirmedException')) return 'Debes confirmar el código SMS antes de ingresar.'
-  if (message.includes('InvalidPasswordException')) return 'La contraseña no cumple con los requisitos.'
+  if (message.includes('NotAuthorizedException')) return 'No se pudo validar el acceso con este número.'
+  if (message.includes('UserNotConfirmedException')) return 'Tu número aún no ha sido confirmado. Te reenviamos el código SMS.'
+  if (message.includes('InvalidPasswordException')) return 'No se pudo preparar la autenticación automática del cliente.'
   if (message.includes('USER_PASSWORD_AUTH')) return 'Debes habilitar USER_PASSWORD_AUTH en el App Client de Cognito.'
+  if (message.includes('LimitExceededException')) return 'Has intentado demasiadas veces. Espera un momento e intenta de nuevo.'
+  if (message.includes('InvalidParameterException')) return 'No pudimos enviar el SMS a este número. Verifica la configuración del User Pool y del App Client.'
   return message || 'No se pudo completar la autenticación.'
 }
 
 const LocationPage = ({ onConfirm }) => {
   const [error, setError] = useState(false)
   const [step, setStep] = useState('welcome')
-  const [authMode, setAuthMode] = useState('login')
   const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showOTPModal, setShowOTPModal] = useState(false)
+  const [otpFlow, setOtpFlow] = useState('signup')
 
   const cleanDigits = toGtLocalDigits(phone)
 
@@ -52,56 +51,54 @@ const LocationPage = ({ onConfirm }) => {
       throw new Error('No se recibió el token de acceso desde Cognito.')
     }
 
+    clearClientToken()
     setClientToken(accessToken)
     await syncClientProfile(normalizedPhone)
     toast.success('¡Número validado correctamente!')
     onConfirm(normalizedPhone)
   }
 
-  const handleLogin = async () => {
+  const openOtpModal = (flow, successMessage) => {
+    setOtpFlow(flow)
+    setShowOTPModal(true)
+    toast.success(successMessage)
+  }
+
+  const handleSendCode = async () => {
     if (cleanDigits.length !== 8) {
       toast.error('Ingresa un número válido de 8 dígitos.')
-      return
-    }
-
-    if (password.length < 8) {
-      toast.error(DEFAULT_PASSWORD_HINT)
       return
     }
 
     setIsLoading(true)
     try {
       const normalizedPhone = normalizeGtPhone(phone)
-      const result = await loginClient({ phone: normalizedPhone, password })
-      await completeClientSession(normalizedPhone, result)
-    } catch (authError) {
-      toast.error(getFriendlyError(authError))
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
-  const handleRegister = async () => {
-    if (cleanDigits.length !== 8) {
-      toast.error('Ingresa un número válido de 8 dígitos.')
-      return
-    }
+      try {
+        await signUpClient({ phone: normalizedPhone })
+        openOtpModal('signup', 'Te enviamos un código SMS para validar tu número.')
+        return
+      } catch (signUpError) {
+        const signUpMessage = signUpError?.message || ''
 
-    if (password.length < 8) {
-      toast.error(DEFAULT_PASSWORD_HINT)
-      return
-    }
+        if (signUpMessage.includes('UsernameExistsException')) {
+          try {
+            await sendExistingClientOtp({ phone: normalizedPhone })
+            openOtpModal('existing-user', 'Te enviamos un código SMS para continuar.')
+            return
+          } catch (existingUserError) {
+            const existingMessage = existingUserError?.message || ''
+            if (existingMessage.includes('UserNotConfirmedException')) {
+              await resendClientConfirmationCode({ phone: normalizedPhone })
+              openOtpModal('signup', 'Reenviamos el código SMS para validar tu número.')
+              return
+            }
+            throw existingUserError
+          }
+        }
 
-    if (password !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden.')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await signUpClient({ phone, password })
-      setShowOTPModal(true)
-      toast.success('Te enviamos un código SMS para confirmar tu cuenta.')
+        throw signUpError
+      }
     } catch (authError) {
       toast.error(getFriendlyError(authError))
     } finally {
@@ -113,8 +110,14 @@ const LocationPage = ({ onConfirm }) => {
     setIsLoading(true)
     try {
       const normalizedPhone = normalizeGtPhone(phone)
-      await confirmClientSignUp({ phone: normalizedPhone, code })
-      const result = await loginClient({ phone: normalizedPhone, password })
+
+      if (otpFlow === 'signup') {
+        await confirmClientSignUp({ phone: normalizedPhone, code })
+      } else {
+        await confirmExistingClientOtp({ phone: normalizedPhone, code })
+      }
+
+      const result = await loginClient({ phone: normalizedPhone })
       setShowOTPModal(false)
       await completeClientSession(normalizedPhone, result)
     } catch (authError) {
@@ -127,7 +130,12 @@ const LocationPage = ({ onConfirm }) => {
   const handleResend = async () => {
     setIsLoading(true)
     try {
-      await resendClientConfirmationCode({ phone })
+      const normalizedPhone = normalizeGtPhone(phone)
+      if (otpFlow === 'signup') {
+        await resendClientConfirmationCode({ phone: normalizedPhone })
+      } else {
+        await sendExistingClientOtp({ phone: normalizedPhone })
+      }
       toast.success('Te reenviamos el código SMS.')
     } catch (authError) {
       toast.error(getFriendlyError(authError))
@@ -154,7 +162,7 @@ const LocationPage = ({ onConfirm }) => {
             <p className="text-gray-500 leading-relaxed">
               {error
                 ? 'Por el momento nuestro servicio es exclusivo para residentes y visitantes dentro de Villa Nueva.'
-                : 'Validaremos tu cuenta de cliente con AWS Cognito antes de iniciar tu pedido.'}
+                : 'Validaremos tu número de teléfono por SMS con AWS Cognito antes de iniciar tu pedido.'}
             </p>
           </>
         )}
@@ -162,12 +170,10 @@ const LocationPage = ({ onConfirm }) => {
         {step === 'auth' && (
           <>
             <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">
-              {authMode === 'login' ? 'Ingresa con tu número' : 'Crea tu cuenta de cliente'}
+              Verifica tu número
             </h2>
             <p className="text-gray-500 leading-relaxed">
-              {authMode === 'login'
-                ? 'Usa tu número de teléfono y contraseña para continuar.'
-                : 'Te enviaremos un código SMS para confirmar tu número en Cognito.'}
+              Ingresa tu número y te enviaremos un código SMS para continuar con tu pedido.
             </p>
           </>
         )}
@@ -200,23 +206,6 @@ const LocationPage = ({ onConfirm }) => {
 
       {step === 'auth' && (
         <div className="space-y-5">
-          <div className="flex rounded-2xl border border-gray-200 bg-gray-50 p-1">
-            <button
-              type="button"
-              onClick={() => setAuthMode('login')}
-              className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition-all ${authMode === 'login' ? 'bg-white text-brand-blue shadow-sm' : 'text-gray-500'}`}
-            >
-              Ingresar
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode('signup')}
-              className={`flex-1 rounded-xl px-4 py-2 text-sm font-black transition-all ${authMode === 'signup' ? 'bg-white text-brand-blue shadow-sm' : 'text-gray-500'}`}
-            >
-              Registrarme
-            </button>
-          </div>
-
           <div className="text-left">
             <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Número de teléfono</label>
             <div className="flex items-center gap-2">
@@ -234,50 +223,22 @@ const LocationPage = ({ onConfirm }) => {
                 className="flex-1 p-3.5 border border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-lg font-bold tracking-wider"
               />
             </div>
+            <p className="mt-2 text-xs font-semibold text-gray-400">Te llegará un código por SMS para validar el número.</p>
           </div>
-
-          <div className="text-left">
-            <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-              className="w-full p-3.5 border border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-base font-bold"
-            />
-            <p className="mt-2 text-xs font-semibold text-gray-400">{DEFAULT_PASSWORD_HINT}</p>
-          </div>
-
-          {authMode === 'signup' && (
-            <div className="text-left">
-              <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Confirmar contraseña</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="********"
-                className="w-full p-3.5 border border-gray-200 rounded-xl bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-base font-bold"
-              />
-            </div>
-          )}
 
           <Button
             fullWidth
-            onClick={authMode === 'login' ? handleLogin : handleRegister}
-            disabled={cleanDigits.length !== 8 || password.length < 8 || isLoading}
+            onClick={handleSendCode}
+            disabled={cleanDigits.length !== 8 || isLoading}
             className="text-lg"
           >
-            {isLoading
-              ? authMode === 'login' ? 'Ingresando...' : 'Creando cuenta...'
-              : authMode === 'login' ? 'Ingresar →' : 'Crear cuenta →'}
+            {isLoading ? 'Enviando código...' : 'Enviar código SMS →'}
           </Button>
 
           <button
             onClick={() => {
               setStep('welcome')
               setPhone('')
-              setPassword('')
-              setConfirmPassword('')
             }}
             className="block w-full py-2 text-gray-400 text-sm font-semibold hover:text-gray-600 transition-colors"
           >

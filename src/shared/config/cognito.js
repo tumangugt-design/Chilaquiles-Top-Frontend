@@ -1,7 +1,8 @@
-
 const REGION = import.meta.env.VITE_COGNITO_REGION || 'us-east-1'
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID || '6vh1hbmm6k3dqas213627qbsm6'
 const ENDPOINT = `https://cognito-idp.${REGION}.amazonaws.com/`
+const CLIENT_PASSWORD_PREFIX = 'ChilaquilesTop@'
+const CLIENT_PASSWORD_SUFFIX = '#OTP2026'
 
 const request = async (target, payload) => {
   const response = await fetch(ENDPOINT, {
@@ -18,6 +19,7 @@ const request = async (target, payload) => {
     const message = data?.message || data?.Message || data?.__type || `Error en ${target}`
     const error = new Error(message)
     error.code = data?.__type || data?.name || null
+    error.payload = data
     throw error
   }
 
@@ -38,12 +40,17 @@ export const toGtLocalDigits = (raw = '') => {
   return digits.slice(0, 8)
 }
 
-export const signUpClient = async ({ phone, password }) => {
+const buildClientPassword = (phone) => {
+  const localDigits = toGtLocalDigits(phone)
+  return `${CLIENT_PASSWORD_PREFIX}${localDigits}${CLIENT_PASSWORD_SUFFIX}`
+}
+
+export const signUpClient = async ({ phone }) => {
   const normalizedPhone = normalizeGtPhone(phone)
   return request('SignUp', {
     ClientId: CLIENT_ID,
     Username: normalizedPhone,
-    Password: password,
+    Password: buildClientPassword(normalizedPhone),
     UserAttributes: [{ Name: 'phone_number', Value: normalizedPhone }],
   })
 }
@@ -65,14 +72,32 @@ export const resendClientConfirmationCode = async ({ phone }) => {
   })
 }
 
-export const loginClient = async ({ phone, password }) => {
+export const sendExistingClientOtp = async ({ phone }) => {
+  const normalizedPhone = normalizeGtPhone(phone)
+  return request('ForgotPassword', {
+    ClientId: CLIENT_ID,
+    Username: normalizedPhone,
+  })
+}
+
+export const confirmExistingClientOtp = async ({ phone, code }) => {
+  const normalizedPhone = normalizeGtPhone(phone)
+  return request('ConfirmForgotPassword', {
+    ClientId: CLIENT_ID,
+    Username: normalizedPhone,
+    ConfirmationCode: code,
+    Password: buildClientPassword(normalizedPhone),
+  })
+}
+
+export const loginClient = async ({ phone }) => {
   const normalizedPhone = normalizeGtPhone(phone)
   return request('InitiateAuth', {
     AuthFlow: 'USER_PASSWORD_AUTH',
     ClientId: CLIENT_ID,
     AuthParameters: {
       USERNAME: normalizedPhone,
-      PASSWORD: password,
+      PASSWORD: buildClientPassword(normalizedPhone),
     },
   })
 }
