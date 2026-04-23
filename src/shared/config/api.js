@@ -1,10 +1,27 @@
+
 import axios from 'axios'
-import { auth } from './firebase.js'
 
 let API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api'
 if (API_URL.startsWith('http://') && !API_URL.includes('localhost') && !API_URL.includes('127.0.0.1')) {
   API_URL = API_URL.replace('http://', 'https://')
 }
+
+export const STAFF_TOKEN_KEY = 'chila_staff_token'
+export const CLIENT_TOKEN_KEY = 'chila_client_access_token'
+
+export const setStaffToken = (token) => {
+  if (token) localStorage.setItem(STAFF_TOKEN_KEY, token)
+}
+
+export const clearStaffToken = () => localStorage.removeItem(STAFF_TOKEN_KEY)
+export const getStaffToken = () => localStorage.getItem(STAFF_TOKEN_KEY)
+
+export const setClientToken = (token) => {
+  if (token) localStorage.setItem(CLIENT_TOKEN_KEY, token)
+}
+
+export const clearClientToken = () => localStorage.removeItem(CLIENT_TOKEN_KEY)
+export const getClientToken = () => localStorage.getItem(CLIENT_TOKEN_KEY)
 
 const api = axios.create({
   baseURL: API_URL,
@@ -13,17 +30,17 @@ const api = axios.create({
   },
 })
 
-api.interceptors.request.use(async (config) => {
-  const user = auth.currentUser
-  if (user) {
-    const token = await user.getIdToken()
+api.interceptors.request.use((config) => {
+  const token = getStaffToken() || getClientToken()
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-export const authClientLogin = (payload) => api.post('/auth/client', payload)
-export const authStaffLogin = (payload) => api.post('/auth/staff', payload)
+export const authClientSync = (payload) => api.post('/auth/client/sync', payload)
+export const authStaffLogin = (payload) => api.post('/auth/staff/login', payload)
+export const registerStaff = (payload) => api.post('/auth/staff/register', payload)
 export const getSession = () => api.get('/auth/session')
 export const createOrder = (payload) => api.post('/orders', payload)
 export const getOrders = (status) => api.get(`/orders?t=${Date.now()}${status ? `&status=${status}` : ''}`)

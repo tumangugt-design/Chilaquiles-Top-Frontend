@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Button from '../components/ui/Button.jsx'
-import { authClientLogin, createOrder } from '../shared/config/api.js'
+import { authClientSync, createOrder } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
 
 const toGtLocalDigits = (raw = '') => {
@@ -70,7 +70,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
         accessCode: localData.accessCode,
       }
 
-      await authClientLogin(payloadCustomer)
+      await authClientSync(payloadCustomer)
       const allItems = [...order.cart, order.currentPlate]
       const response = await createOrder({
         customer: payloadCustomer,
