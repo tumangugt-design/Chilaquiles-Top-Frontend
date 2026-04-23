@@ -134,15 +134,21 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
         ) : null}
       </div>
 
-      {/* Action Buttons - Desktop */}
-      <div className="hidden lg:block space-y-4 pt-6 border-t border-ui-border mt-6">
+      <div className="pt-6 border-t border-ui-border mt-6 flex flex-col sm:flex-row gap-4">
+        <button
+          onClick={onBack}
+          className="order-2 sm:order-1 text-ui-muted font-bold hover:text-ui-text transition-colors flex items-center justify-center px-4 py-3 sm:py-2"
+        >
+          <span className="mr-2">←</span> Volver a editar
+        </button>
         <Button 
           fullWidth 
           onClick={onNext} 
           disabled={!isComplete}
-          className="py-4 shadow-xl shadow-brand-orange/20"
+          className="order-1 sm:order-2 py-4 shadow-xl shadow-brand-orange/20 flex-1"
         >
-          Finalizar Pedido
+          <span className="hidden sm:inline">Finalizar Pedido y Continuar</span>
+          <span className="sm:hidden">Finalizar Pedido</span>
           <span className="ml-2">→</span>
         </Button>
       </div>

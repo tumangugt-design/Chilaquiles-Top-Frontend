@@ -25,15 +25,21 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
         ))}
       </div>
 
-      <div className="pt-8 hidden lg:flex justify-between items-center border-t border-ui-border">
+      <div className="pt-8 flex justify-between items-center border-t border-ui-border mt-4">
         <button
           onClick={onBack}
-          className="text-ui-muted font-bold hover:text-ui-text transition-colors flex items-center"
+          className="text-ui-muted font-bold hover:text-ui-text transition-colors flex items-center px-4 py-2"
         >
-          <span className="mr-2">←</span> Volver
+          <span className="mr-2">←</span> <span className="hidden sm:inline">Volver</span><span className="sm:hidden text-xs">Atrás</span>
         </button>
-        <Button className="w-full md:w-auto min-w-[200px]" disabled={!order.requestedCount} onClick={onNext}>
-          Siguiente Paso <span className="ml-2">→</span>
+        <Button 
+          className="w-auto min-w-[120px] sm:min-w-[200px]" 
+          disabled={!order.requestedCount} 
+          onClick={onNext}
+        >
+          <span className="hidden sm:inline">Siguiente Paso</span>
+          <span className="sm:hidden">Siguiente</span>
+          <span className="ml-2">→</span>
         </Button>
       </div>
     </div>

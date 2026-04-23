@@ -130,13 +130,13 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
           {renderStep()}
         </div>
       ) : (
-        <div className="pb-32 lg:pb-12 pt-20 lg:pt-28">
+        <div className="pb-40 lg:pb-20 pt-20 sm:pt-24 lg:pt-32">
           <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
-          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col lg:flex-row items-start justify-center gap-8">
+          <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row items-start justify-center gap-4 sm:gap-8">
               <div className="flex-1 w-full max-w-3xl">
                 <Stepper currentStep={currentStep} />
-                <div className="bg-ui-card rounded-[2rem] p-4 sm:p-10 shadow-xl border border-ui-border min-h-[500px] animate-fade-in transition-all">
+                <div className="bg-ui-card rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-10 shadow-xl border border-ui-border min-h-[400px] sm:min-h-[500px] animate-fade-in transition-all">
                   {renderStep()}
                 </div>
                 <div className="mt-8 text-center text-xs text-ui-muted font-medium space-y-1 mb-8">

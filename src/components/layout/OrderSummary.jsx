@@ -125,22 +125,26 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
       {currentStep !== 'CUSTOMER' && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
-          <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-          <div className="bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-4 relative">
-            <div className="flex items-center gap-4 max-w-md mx-auto">
+          <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-ui-bg via-ui-bg/95 to-transparent pointer-events-none" />
+          <div className="bg-ui-card border-t border-ui-border shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-5 sm:p-6 pb-8 sm:pb-6 relative">
+            <div className="flex items-center gap-4 max-w-lg mx-auto">
               <div onClick={() => setIsOpen(true)} className="flex flex-col cursor-pointer px-2 active:opacity-60 transition-opacity">
-                <span className="text-[10px] uppercase font-bold text-ui-muted mb-0.5">Total</span>
-                <div className="flex items-center text-brand-blue font-black text-2xl">
+                <span className="text-[10px] uppercase font-black text-ui-muted mb-0.5 tracking-widest">Total</span>
+                <div className="flex items-center text-brand-blue font-black text-2xl sm:text-3xl">
                   Q{grandTotal}
-                  <div className="ml-1.5 bg-blue-50 rounded-full p-0.5 animate-bounce">
+                  <div className="ml-1.5 bg-brand-blue/10 rounded-full p-1.5 animate-bounce">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 15l7-7 7 7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 15l7-7 7 7" />
                     </svg>
                   </div>
                 </div>
               </div>
-
-              <Button variant="primary" className="flex-1 py-3.5 text-base shadow-lg rounded-xl" disabled={!canContinue()} onClick={handleMainAction}>
+              <Button 
+                variant="primary" 
+                className="flex-1 py-4 sm:py-5 text-lg font-black shadow-xl shadow-brand-blue/30 rounded-2xl" 
+                disabled={!canContinue()} 
+                onClick={handleMainAction}
+              >
                 {getButtonLabel()}
               </Button>
             </div>

@@ -39,12 +39,14 @@ const BaseRecipePage = ({ plate, updatePlate, onNext, onBack }) => {
         ))}
       </div>
 
-      <div className="pt-12 hidden lg:flex items-center justify-between border-t border-gray-100">
-        <button onClick={onBack} className="text-gray-500 font-bold hover:text-gray-800 transition-colors px-4 py-2">
-          Atrás
+      <div className="pt-8 flex items-center justify-between border-t border-ui-border mt-4">
+        <button onClick={onBack} className="text-ui-muted font-bold hover:text-ui-text transition-colors px-4 py-2 flex items-center">
+          <span className="mr-2">←</span> <span className="hidden sm:inline">Atrás</span><span className="sm:hidden text-xs">Volver</span>
         </button>
-        <Button className="w-full md:w-auto min-w-[200px]" onClick={onNext}>
-          Revisar Plato <span className="ml-2">→</span>
+        <Button className="w-auto min-w-[120px] sm:min-w-[200px]" onClick={onNext}>
+          <span className="hidden sm:inline">Revisar Plato</span>
+          <span className="sm:hidden">Revisar</span>
+          <span className="ml-2">→</span>
         </Button>
       </div>
     </div>

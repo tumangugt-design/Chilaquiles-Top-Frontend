@@ -46,7 +46,7 @@ const OTPModal = ({ isOpen, onClose, onVerify, onResend, isSending = false, phon
           <button onClick={onClose} className="text-ui-muted hover:text-ui-text text-xl font-black">×</button>
         </div>
 
-        <div className="grid grid-cols-6 gap-2 sm:gap-3 mb-6">
+        <div className="grid grid-cols-6 gap-1.5 sm:gap-3 mb-6">
           {otp.map((digit, index) => (
             <input
               key={index}

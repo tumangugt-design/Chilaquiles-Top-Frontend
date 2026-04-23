@@ -74,7 +74,7 @@ const OptionCard = ({
       )}
 
       {/* Visual Area */}
-      <div className={`relative w-full overflow-hidden bg-ui-bg ${illustration ? 'h-32 sm:h-52 p-2 sm:p-6' : 'h-32 sm:h-48'}`}>
+      <div className={`relative w-full overflow-hidden bg-ui-bg ${illustration ? 'h-36 sm:h-52 p-4 sm:p-6' : 'h-36 sm:h-48'}`}>
         {illustration ? (
           <div className={`w-full h-full transition-transform duration-500 ${selected ? 'scale-105' : 'scale-100 group-hover:scale-105'}`}>
             {illustration}
@@ -92,18 +92,18 @@ const OptionCard = ({
       </div>
 
       {/* Content Area */}
-      <div className="p-3 sm:p-5">
+      <div className="p-4 sm:p-5">
         <div className="flex justify-between items-start mb-1 sm:mb-2">
-          <h3 className={`font-bold text-base sm:text-lg leading-tight ${selected ? 'text-brand-blue' : 'text-ui-text'}`}>
+          <h3 className={`font-black text-base sm:text-lg leading-tight ${selected ? 'text-brand-blue' : 'text-ui-text'}`}>
             {title}
           </h3>
           {price && (
-            <span className="shrink-0 font-bold text-base sm:text-lg text-brand-blue">{price}</span>
+            <span className="shrink-0 font-black text-base sm:text-lg text-brand-blue">{price}</span>
           )}
         </div>
 
         {description && (
-          <p className="text-ui-muted text-xs sm:text-sm leading-relaxed font-medium line-clamp-2 sm:line-clamp-none">
+          <p className="text-ui-muted text-[11px] sm:text-sm leading-relaxed font-bold line-clamp-2 sm:line-clamp-none">
             {description}
             {spicyLevel === 'MILD' && <MildFlameIcon />}
           </p>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { STEPS_ORDER } from '../../shared/constants/index.jsx'
 
 const Stepper = ({ currentStep }) => {
@@ -15,12 +16,19 @@ const Stepper = ({ currentStep }) => {
     { label: 'Datos', step: 'CUSTOMER' },
   ]
 
-  const stepWidth = 80
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const stepWidth = isMobile ? 65 : 80
   const translateX = `calc(50% - ${stepWidth / 2}px - ${currentIndex * stepWidth}px)`
 
   return (
-    <div className="sticky top-16 lg:top-20 z-30 -mx-4 sm:mx-0 bg-ui-bg border-b border-ui-border transition-all duration-300 shadow-sm">
-      <div className="w-full relative overflow-hidden h-14 sm:h-20 select-none flex items-center">
+    <div className="sticky top-[68px] sm:top-24 z-30 -mx-2 sm:mx-0 bg-ui-bg/95 backdrop-blur-md border-b border-ui-border transition-all duration-300 shadow-sm">
+      <div className="w-full relative overflow-hidden h-12 sm:h-20 select-none flex items-center">
 
         {/* Gradient Masks */}
         <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-20 bg-gradient-to-r from-ui-bg to-transparent z-20 pointer-events-none" />
