@@ -37,7 +37,7 @@ const LocationPage = ({ onConfirm }) => {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
       }
-      
+
       window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-location', {
         size: 'invisible',
         callback: () => {
@@ -60,12 +60,17 @@ const LocationPage = ({ onConfirm }) => {
 
   useEffect(() => {
     isMountedRef.current = true;
+
+    // Inicializamos el reCAPTCHA una sola vez al cargar la página
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-location', {
+        size: 'invisible',
+        callback: () => console.log('reCAPTCHA listo'),
+      });
+    }
+
     return () => {
       isMountedRef.current = false;
-      if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch (e) {}
-        window.recaptchaVerifier = null;
-      }
     };
   }, []);
 
@@ -79,28 +84,21 @@ const LocationPage = ({ onConfirm }) => {
     setIsSendingOTP(true);
     try {
       const phoneNumber = normalizeGtPhone(phone);
-      const verifier = initRecaptcha();
-      if (!verifier) throw new Error('Error al inicializar el verificador de seguridad.');
 
-      console.log('Sending OTP to:', phoneNumber);
+      const verifier = window.recaptchaVerifier;
+      if (!verifier) throw new Error('Seguridad no inicializada. Recarga la página.');
+
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-      
-      if (!isMountedRef.current) return;
 
+      if (!isMountedRef.current) return;
       setConfirmationResult(confirmation);
       setShowOTPModal(true);
       toast.success('Código enviado por SMS');
     } catch (error) {
       console.error('Error enviando SMS:', error);
-      if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch(e){}
-        window.recaptchaVerifier = null;
-      }
-      toast.error(error?.message || 'Error al enviar el código. Revisa tu número.');
+      toast.error('Error de seguridad o demasiados intentos. Espera unos minutos.');
     } finally {
-      if (isMountedRef.current) {
-        setIsSendingOTP(false);
-      }
+      if (isMountedRef.current) setIsSendingOTP(false);
     }
   };
 
@@ -111,7 +109,7 @@ const LocationPage = ({ onConfirm }) => {
     try {
       await confirmationResult.confirm(code);
       const normalizedPhone = normalizeGtPhone(phone);
-      
+
       setShowOTPModal(false);
       toast.success('¡Verificado! Vamos a armar tus chilaquiles 🌮');
       onConfirm(normalizedPhone);
@@ -208,9 +206,9 @@ const LocationPage = ({ onConfirm }) => {
             </div>
           </div>
 
-          <Button 
-            fullWidth 
-            onClick={handleSendOTP} 
+          <Button
+            fullWidth
+            onClick={handleSendOTP}
             disabled={toGtLocalDigits(phone).length !== 8 || isSendingOTP}
             className="text-lg"
           >
@@ -233,12 +231,12 @@ const LocationPage = ({ onConfirm }) => {
         </div>
       </div>
 
-      <OTPModal 
-        isOpen={showOTPModal} 
-        onClose={() => setShowOTPModal(false)} 
-        onVerify={handleVerifyOTP} 
-        isSending={isSendingOTP} 
-        phone={toGtLocalDigits(phone)} 
+      <OTPModal
+        isOpen={showOTPModal}
+        onClose={() => setShowOTPModal(false)}
+        onVerify={handleVerifyOTP}
+        isSending={isSendingOTP}
+        phone={toGtLocalDigits(phone)}
       />
     </div>
   )
