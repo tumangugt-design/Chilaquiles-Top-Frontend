@@ -125,7 +125,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   return (
     <div className="min-h-screen bg-ui-bg font-sans text-ui-text relative transition-colors duration-300">
       {currentStep === 'LOCATION' ? (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-24 sm:pt-4">
           <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
           {renderStep()}
         </div>

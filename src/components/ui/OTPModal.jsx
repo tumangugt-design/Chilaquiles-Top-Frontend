@@ -36,7 +36,7 @@ const OTPModal = ({ isOpen, onClose, onVerify, onResend, isSending = false, phon
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-[2rem] bg-ui-card border border-ui-border shadow-2xl p-6 sm:p-8 animate-fade-in">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
