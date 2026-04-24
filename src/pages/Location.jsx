@@ -13,50 +13,53 @@ import {
 import { authClientSync, clearClientToken, setClientToken } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
 
-const getFriendlyError = (error) => {
-  const message = error?.message || ''
+const hasCognitoError = (error, code) => {
+  const haystack = `${error?.code || ''} ${error?.message || ''} ${error?.payload?.__type || ''}`
+  return haystack.includes(code)
+}
 
-  if (message.includes('UsernameExistsException')) {
+const getFriendlyError = (error) => {
+  if (hasCognitoError(error, 'UsernameExistsException')) {
     return 'Este número ya existe.'
   }
 
-  if (message.includes('UserNotFoundException')) {
+  if (hasCognitoError(error, 'UserNotFoundException')) {
     return 'No encontramos una cuenta con ese número.'
   }
 
-  if (message.includes('CodeMismatchException')) {
+  if (hasCognitoError(error, 'CodeMismatchException')) {
     return 'El código ingresado no es correcto.'
   }
 
-  if (message.includes('ExpiredCodeException')) {
+  if (hasCognitoError(error, 'ExpiredCodeException')) {
     return 'El código expiró. Solicita uno nuevo.'
   }
 
-  if (message.includes('NotAuthorizedException')) {
+  if (hasCognitoError(error, 'NotAuthorizedException')) {
     return 'No se pudo validar el acceso con este número.'
   }
 
-  if (message.includes('UserNotConfirmedException')) {
+  if (hasCognitoError(error, 'UserNotConfirmedException')) {
     return 'Tu número aún no ha sido confirmado. Te reenviamos el código SMS.'
   }
 
-  if (message.includes('InvalidPasswordException')) {
+  if (hasCognitoError(error, 'InvalidPasswordException')) {
     return 'No se pudo preparar la autenticación automática del cliente.'
   }
 
-  if (message.includes('USER_PASSWORD_AUTH')) {
+  if (String(error?.message || '').includes('USER_PASSWORD_AUTH')) {
     return 'Debes habilitar USER_PASSWORD_AUTH en el App Client de Cognito.'
   }
 
-  if (message.includes('LimitExceededException')) {
+  if (hasCognitoError(error, 'LimitExceededException')) {
     return 'Has intentado demasiadas veces. Espera un momento e intenta de nuevo.'
   }
 
-  if (message.includes('InvalidParameterException')) {
+  if (hasCognitoError(error, 'InvalidParameterException')) {
     return 'No pudimos enviar el SMS a este número. Verifica la configuración del User Pool y del App Client.'
   }
 
-  return message || 'No se pudo completar la autenticación.'
+  return error?.message || 'No se pudo completar la autenticación.'
 }
 
 const LocationPage = ({ onConfirm }) => {
@@ -104,24 +107,17 @@ const LocationPage = ({ onConfirm }) => {
       const normalizedPhone = normalizeGtPhone(phone)
 
       try {
-        // Si no existe, lo registra y manda SMS de confirmación
         await signUpClient({ phone: normalizedPhone })
         openOtpModal('Te enviamos un código SMS para validar tu número.')
         return
       } catch (signUpError) {
-        const signUpMessage = signUpError?.message || ''
-
-        if (signUpMessage.includes('UsernameExistsException')) {
+        if (hasCognitoError(signUpError, 'UsernameExistsException')) {
           try {
-            // Si ya existe y está confirmado, entra directo sin volver a pedir SMS
             const result = await loginClient({ phone: normalizedPhone })
             await completeClientSession(normalizedPhone, result)
             return
           } catch (existingLoginError) {
-            const existingMessage = existingLoginError?.message || ''
-
-            if (existingMessage.includes('UserNotConfirmedException')) {
-              // Si existe pero no está confirmado, reenviamos código
+            if (hasCognitoError(existingLoginError, 'UserNotConfirmedException')) {
               await resendClientConfirmationCode({ phone: normalizedPhone })
               openOtpModal('Tu número aún no está confirmado. Reenviamos el código SMS.')
               return

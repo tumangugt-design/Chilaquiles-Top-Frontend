@@ -15,10 +15,14 @@ const request = async (target, payload) => {
   })
 
   const data = await response.json().catch(() => ({}))
+
   if (!response.ok) {
-    const message = data?.message || data?.Message || data?.__type || `Error en ${target}`
+    const rawCode = String(data?.__type || data?.name || '')
+    const normalizedCode = rawCode.includes('#') ? rawCode.split('#').pop() : rawCode
+    const message = data?.message || data?.Message || normalizedCode || `Error en ${target}`
+
     const error = new Error(message)
-    error.code = data?.__type || data?.name || null
+    error.code = normalizedCode || null
     error.payload = data
     throw error
   }
