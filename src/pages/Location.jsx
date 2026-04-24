@@ -7,8 +7,6 @@ import {
   confirmClientSignUp,
   loginClient,
   resendClientConfirmationCode,
-  sendExistingClientOtp,
-  confirmExistingClientOtp,
   normalizeGtPhone,
   toGtLocalDigits,
 } from '../shared/config/cognito.js'
@@ -17,16 +15,47 @@ import toast from 'react-hot-toast'
 
 const getFriendlyError = (error) => {
   const message = error?.message || ''
-  if (message.includes('UsernameExistsException')) return 'Este número ya existe. Te enviaremos un código SMS para continuar.'
-  if (message.includes('UserNotFoundException')) return 'No encontramos una cuenta con ese número.'
-  if (message.includes('CodeMismatchException')) return 'El código ingresado no es correcto.'
-  if (message.includes('ExpiredCodeException')) return 'El código expiró. Solicita uno nuevo.'
-  if (message.includes('NotAuthorizedException')) return 'No se pudo validar el acceso con este número.'
-  if (message.includes('UserNotConfirmedException')) return 'Tu número aún no ha sido confirmado. Te reenviamos el código SMS.'
-  if (message.includes('InvalidPasswordException')) return 'No se pudo preparar la autenticación automática del cliente.'
-  if (message.includes('USER_PASSWORD_AUTH')) return 'Debes habilitar USER_PASSWORD_AUTH en el App Client de Cognito.'
-  if (message.includes('LimitExceededException')) return 'Has intentado demasiadas veces. Espera un momento e intenta de nuevo.'
-  if (message.includes('InvalidParameterException')) return 'No pudimos enviar el SMS a este número. Verifica la configuración del User Pool y del App Client.'
+
+  if (message.includes('UsernameExistsException')) {
+    return 'Este número ya existe.'
+  }
+
+  if (message.includes('UserNotFoundException')) {
+    return 'No encontramos una cuenta con ese número.'
+  }
+
+  if (message.includes('CodeMismatchException')) {
+    return 'El código ingresado no es correcto.'
+  }
+
+  if (message.includes('ExpiredCodeException')) {
+    return 'El código expiró. Solicita uno nuevo.'
+  }
+
+  if (message.includes('NotAuthorizedException')) {
+    return 'No se pudo validar el acceso con este número.'
+  }
+
+  if (message.includes('UserNotConfirmedException')) {
+    return 'Tu número aún no ha sido confirmado. Te reenviamos el código SMS.'
+  }
+
+  if (message.includes('InvalidPasswordException')) {
+    return 'No se pudo preparar la autenticación automática del cliente.'
+  }
+
+  if (message.includes('USER_PASSWORD_AUTH')) {
+    return 'Debes habilitar USER_PASSWORD_AUTH en el App Client de Cognito.'
+  }
+
+  if (message.includes('LimitExceededException')) {
+    return 'Has intentado demasiadas veces. Espera un momento e intenta de nuevo.'
+  }
+
+  if (message.includes('InvalidParameterException')) {
+    return 'No pudimos enviar el SMS a este número. Verifica la configuración del User Pool y del App Client.'
+  }
+
   return message || 'No se pudo completar la autenticación.'
 }
 
@@ -36,7 +65,6 @@ const LocationPage = ({ onConfirm }) => {
   const [phone, setPhone] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showOTPModal, setShowOTPModal] = useState(false)
-  const [otpFlow, setOtpFlow] = useState('signup')
 
   const cleanDigits = toGtLocalDigits(phone)
 
@@ -47,6 +75,7 @@ const LocationPage = ({ onConfirm }) => {
 
   const completeClientSession = async (normalizedPhone, authResult) => {
     const accessToken = authResult?.AuthenticationResult?.AccessToken
+
     if (!accessToken) {
       throw new Error('No se recibió el token de acceso desde Cognito.')
     }
@@ -58,8 +87,7 @@ const LocationPage = ({ onConfirm }) => {
     onConfirm(normalizedPhone)
   }
 
-  const openOtpModal = (flow, successMessage) => {
-    setOtpFlow(flow)
+  const openOtpModal = (successMessage) => {
     setShowOTPModal(true)
     toast.success(successMessage)
   }
@@ -71,29 +99,35 @@ const LocationPage = ({ onConfirm }) => {
     }
 
     setIsLoading(true)
+
     try {
       const normalizedPhone = normalizeGtPhone(phone)
 
       try {
+        // Si no existe, lo registra y manda SMS de confirmación
         await signUpClient({ phone: normalizedPhone })
-        openOtpModal('signup', 'Te enviamos un código SMS para validar tu número.')
+        openOtpModal('Te enviamos un código SMS para validar tu número.')
         return
       } catch (signUpError) {
         const signUpMessage = signUpError?.message || ''
 
         if (signUpMessage.includes('UsernameExistsException')) {
           try {
-            await sendExistingClientOtp({ phone: normalizedPhone })
-            openOtpModal('existing-user', 'Te enviamos un código SMS para continuar.')
+            // Si ya existe y está confirmado, entra directo sin volver a pedir SMS
+            const result = await loginClient({ phone: normalizedPhone })
+            await completeClientSession(normalizedPhone, result)
             return
-          } catch (existingUserError) {
-            const existingMessage = existingUserError?.message || ''
+          } catch (existingLoginError) {
+            const existingMessage = existingLoginError?.message || ''
+
             if (existingMessage.includes('UserNotConfirmedException')) {
+              // Si existe pero no está confirmado, reenviamos código
               await resendClientConfirmationCode({ phone: normalizedPhone })
-              openOtpModal('signup', 'Reenviamos el código SMS para validar tu número.')
+              openOtpModal('Tu número aún no está confirmado. Reenviamos el código SMS.')
               return
             }
-            throw existingUserError
+
+            throw existingLoginError
           }
         }
 
@@ -108,17 +142,15 @@ const LocationPage = ({ onConfirm }) => {
 
   const handleVerifyCode = async (code) => {
     setIsLoading(true)
+
     try {
       const normalizedPhone = normalizeGtPhone(phone)
 
-      if (otpFlow === 'signup') {
-        await confirmClientSignUp({ phone: normalizedPhone, code })
-      } else {
-        await confirmExistingClientOtp({ phone: normalizedPhone, code })
-      }
+      await confirmClientSignUp({ phone: normalizedPhone, code })
 
       const result = await loginClient({ phone: normalizedPhone })
       setShowOTPModal(false)
+
       await completeClientSession(normalizedPhone, result)
     } catch (authError) {
       toast.error(getFriendlyError(authError))
@@ -129,13 +161,10 @@ const LocationPage = ({ onConfirm }) => {
 
   const handleResend = async () => {
     setIsLoading(true)
+
     try {
       const normalizedPhone = normalizeGtPhone(phone)
-      if (otpFlow === 'signup') {
-        await resendClientConfirmationCode({ phone: normalizedPhone })
-      } else {
-        await sendExistingClientOtp({ phone: normalizedPhone })
-      }
+      await resendClientConfirmationCode({ phone: normalizedPhone })
       toast.success('Te reenviamos el código SMS.')
     } catch (authError) {
       toast.error(getFriendlyError(authError))
@@ -210,7 +239,7 @@ const LocationPage = ({ onConfirm }) => {
             <label className="block text-sm font-bold text-ui-text mb-2 ml-1">Número de teléfono</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="flex items-center bg-ui-bg px-2.5 py-3 sm:px-3 sm:py-3.5 rounded-xl border border-ui-border">
-                <span className="text-xs sm:text-sm font-bold text-ui-muted">🇬🇹 +502</span>
+                <span className="text-xs sm:text-sm font-bold text-ui-muted">GT +502</span>
               </div>
               <input
                 type="tel"
@@ -223,7 +252,9 @@ const LocationPage = ({ onConfirm }) => {
                 className="flex-1 p-3 sm:p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-base sm:text-lg font-bold tracking-wider"
               />
             </div>
-            <p className="mt-2 text-[10px] sm:text-xs font-semibold text-ui-muted">Te llegará un código por SMS para validar el número.</p>
+            <p className="mt-2 text-[10px] sm:text-xs font-semibold text-ui-muted">
+              Si es tu primera vez, te llegará un código por SMS. Si tu número ya fue validado, entrarás automáticamente.
+            </p>
           </div>
 
           <Button
@@ -232,7 +263,7 @@ const LocationPage = ({ onConfirm }) => {
             disabled={cleanDigits.length !== 8 || isLoading}
             className="text-base sm:text-lg"
           >
-            {isLoading ? 'Enviando código...' : 'Enviar código SMS →'}
+            {isLoading ? 'Validando número...' : 'Continuar →'}
           </Button>
 
           <button
