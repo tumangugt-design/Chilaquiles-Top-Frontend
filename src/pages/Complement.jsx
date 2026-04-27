@@ -4,10 +4,13 @@ import { OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const ComplementPage = ({ plate, updatePlate, onNext, onBack }) => {
+const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
       <div className="max-w-xl">
+        <p className="text-sm sm:text-base font-black text-brand-blue uppercase tracking-widest mb-2">
+          Plato {plateNumber}
+        </p>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 sm:mb-3">Elige tu complemento</h2>
         <p className="text-base sm:text-lg text-gray-500">El toque final para elevar el sabor.</p>
       </div>

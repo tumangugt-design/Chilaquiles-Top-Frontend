@@ -101,13 +101,13 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'SIZE':
         return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'SAUCE':
-        return <SaucePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <SaucePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'PROTEIN':
-        return <ProteinPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'COMPLEMENT':
-        return <ComplementPage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'BASE_RECIPE':
-        return <BaseRecipePage plate={order.currentPlate} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
       case 'CUSTOMER':

@@ -74,7 +74,9 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
             </div>
             <div className="text-[10px] text-ui-muted leading-tight space-y-0.5 mt-1">
               <div>{getLabel(plate.sauce, OPTIONS_SAUCE)}, {getLabel(plate.protein, OPTIONS_PROTEIN)}</div>
-              {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && <div className="italic text-ui-muted">{formatBaseRecipe(plate.baseRecipe)}</div>}
+              {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && (
+                <div className="text-ui-text font-bold">{formatBaseRecipe(plate.baseRecipe)}</div>
+              )}
             </div>
           </div>
         ))}
@@ -82,7 +84,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
         <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
           <div className="flex justify-between items-center mb-2 border-b border-blue-100 pb-1">
             <span className="text-xs font-bold text-brand-blue uppercase">
-              Plato Actual {order.requestedCount > 1 ? `(${totalItems} de ${order.requestedCount})` : '(Editando)'}
+              {`Plato ${totalItems} ${order.requestedCount > 1 ? `(${totalItems} de ${order.requestedCount})` : '(Editando)'}`}
             </span>
           </div>
           {currentPlate.sauce || currentPlate.protein ? (
@@ -91,7 +93,9 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
               <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Proteína</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.protein, OPTIONS_PROTEIN)}</span></div>
               <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Complemento</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.complement, OPTIONS_COMPLEMENT)}</span></div>
               {showBaseInSummary && !!formatBaseRecipe(currentPlate.baseRecipe) && (
-                <div className="pt-1 border-t border-ui-border italic text-ui-muted">{formatBaseRecipe(currentPlate.baseRecipe)}</div>
+                <div className="pt-1 border-t border-ui-border text-ui-text font-bold">
+                  {formatBaseRecipe(currentPlate.baseRecipe)}
+                </div>
               )}
             </div>
           ) : (
@@ -139,10 +143,10 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
                   </div>
                 </div>
               </div>
-              <Button 
-                variant="primary" 
-                className="flex-1 py-4 sm:py-5 text-lg font-black shadow-xl shadow-brand-blue/30 rounded-2xl" 
-                disabled={!canContinue()} 
+              <Button
+                variant="primary"
+                className="flex-1 py-4 sm:py-5 text-lg font-black shadow-xl shadow-brand-blue/30 rounded-2xl"
+                disabled={!canContinue()}
                 onClick={handleMainAction}
               >
                 {getButtonLabel()}

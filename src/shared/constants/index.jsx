@@ -180,14 +180,14 @@ export const OPTIONS_COMPLEMENT = [
   {
     id: 'CEBOLLA_CARAMELIZADA',
     label: 'Cebolla Caramelizada',
-    value: 'CEBOLLA_CARAMELIZADA',
+    value: 'CEBOLLA CARAMELIZADA',
     description: 'Cocinada por un siglo, sabor único.',
     illustration: React.createElement(IllustrationCebollaCaramel),
   },
   {
     id: 'QUESO_EXTRA',
     label: 'Queso Extra',
-    value: 'QUESO_EXTRA',
+    value: 'QUESO EXTRA',
     description: 'Queso mozzarella adicional. Tu plato ya incluye queso en la base.',
     illustration: React.createElement(IllustrationQuesoExtra),
   },

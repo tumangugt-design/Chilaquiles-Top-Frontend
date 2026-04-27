@@ -4,7 +4,7 @@ import { OPTIONS_BASE_RECIPE } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const BaseRecipePage = ({ plate, updatePlate, onNext, onBack }) => {
+const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
   const toggleBase = (key) => {
     updatePlate({
       baseRecipe: {
@@ -17,6 +17,9 @@ const BaseRecipePage = ({ plate, updatePlate, onNext, onBack }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-4 sm:mb-8">
+        <p className="text-sm sm:text-base font-black text-brand-blue uppercase tracking-widest mb-2">
+          Plato {plateNumber}
+        </p>
         <h2 className="text-2xl font-bold mb-2">Personaliza la base</h2>
         <p className="text-sm sm:text-base text-gray-500">
           Toca algún ingrediente si deseas eliminarlo. Vienen incluidos por defecto.
