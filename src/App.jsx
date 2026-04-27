@@ -7,6 +7,7 @@ import { STEPS_ORDER } from './shared/constants/index.jsx'
 import { useOrder } from './shared/hooks/useOrder.jsx'
 import { getAvailablePlates } from './shared/config/api.js'
 import LocationPage from './pages/Location.jsx'
+import PhoneAuthPage from './pages/PhoneAuth.jsx'
 import SizePage from './pages/Size.jsx'
 import SaucePage from './pages/Sauce.jsx'
 import ProteinPage from './pages/Protein.jsx'
@@ -98,6 +99,8 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
             }}
           />
         )
+      case 'PHONE_AUTH':
+        return <PhoneAuthPage onNext={nextStep} onBack={prevStep} />
       case 'SIZE':
         return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'SAUCE':

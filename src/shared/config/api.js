@@ -47,3 +47,6 @@ export const deleteInventoryItem = (name) => api.delete(`/inventory/${name}`)
 export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount })
 
 export default api
+
+export const requestClientAuthCode = (payload) => api.post('/auth/client/request-code', payload)
+export const verifyClientAuthCode = (payload) => api.post('/auth/client/verify-code', payload)

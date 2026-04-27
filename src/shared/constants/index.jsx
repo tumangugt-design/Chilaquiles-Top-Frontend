@@ -67,6 +67,7 @@ export const INVENTORY_PRODUCT_MAP = Object.fromEntries(
 
 export const STEPS_ORDER = [
   'LOCATION',
+  'PHONE_AUTH',
   'SIZE',
   'SAUCE',
   'PROTEIN',
@@ -79,6 +80,7 @@ export const STEPS_ORDER = [
 
 export const STEP_LABELS = {
   LOCATION: 'Ubicación',
+  PHONE_AUTH: 'Verificación',
   SIZE: 'Tamaño',
   SAUCE: 'Salsa',
   PROTEIN: 'Proteína',
