@@ -1,6 +1,4 @@
-// ============================================
-// COMPONENTE: Button
-// ============================================
+
 
 const Button = ({ children, variant = 'primary', fullWidth = false, className = '', ...props }) => {
   const baseStyles =

@@ -1,4 +1,3 @@
-
 import axios from 'axios'
 
 let API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api'
@@ -7,7 +6,6 @@ if (API_URL.startsWith('http://') && !API_URL.includes('localhost') && !API_URL.
 }
 
 export const STAFF_TOKEN_KEY = 'chila_staff_token'
-export const CLIENT_TOKEN_KEY = 'chila_client_access_token'
 
 export const setStaffToken = (token) => {
   if (token) localStorage.setItem(STAFF_TOKEN_KEY, token)
@@ -15,13 +13,6 @@ export const setStaffToken = (token) => {
 
 export const clearStaffToken = () => localStorage.removeItem(STAFF_TOKEN_KEY)
 export const getStaffToken = () => localStorage.getItem(STAFF_TOKEN_KEY)
-
-export const setClientToken = (token) => {
-  if (token) localStorage.setItem(CLIENT_TOKEN_KEY, token)
-}
-
-export const clearClientToken = () => localStorage.removeItem(CLIENT_TOKEN_KEY)
-export const getClientToken = () => localStorage.getItem(CLIENT_TOKEN_KEY)
 
 const api = axios.create({
   baseURL: API_URL,
@@ -31,14 +22,13 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = getStaffToken() || getClientToken()
+  const token = getStaffToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-export const authClientSync = (payload) => api.post('/auth/client/sync', payload)
 export const authStaffLogin = (payload) => api.post('/auth/staff/login', payload)
 export const registerStaff = (payload) => api.post('/auth/staff/register', payload)
 export const getSession = () => api.get('/auth/session')

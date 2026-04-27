@@ -30,7 +30,7 @@ const Stepper = ({ currentStep }) => {
     <div className="sticky top-[68px] sm:top-24 z-30 -mx-2 sm:mx-0 bg-ui-bg/95 backdrop-blur-md border-b border-ui-border transition-all duration-300 shadow-sm">
       <div className="w-full relative overflow-hidden h-12 sm:h-20 select-none flex items-center">
 
-        {/* Gradient Masks */}
+        {}
         <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-20 bg-gradient-to-r from-ui-bg to-transparent z-20 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-20 bg-gradient-to-l from-ui-bg to-transparent z-20 pointer-events-none" />
 
@@ -38,7 +38,7 @@ const Stepper = ({ currentStep }) => {
           className="absolute top-0 left-0 h-full flex items-center transition-transform duration-500 ease-out will-change-transform"
           style={{ transform: `translateX(${translateX})`, width: `${milestones.length * stepWidth}px` }}
         >
-          {/* Background Line */}
+          {}
           <div className="absolute top-[50%] -translate-y-[50%] left-0 right-0 h-0.5 bg-ui-border -z-10 mx-10 rounded-full" />
 
           {milestones.map((m, idx) => {
@@ -52,7 +52,7 @@ const Stepper = ({ currentStep }) => {
                 className="flex flex-col items-center justify-center flex-shrink-0 transition-all duration-300"
                 style={{ width: `${stepWidth}px` }}
               >
-                {/* Dot / Circle */}
+                {}
                 <div
                   className={`
                     w-3 h-3 sm:w-5 sm:h-5 rounded-full border mb-1.5 transition-all duration-300 relative z-10 flex items-center justify-center
@@ -72,7 +72,7 @@ const Stepper = ({ currentStep }) => {
                   )}
                 </div>
 
-                {/* Label */}
+                {}
                 <span
                   className={`
                     text-[9px] sm:text-[10px] font-black uppercase tracking-tighter transition-all duration-300 text-center px-1 leading-none

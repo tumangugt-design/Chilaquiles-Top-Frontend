@@ -134,7 +134,7 @@ const ChefPage = ({ authSession }) => {
 
   if (session && session.status === 'pending') {
     return (
-      <PanelShell title="Acceso en Espera" subtitle="Estamos validando tu perfil">
+      <PanelShell title="Acceso en espera" subtitle="Tu acceso está pendiente.">
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-24 h-24 bg-brand-blue/10 rounded-full flex items-center justify-center mb-8 animate-pulse">
             <svg className="w-12 h-12 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,7 +154,7 @@ const ChefPage = ({ authSession }) => {
       <PanelShell title="Centro de Producción" subtitle="Pedidos activos y terminados">
         <StaffAccessCard
           title="Acceso a Cocina"
-          subtitle="Valida tus credenciales para visualizar las órdenes entrantes y gestionar la producción."
+          subtitle="Ingresa con tu usuario y contraseña."
           accentClass="!bg-brand-orange"
           authSession={authSession}
           allowRequest

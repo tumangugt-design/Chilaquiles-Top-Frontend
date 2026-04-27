@@ -1,6 +1,4 @@
-// ============================================
-// PÁGINA: Protein (Proteína)
-// ============================================
+
 
 import { OPTIONS_PROTEIN } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'

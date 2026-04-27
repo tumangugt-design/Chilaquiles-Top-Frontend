@@ -1,6 +1,4 @@
-// ============================================
-// PÁGINA: BaseRecipe (Personalizar base)
-// ============================================
+
 
 import { OPTIONS_BASE_RECIPE } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'

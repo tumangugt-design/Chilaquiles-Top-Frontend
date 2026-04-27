@@ -1,7 +1,4 @@
-/**
- * Notification Sound Utility
- * Generates a professional "ping" sound using Web Audio API
- */
+
 export const playNotificationSound = () => {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -11,7 +8,6 @@ export const playNotificationSound = () => {
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
 
-    // Sine wave for a clean "ding"
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
     oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5); // Descend to A4

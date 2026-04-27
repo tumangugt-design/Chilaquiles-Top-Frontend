@@ -35,11 +35,11 @@ const StaffAccessCard = ({
         ...requestData,
         phone: normalizeGtPhone(requestData.phone),
       })
-      setMessage('Solicitud enviada. Un administrador debe aprobar tu acceso.')
+      setMessage('Solicitud enviada.')
       setMode('login')
       setRequestData({ name: '', phone: '', username: '', password: '' })
     } catch {
-      // handled in hook
+
     }
   }
 
@@ -56,7 +56,7 @@ const StaffAccessCard = ({
       {allowRequest && (
         <div className="mb-5 flex gap-2 rounded-2xl bg-ui-bg p-1 border border-ui-border">
           <button type="button" className={`px-4 py-2 rounded-xl text-sm font-black ${mode === 'login' ? 'bg-ui-card text-ui-text' : 'text-ui-muted'}`} onClick={() => setMode('login')}>Ingresar</button>
-          <button type="button" className={`px-4 py-2 rounded-xl text-sm font-black ${mode === 'request' ? 'bg-ui-card text-ui-text' : 'text-ui-muted'}`} onClick={() => setMode('request')}>Solicitar acceso</button>
+          <button type="button" className={`px-4 py-2 rounded-xl text-sm font-black ${mode === 'request' ? 'bg-ui-card text-ui-text' : 'text-ui-muted'}`} onClick={() => setMode('request')}>Solicitar</button>
         </div>
       )}
 

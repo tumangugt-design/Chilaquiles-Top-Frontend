@@ -1,6 +1,4 @@
-// ============================================
-// PÁGINA: Complement (Complemento)
-// ============================================
+
 
 import { OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'

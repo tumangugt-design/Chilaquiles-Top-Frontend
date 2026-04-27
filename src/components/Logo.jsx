@@ -1,7 +1,4 @@
-// ============================================
-// COMPONENTE: Logo
-// Logo SVG de Chilaquiles TOP
-// ============================================
+
 
 const Logo = ({ className }) => {
   return (
@@ -16,7 +13,7 @@ const Logo = ({ className }) => {
         <path id="textArc" d="M 0,145 Q 200,35 400,145" fill="transparent" />
       </defs>
 
-      {/* Arched Text: CHILAQUILES */}
+      {}
       <text width="400">
         <textPath
           href="#textArc"
@@ -34,7 +31,7 @@ const Logo = ({ className }) => {
         </textPath>
       </text>
 
-      {/* Bottom Text: TOP */}
+      {}
       <text
         x="200"
         y="195"
@@ -50,7 +47,7 @@ const Logo = ({ className }) => {
         TOP
       </text>
 
-      {/* Horizontal Lines */}
+      {}
       <rect x="25" y="165" width="80" height="8" fill="#0000FF" />
       <rect x="295" y="165" width="80" height="8" fill="#0000FF" />
     </svg>

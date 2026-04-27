@@ -1,7 +1,7 @@
 const PanelShell = ({ title, subtitle, actions, children }) => {
   return (
     <div className="min-h-screen bg-ui-bg font-sans text-ui-text transition-colors duration-300">
-      {/* Header is now handled globally in App.jsx */}
+      {}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
         <div className="bg-ui-card rounded-[2.5rem] p-6 sm:p-12 shadow-xl border border-ui-border animate-fade-in transition-all">

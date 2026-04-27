@@ -1,6 +1,4 @@
-// ============================================
-// PÁGINA: Sauce (Salsa)
-// ============================================
+
 
 import { OPTIONS_SAUCE } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'

@@ -93,10 +93,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'LOCATION':
         return (
           <LocationPage
-            onConfirm={(verifiedPhone) => {
-              if (verifiedPhone) {
-                updateOrder({ customer: { ...order.customer, phone: verifiedPhone } })
-              }
+            onConfirm={() => {
               nextStep()
             }}
           />
@@ -114,11 +111,11 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
       case 'CUSTOMER':
-        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} phoneVerified={!!order.customer?.phone} />
+        return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} />
       case 'CONFIRMATION':
         return <ConfirmationPage order={order} onReset={handleResetApp} />
       default:
-        return <div>Paso desconocido</div>
+        return <div>Vista no disponible</div>
     }
   }
 
@@ -141,7 +138,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                 </div>
                 <div className="mt-8 text-center text-xs text-ui-muted font-medium space-y-1 mb-8">
                   <p>© 2026 Chilaquiles TOP.</p>
-                  <p className="opacity-75">Comida, Precios, Experiencia. Aquí todo es TOP</p>
+                  <p className="opacity-75">Hecho al momento.</p>
                 </div>
               </div>
               <OrderSummary order={order} currentStep={currentStep} onEdit={goToStep} onNext={nextStep} onAddAnother={handleAddCurrentPlateToCart} />

@@ -51,20 +51,20 @@ const formatUserSubtitle = (user) => {
 const getHistoryMeta = (type) => {
   if (type === 'client') {
     return {
-      title: 'Historial de órdenes del cliente',
+      title: 'Historial del cliente',
       empty: 'Este cliente todavía no tiene órdenes registradas.'
     }
   }
 
   if (type === 'chef') {
     return {
-      title: 'Historial de órdenes preparadas',
+      title: 'Historial de cocina',
       empty: 'Este cocinero todavía no tiene órdenes preparadas.'
     }
   }
 
   return {
-    title: 'Historial de órdenes entregadas',
+    title: 'Historial de reparto',
     empty: 'Este repartidor todavía no tiene órdenes entregadas.'
   }
 }
@@ -466,10 +466,10 @@ const AdminPage = ({ authSession }) => {
 
   if (!session || session.role !== 'ADMIN') {
     return (
-      <PanelShell title="Panel de Administración" subtitle="Gestión de staff, inventario, pedidos y usuarios">
+      <PanelShell title="Panel Chilaquiles TOP" subtitle="Pedidos, cocina, reparto e inventario">
         <StaffAccessCard
           title="Acceso Administrativo"
-          subtitle="Ingresa con usuario y contraseña para gestionar la operación."
+          subtitle="Ingresa con tu usuario y contraseña."
           accentClass="!bg-brand-blue"
           authSession={authSession}
         />
@@ -491,7 +491,7 @@ const AdminPage = ({ authSession }) => {
     >
       <div className="flex flex-wrap gap-3 mb-10 justify-center">
         {[
-          ['staff', 'Staff'],
+          ['staff', 'Accesos'],
           ['clients', 'Clientes'],
           ['chefs', 'Usuarios Cocineros'],
           ['drivers', 'Usuarios Repartidores'],
@@ -512,7 +512,7 @@ const AdminPage = ({ authSession }) => {
       {activeTab === 'staff' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between border-b border-ui-border pb-4">
-            <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes de Staff</h2>
+            <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes</h2>
             <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
               {pendingUsers.length} pendientes
             </span>
@@ -521,7 +521,7 @@ const AdminPage = ({ authSession }) => {
           <div className="space-y-4">
             {pendingUsers.length === 0 ? (
               <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
-                <p className="text-ui-muted text-sm font-medium">No hay solicitudes nuevas en este momento.</p>
+                <p className="text-ui-muted text-sm font-medium">No hay solicitudes pendientes.</p>
               </div>
             ) : (
               pendingUsers.map((user) => (
@@ -543,7 +543,7 @@ const AdminPage = ({ authSession }) => {
 
           {clientUsers.length === 0 ? (
             <div className="text-center py-16 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
-              <p className="text-ui-muted text-sm font-medium">No hay clientes registrados todavía.</p>
+              <p className="text-ui-muted text-sm font-medium">No hay clientes registrados.</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">

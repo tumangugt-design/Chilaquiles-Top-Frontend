@@ -80,7 +80,7 @@ const RepartidorPage = ({ authSession }) => {
     }
 
     if (!order.location?.lat || !order.location?.lng) {
-      toast.error('Este pedido aún no tiene ubicación exacta.')
+      toast.error('Este pedido no tiene ubicación.')
       return
     }
 
@@ -113,7 +113,7 @@ const RepartidorPage = ({ authSession }) => {
 
   if (session && session.status === 'pending') {
     return (
-      <PanelShell title="Registro de Reparto" subtitle="Validando credenciales de logística">
+      <PanelShell title="Acceso en espera" subtitle="Tu acceso está pendiente.">
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-24 h-24 bg-brand-blue/10 rounded-full flex items-center justify-center mb-8 animate-pulse">
             <svg className="w-12 h-12 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
@@ -131,7 +131,7 @@ const RepartidorPage = ({ authSession }) => {
       <PanelShell title="Centro de Entregas" subtitle="Pedidos listos, en camino y entregados">
         <StaffAccessCard
           title="Acceso de Repartidor"
-          subtitle="Ingresa con tus credenciales o solicita acceso para gestionar las entregas."
+          subtitle="Ingresa con tu usuario y contraseña."
           accentClass="!bg-[#4CAF50]"
           authSession={authSession}
           allowRequest

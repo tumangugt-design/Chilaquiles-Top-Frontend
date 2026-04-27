@@ -1,7 +1,4 @@
-// ============================================
-// COMPONENTE: OptionCard
-// Tarjeta seleccionable para elegir opciones del menú
-// ============================================
+
 
 const MildFlameIcon = () => (
   <svg
@@ -48,7 +45,7 @@ const OptionCard = ({
         }
       `}
     >
-      {/* Selection Check Circle */}
+      {}
       <div
         className={`
           absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-md
@@ -64,7 +61,7 @@ const OptionCard = ({
         </svg>
       </div>
 
-      {/* Badge */}
+      {}
       {badge && (
         <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
           <span className="bg-brand-orange text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:px-3 sm:py-1 rounded-full uppercase tracking-wider shadow-sm">
@@ -73,7 +70,7 @@ const OptionCard = ({
         </div>
       )}
 
-      {/* Visual Area */}
+      {}
       <div className={`relative w-full overflow-hidden bg-ui-bg ${illustration ? 'h-36 sm:h-52 p-4 sm:p-6' : 'h-36 sm:h-48'}`}>
         {illustration ? (
           <div className={`w-full h-full transition-transform duration-500 ${selected ? 'scale-105' : 'scale-100 group-hover:scale-105'}`}>
@@ -91,7 +88,7 @@ const OptionCard = ({
         ) : null}
       </div>
 
-      {/* Content Area */}
+      {}
       <div className="p-4 sm:p-5">
         <div className="flex justify-between items-start mb-1 sm:mb-2">
           <h3 className={`font-black text-base sm:text-lg leading-tight ${selected ? 'text-brand-blue' : 'text-ui-text'}`}>
@@ -110,7 +107,7 @@ const OptionCard = ({
         )}
       </div>
 
-      {/* Active Bottom Bar */}
+      {}
       {selected && <div className="absolute bottom-0 left-0 right-0 h-1 sm:h-1.5 bg-brand-blue" />}
     </div>
   )

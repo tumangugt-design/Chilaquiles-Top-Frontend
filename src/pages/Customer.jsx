@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Button from '../components/ui/Button.jsx'
-import { authClientSync, createOrder } from '../shared/config/api.js'
+import { createOrder } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
 
 const toGtLocalDigits = (raw = '') => {
@@ -9,53 +9,74 @@ const toGtLocalDigits = (raw = '') => {
   return digits.slice(0, 8)
 }
 
+const normalizeGtPhone = (raw = '') => {
+  const digits = toGtLocalDigits(raw)
+  return digits ? `+502${digits}` : ''
+}
+
 const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
   const [localData, setLocalData] = useState({
     name: order.customer?.name || '',
+    phone: toGtLocalDigits(order.customer?.phone || ''),
     address: order.customer?.address || '',
     location: order.customer?.location || null,
     accessCode: order.customer?.accessCode || '',
   })
-  const [touched, setTouched] = useState({ name: false, address: false })
+  const [touched, setTouched] = useState({ name: false, phone: false, address: false })
   const [loadingLoc, setLoadingLoc] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    const newData = { ...localData, [name]: value }
+    const nextValue = name === 'phone' ? toGtLocalDigits(value) : value
+    const newData = { ...localData, [name]: nextValue }
     setLocalData(newData)
-    updateOrder({ customer: { ...order.customer, ...newData } })
+    updateOrder({
+      customer: {
+        ...order.customer,
+        ...newData,
+        phone: normalizeGtPhone(newData.phone),
+      },
+    })
   }
 
   const handleLocationClick = () => {
     if (!navigator.geolocation) {
-      toast.error('La geolocalización no es soportada por tu navegador.')
+      toast.error('Tu navegador no permite ubicación.')
       return
     }
 
     setLoadingLoc(true)
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const lat = position.coords.latitude
-        const lng = position.coords.longitude
-        const newData = {
-          ...localData,
-          location: { lat, lng },
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
         }
+        const newData = { ...localData, location }
         setLocalData(newData)
-        updateOrder({ customer: { ...order.customer, ...newData } })
+        updateOrder({
+          customer: {
+            ...order.customer,
+            ...newData,
+            phone: normalizeGtPhone(newData.phone),
+          },
+        })
         setLoadingLoc(false)
-        toast.success('Ubicación validada correctamente')
+        toast.success('Ubicación lista')
       },
       () => {
-        toast.error('No pudimos obtener tu ubicación. Por favor vuelve a intentarlo.')
+        toast.error('No pudimos obtener tu ubicación.')
         setLoadingLoc(false)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
-  const isValid = localData.name.trim().length > 2 && localData.address.trim().length > 5
+  const isValid =
+    localData.name.trim().length > 2 &&
+    localData.phone.trim().length === 8 &&
+    localData.address.trim().length > 5
 
   const handleSubmit = async () => {
     if (!isValid) return
@@ -64,13 +85,13 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
     try {
       const payloadCustomer = {
         ...order.customer,
-        name: localData.name,
-        address: localData.address,
+        name: localData.name.trim(),
+        phone: normalizeGtPhone(localData.phone),
+        address: localData.address.trim(),
         location: localData.location,
-        accessCode: localData.accessCode,
+        accessCode: localData.accessCode.trim(),
       }
 
-      await authClientSync(payloadCustomer)
       const allItems = [...order.cart, order.currentPlate]
       const response = await createOrder({
         customer: payloadCustomer,
@@ -81,12 +102,12 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
           baseRecipe: item.baseRecipe,
         })),
       })
+
       setLastOrder(response.data.order)
-      toast.success('¡Pedido enviado con éxito! 🌮')
+      toast.success('Pedido enviado')
       onNext()
     } catch (error) {
-      console.error('Error creando pedido:', error)
-      toast.error(error.response?.data?.message || error?.message || 'Error al crear pedido.')
+      toast.error(error.response?.data?.message || error?.message || 'No se pudo enviar el pedido.')
     } finally {
       setIsSubmitting(false)
     }
@@ -97,46 +118,52 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
   return (
     <div className="space-y-6 animate-fade-in relative">
       <div className="mb-4 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2">Finalizar Pedido</h2>
-        <p className="text-ui-muted">Completa tus datos para recibir tu orden TOP.</p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2">Finalizar pedido</h2>
+        <p className="text-ui-muted">Completa tus datos.</p>
       </div>
 
       <div className="space-y-4 sm:space-y-5">
-        {order.customer?.phone && (
-          <div>
-            <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Teléfono</label>
-            <div className="w-full p-4 border rounded-xl bg-green-500/10 border-green-500 flex items-center">
-              <span className="text-base font-black text-green-600 dark:text-green-400">+502 {toGtLocalDigits(order.customer.phone)}</span>
-              <div className="ml-auto w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div>
-          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Nombre completo</label>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Nombre</label>
           <input
             type="text"
             name="name"
             value={localData.name}
             onChange={handleChange}
             onBlur={() => setTouched({ ...touched, name: true })}
-            placeholder="Ej. Juan Pérez"
-            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.length <= 2 ? 'border-red-500' : 'border-ui-border'}`}
+            placeholder="Juan Pérez"
+            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.trim().length <= 2 ? 'border-red-500' : 'border-ui-border'}`}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Código de Acceso</label>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Teléfono</label>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center bg-ui-bg px-2.5 py-3 sm:px-3 sm:py-3.5 rounded-xl border border-ui-border">
+              <span className="text-xs sm:text-sm font-bold text-ui-muted">GT +502</span>
+            </div>
+            <input
+              type="tel"
+              name="phone"
+              value={localData.phone}
+              onChange={handleChange}
+              onBlur={() => setTouched({ ...touched, phone: true })}
+              placeholder="33662977"
+              maxLength={8}
+              inputMode="numeric"
+              className={`flex-1 p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm font-bold tracking-wider ${touched.phone && localData.phone.trim().length !== 8 ? 'border-red-500' : 'border-ui-border'}`}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Código de acceso</label>
           <input
             type="text"
             name="accessCode"
             value={localData.accessCode}
             onChange={handleChange}
-            placeholder="Ej. 1234"
+            placeholder="1234"
             className="w-full p-3 sm:p-4 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm"
           />
         </div>
@@ -149,7 +176,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
             disabled={loadingLoc}
             className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${hasLocation ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-ui-bg border-ui-border text-ui-text hover:border-brand-blue/40'}`}
           >
-            <span className="font-black text-sm">{loadingLoc ? 'Obteniendo ubicación...' : hasLocation ? 'Ubicación validada' : 'Obtener ubicación'}</span>
+            <span className="font-black text-sm">{loadingLoc ? 'Obteniendo ubicación...' : hasLocation ? 'Ubicación lista' : 'Obtener ubicación'}</span>
             <div className={`w-6 h-6 rounded-full flex items-center justify-center ${hasLocation ? 'bg-green-500 text-white' : 'bg-brand-blue/10 text-brand-blue'}`}>
               {hasLocation ? (
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,22 +192,22 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Dirección exacta</label>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Dirección</label>
           <textarea
             name="address"
             rows={3}
             value={localData.address}
             onChange={handleChange}
             onBlur={() => setTouched({ ...touched, address: true })}
-            placeholder="Casa, calle, número, referencia..."
-            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
+            placeholder="Casa, calle, número, referencia"
+            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
           />
         </div>
       </div>
 
       <div className="flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
         <Button variant="secondary" onClick={onBack}>Atrás</Button>
-        <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>{isSubmitting ? 'Enviando...' : 'Confirmar Pedido →'}</Button>
+        <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>{isSubmitting ? 'Enviando...' : 'Confirmar pedido'}</Button>
       </div>
     </div>
   )

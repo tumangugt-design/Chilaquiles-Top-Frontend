@@ -1,9 +1,5 @@
-// ============================================
-// ILUSTRACIONES - INGREDIENTES
-// Componentes SVG de proteínas, complementos y base
-// ============================================
 
-// Paleta bowl negro de porcelana
+
 const BOWL_HIGHLIGHT = '#FFFFFF'
 const BOWL_RIM = '#374151'
 
@@ -24,7 +20,6 @@ const CILANTRO_BASE = '#4ADE80'
 const CREAM_BASE = '#FFFFFF'
 const CREAM_SHADOW = '#DBEAFE'
 
-// Bowl reutilizable
 const BlackPorcelainBowl = ({ children }) => (
   <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
     <defs>
@@ -52,7 +47,6 @@ const BlackPorcelainBowl = ({ children }) => (
   </svg>
 )
 
-// PROTEÍNAS
 export const IllustrationSteak = () => (
   <BlackPorcelainBowl>
     <g transform="translate(25, 10)">
@@ -94,7 +88,6 @@ export const IllustrationChorizo = () => (
   </BlackPorcelainBowl>
 )
 
-// COMPLEMENTOS
 export const IllustrationAguacate = () => (
   <BlackPorcelainBowl>
     <g transform="translate(30, 10)">
@@ -130,7 +123,6 @@ export const IllustrationQuesoExtra = () => (
   </BlackPorcelainBowl>
 )
 
-// BASE RECIPE
 export const IllustrationCebolla = () => (
   <BlackPorcelainBowl>
     <g transform="translate(30, 15)">

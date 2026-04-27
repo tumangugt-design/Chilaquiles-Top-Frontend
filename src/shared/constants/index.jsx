@@ -1,7 +1,4 @@
-// ============================================
-// CONSTANTES Y DATOS DEL MENÚ
-// Chilaquiles TOP - Shared Constants
-// ============================================
+
 
 import React from 'react'
 import { IllustrationMedia, IllustrationCompleta } from '../../components/illustrations/SizeIllustrations.jsx'

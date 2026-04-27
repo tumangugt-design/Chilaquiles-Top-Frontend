@@ -1,7 +1,4 @@
-// ============================================
-// ILUSTRACIONES - TAMAÑOS
-// Componentes SVG para Media Orden y Orden Completa
-// ============================================
+
 
 const TRAY_RIM = '#374151'
 const CHIP_BASE = '#D97706'
@@ -19,7 +16,7 @@ export const IllustrationMedia = () => (
       </linearGradient>
     </defs>
 
-    {/* TRAY */}
+    {}
     <g transform="translate(40, 40) scale(0.7)">
       <ellipse cx="110" cy="110" rx="100" ry="40" fill="#000000" fillOpacity="0.2" />
       <path d="M20 30 C 20 20, 200 20, 200 30 L 190 100 C 190 115, 30 115, 30 100 Z" fill="url(#trayGradient)" />
@@ -27,7 +24,7 @@ export const IllustrationMedia = () => (
       <path d="M15 30 C 15 15, 205 15, 205 30 L 200 35 C 200 25, 20 25, 20 35 Z" fill={TRAY_RIM} />
     </g>
 
-    {/* FOOD - Media Orden */}
+    {}
     <g transform="translate(65, 65) scale(0.65)">
       <path d="M10 50 L30 20 L50 50 Z" fill={CHIP_BASE} />
       <path d="M40 55 L70 15 L90 55 Z" fill={CHIP_BASE} />
@@ -61,7 +58,7 @@ export const IllustrationCompleta = () => (
       </linearGradient>
     </defs>
 
-    {/* TRAY */}
+    {}
     <g transform="translate(40, 40) scale(0.7)">
       <ellipse cx="110" cy="110" rx="100" ry="40" fill="#000000" fillOpacity="0.2" />
       <path d="M20 30 C 20 20, 200 20, 200 30 L 190 100 C 190 115, 30 115, 30 100 Z" fill="url(#trayGradient2)" />
@@ -69,7 +66,7 @@ export const IllustrationCompleta = () => (
       <path d="M15 30 C 15 15, 205 15, 205 30 L 200 35 C 200 25, 20 25, 20 35 Z" fill={TRAY_RIM} />
     </g>
 
-    {/* FOOD - Orden Completa (more chips, denser) */}
+    {}
     <g transform="translate(55, 50) scale(0.75)">
       <path d="M0 50 L20 20 L40 50 Z" fill={CHIP_BASE} />
       <path d="M30 60 L60 10 L90 60 Z" fill={CHIP_BASE} />

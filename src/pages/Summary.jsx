@@ -1,6 +1,4 @@
-// ============================================
-// PÁGINA: Summary (Resumen del pedido)
-// ============================================
+
 
 import { getMarginalPrice, formatBaseRecipe } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -9,7 +7,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
   return (
     <div className="bg-ui-card border border-ui-border shadow-sm rounded-xl p-5 mb-4 relative overflow-hidden">
-      {/* Left color bar accent */}
+      {}
       <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-brand-blue"></div>
 
       <div className="mb-3 pb-2 border-b border-ui-border flex justify-between items-center pl-3">
@@ -17,7 +15,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
       </div>
 
       <div className="space-y-2 pl-3">
-        {/* Removed SIZE section */}
+        {}
 
         <div className="flex justify-between items-center text-sm text-ui-muted">
           <span className="text-ui-text">
@@ -64,7 +62,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
           }
         </div>
 
-        {/* Base Recipe Section */}
+        {}
         <div className="flex justify-between items-center text-sm text-ui-muted pt-1 border-t border-ui-border mt-1">
           <span className="italic text-ui-muted">{formatBaseRecipe(plate.baseRecipe)}</span>
           {showEdit && onEdit &&              <button
@@ -81,7 +79,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 }
 
 const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
-  // Combine all plates into a single list for display
+
   const allPlates = [...order.cart, order.currentPlate]
   const platesCount = allPlates.length
   const requestedCount = order.requestedCount || 1
@@ -100,10 +98,10 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
         <p className="text-ui-muted text-sm">Revisa que todo esté delicioso antes de confirmar.</p>
       </div>
 
-      {/* SINGLE LIST OF ALL PLATES */}
+      {}
       <div className="space-y-4">
         {allPlates.map((plate, idx) => {
-          // Only the LAST item (the currentPlate) is editable in this flow context
+
           const isCurrent = idx === allPlates.length - 1
 
           return (
@@ -119,7 +117,7 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
         })}
       </div>
 
-      {/* ADD ANOTHER PLATE BUTTON OR LIMIT MESSAGE */}
+      {}
       <div className="mt-6">
         {!isComplete ? (
           <Button
