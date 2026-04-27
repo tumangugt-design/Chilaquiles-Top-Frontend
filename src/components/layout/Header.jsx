@@ -45,20 +45,16 @@ const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfile
           )}
 
           {!isPanel && (
-            <div className="flex items-center space-x-1.5 sm:space-x-2 bg-green-500/10 px-2 sm:px-3 py-1 rounded-full border border-green-500/20">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-              <span className="text-[8px] sm:text-[10px] font-black text-green-600 uppercase tracking-tight sm:tracking-wide">
-                {typeof availableCount === 'number' ? (
-                  <>
-                    <span className="hidden sm:inline">Disponibles: </span>
-                    {availableCount}
-                    <span className="sm:hidden"> DISP</span>
-                    <span className="hidden sm:inline"> {availableCount === 1 ? 'plato' : 'platos'}</span>
-                  </>
-                ) : (
-                  'Activo'
-                )}
-              </span>
+            <div className="flex items-center gap-2 bg-green-500/10 px-3 sm:px-4 py-2 rounded-2xl border border-green-500/20">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+              <div className="flex flex-col leading-none">
+                <span className="text-base sm:text-lg font-black text-green-600">
+                  {typeof availableCount === 'number' ? availableCount : 0}
+                </span>
+                <span className="text-[9px] sm:text-[11px] font-bold text-green-600 uppercase tracking-wide">
+                  Platos disponibles
+                </span>
+              </div>
             </div>
           )}
         </div>
