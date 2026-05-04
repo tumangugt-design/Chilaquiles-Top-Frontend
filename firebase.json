@@ -6,6 +6,54 @@
       "**/.*",
       "**/node_modules/**"
     ],
+
+    "redirects": [
+      {
+        "source": "/**",
+        "has": [
+          {
+            "type": "host",
+            "value": "admin.chilaquilestop.com"
+          }
+        ],
+        "destination": "/admin",
+        "type": 302
+      },
+      {
+        "source": "/**",
+        "has": [
+          {
+            "type": "host",
+            "value": "chef.chilaquilestop.com"
+          }
+        ],
+        "destination": "/chef",
+        "type": 302
+      },
+      {
+        "source": "/**",
+        "has": [
+          {
+            "type": "host",
+            "value": "repartidor.chilaquilestop.com"
+          }
+        ],
+        "destination": "/repartidor",
+        "type": 302
+      },
+      {
+        "source": "/**",
+        "has": [
+          {
+            "type": "host",
+            "value": "pedidos.chilaquilestop.com"
+          }
+        ],
+        "destination": "/pedidos",
+        "type": 302
+      }
+    ],
+
     "rewrites": [
       {
         "source": "**",
