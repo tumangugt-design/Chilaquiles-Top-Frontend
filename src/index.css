@@ -89,3 +89,22 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand-blue);
 }
+
+@theme {
+  --font-brand: "Montserrat", "Futura", "Gotham", sans-serif;
+  --color-brand-blue: #0000ff;
+  --color-brand-white: #ffffff;
+  --color-brand-black: #000000;
+  --animate-fade-in: fadeIn 0.9s ease-out forwards;
+  --animate-slide-up: slideUp 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}

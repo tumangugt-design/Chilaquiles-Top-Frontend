@@ -19,6 +19,7 @@ import AdminPage from './pages/Admin.jsx'
 import ChefPage from './pages/Chef.jsx'
 import RepartidorPage from './pages/Repartidor.jsx'
 import ProfileModal from './components/ui/ProfileModal.jsx'
+import LandingPage from './pages/Landing.jsx'
 
 function CustomerFlow({ onToggleTheme, currentTheme }) {
   const [currentStep, setCurrentStep] = useState('LOCATION')
@@ -167,6 +168,7 @@ function App() {
       else if (host === 'chef.chilaquilestop.com') nextPath = '/chef'
       else if (host === 'repartidor.chilaquilestop.com') nextPath = '/repartidor'
       else if (host === 'pedidos.chilaquilestop.com') nextPath = '/clientes'
+      else if (host === 'chilaquilestop.com') nextPath = '/'
     }
 
     if (nextPath !== currentPath) {
@@ -222,9 +224,10 @@ function App() {
   if (path === '/admin') return renderPanel(AdminPage)
   if (path === '/chef') return renderPanel(ChefPage)
   if (path === '/repartidor') return renderPanel(RepartidorPage)
-  if (path === '/clientes' || path === '/') {
-    return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
-  }
+  if (path === '/clientes') return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
+  if (path === '/') return <LandingPage />
+
+  return <LandingPage />
 
   return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
 }
