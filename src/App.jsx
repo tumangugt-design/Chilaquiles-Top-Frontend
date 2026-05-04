@@ -154,8 +154,37 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
-  const path = useMemo(() => window.location.pathname, [])
-  const panelRole = path === '/admin' ? 'ADMIN' : path === '/chef' ? 'CHEF' : path === '/repartidor' ? 'REPARTIDOR' : null
+  const [path, setPath] = useState(window.location.pathname)
+
+  useEffect(() => {
+    const host = window.location.hostname.replace(/^www\./, '')
+    const currentPath = window.location.pathname
+
+    let nextPath = currentPath
+
+    if (currentPath === '/') {
+      if (host === 'admin.chilaquilestop.com') nextPath = '/admin'
+      else if (host === 'chef.chilaquilestop.com') nextPath = '/chef'
+      else if (host === 'repartidor.chilaquilestop.com') nextPath = '/repartidor'
+      else if (host === 'pedidos.chilaquilestop.com') nextPath = '/clientes'
+    }
+
+    if (nextPath !== currentPath) {
+      window.history.replaceState({}, '', nextPath)
+    }
+
+    setPath(nextPath)
+  }, [])
+
+  const panelRole =
+    path === '/admin'
+      ? 'ADMIN'
+      : path === '/chef'
+        ? 'CHEF'
+        : path === '/repartidor'
+          ? 'REPARTIDOR'
+          : null
+
   const authSession = useAuthSession(panelRole)
 
   useEffect(() => {
@@ -193,6 +222,9 @@ function App() {
   if (path === '/admin') return renderPanel(AdminPage)
   if (path === '/chef') return renderPanel(ChefPage)
   if (path === '/repartidor') return renderPanel(RepartidorPage)
+  if (path === '/clientes' || path === '/') {
+    return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
+  }
 
   return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
 }
