@@ -46,4 +46,9 @@ export const saveInventoryItem = (payload) => api.post('/inventory', payload)
 export const deleteInventoryItem = (name) => api.delete(`/inventory/${name}`)
 export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount })
 
+// Customer OTP
+export const sendOtp = (phone) => api.post('/auth/send-otp', { phone })
+export const verifyOtp = (phone, code) => api.post('/auth/verify-otp', { phone, code })
+
 export default api
+

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 import toast from 'react-hot-toast'
+import { sendOtp, verifyOtp } from '../shared/config/api.js'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
@@ -76,36 +77,41 @@ const LocationPage = ({ onConfirm }) => {
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     if (cleanDigits.length !== 8) {
       toast.error('Ingresa un número válido de 8 dígitos.')
       return
     }
 
     setIsLoading(true)
+    const normalizedPhone = normalizeGtPhone(cleanDigits)
 
-    window.setTimeout(() => {
-      setIsLoading(false)
+    try {
+      await sendOtp(normalizedPhone)
       setStep('otp')
-      toast.success('Código enviado.')
-    }, 500)
+      toast.success('Código enviado por WhatsApp.')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Error al enviar código')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     if (code.length < 4) {
       toast.error('Ingresa un código válido.')
       return
     }
 
     setIsLoading(true)
+    const normalizedPhone = normalizeGtPhone(cleanDigits)
 
-    window.setTimeout(() => {
-      const normalizedPhone = normalizeGtPhone(cleanDigits)
+    try {
+      await verifyOtp(normalizedPhone, code)
 
       sessionStorage.setItem(VERIFIED_PHONE_KEY, normalizedPhone)
       sessionStorage.setItem(VERIFIED_PHONE_LOCAL_KEY, cleanDigits)
 
-      setIsLoading(false)
       toast.success('Número verificado correctamente.')
 
       if (typeof onConfirm === 'function') {
@@ -115,7 +121,11 @@ const LocationPage = ({ onConfirm }) => {
           phoneVerified: true,
         })
       }
-    }, 400)
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Código incorrecto')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

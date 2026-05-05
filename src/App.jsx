@@ -94,11 +94,22 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'LOCATION':
         return (
           <LocationPage
-            onConfirm={() => {
+            onConfirm={(data) => {
+              if (data?.phone) {
+                updateOrder({
+                  customer: {
+                    ...order.customer,
+                    phone: data.phone,
+                    phoneLocal: data.phoneLocal,
+                    phoneVerified: true,
+                  },
+                })
+              }
               nextStep()
             }}
           />
         )
+
       case 'SIZE':
         return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'SAUCE':
