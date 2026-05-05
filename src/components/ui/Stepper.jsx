@@ -27,7 +27,7 @@ const Stepper = ({ currentStep }) => {
   const translateX = `calc(50% - ${stepWidth / 2}px - ${currentIndex * stepWidth}px)`
 
   return (
-    <div className="sticky top-[68px] sm:top-24 z-30 -mx-2 sm:mx-0 bg-ui-bg/95 backdrop-blur-md border-b border-ui-border transition-all duration-300 shadow-sm">
+    <div className="relative -mx-2 sm:mx-0 mb-4 bg-ui-bg/95 transition-all duration-300">
       <div className="w-full relative overflow-hidden h-12 sm:h-20 select-none flex items-center">
 
         {}

@@ -4,7 +4,7 @@ import Button from '../components/ui/Button.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { getOrders, updateOrderStatus } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { getBaseRecipeParts } from '../shared/constants/index.jsx'
+import { formatBaseRecipe } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 
@@ -141,8 +141,6 @@ const RepartidorPage = ({ authSession }) => {
   }
 
   const renderOrderCard = (order) => {
-    const bases = order.items.flatMap((item) => getBaseRecipeParts(item.baseRecipe))
-
     return (
       <div key={order._id} className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
         <div className="flex items-start justify-between gap-4 mb-5">
@@ -185,19 +183,24 @@ const RepartidorPage = ({ authSession }) => {
           <details className="rounded-2xl border border-black/15 bg-white/70 p-4">
             <summary className="cursor-pointer font-black text-sm text-brand-blue uppercase">Comanda</summary>
             <div className="mt-4 space-y-4 text-sm">
-              {order.items.map((item, idx) => (
-                <div key={idx} className="rounded-2xl border border-black/15 bg-white/60 p-4">
-                  <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
-                  <div className="space-y-1 font-bold text-black/80">
-                    <div>{item.sauce}</div>
-                    <div>{item.protein}</div>
-                    <div>{item.complement}</div>
-                    <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
-                      {getBaseRecipeParts(item.baseRecipe).map((base) => <div key={base} className="text-black/75">{base}</div>)}
+              {order.items.map((item, idx) => {
+                const baseText = formatBaseRecipe(item.baseRecipe)
+                return (
+                  <div key={idx} className="rounded-2xl border border-black/15 bg-white/60 p-4">
+                    <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
+                    <div className="space-y-1 font-bold text-black/80">
+                      <div>{item.sauce}</div>
+                      <div>{item.protein}</div>
+                      <div>{item.complement}</div>
+                      {baseText && (
+                        <div className="pt-2 mt-2 border-t border-black/15 font-bold text-black/80 uppercase">
+                          {baseText}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </details>
         )}

@@ -4,7 +4,7 @@ import Button from '../components/ui/Button.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { getOrders, updateOrderStatus } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { getBaseRecipeParts } from '../shared/constants/index.jsx'
+import { formatBaseRecipe } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 
@@ -44,7 +44,7 @@ const ChefOrderCard = ({ order, onAdvance }) => (
 
     <div className="space-y-4">
       {order.items.map((item, idx) => {
-        const bases = getBaseRecipeParts(item.baseRecipe)
+        const baseText = formatBaseRecipe(item.baseRecipe)
         return (
           <div key={idx} className="rounded-2xl border border-black/15 bg-white/70 p-4">
             <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
@@ -52,11 +52,9 @@ const ChefOrderCard = ({ order, onAdvance }) => (
               <div className="font-bold text-black/80">{item.sauce}</div>
               <div className="font-bold text-black/80">{item.protein}</div>
               <div className="font-bold text-black/80">{item.complement}</div>
-              {bases.length > 0 && (
-                <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
-                  {bases.map((base) => (
-                    <div key={base} className="text-black/75 font-bold">{base}</div>
-                  ))}
+              {baseText && (
+                <div className="pt-2 mt-2 border-t border-black/15 font-bold text-black/80 uppercase">
+                  {baseText}
                 </div>
               )}
             </div>

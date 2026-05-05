@@ -12,7 +12,7 @@ import {
   getOrders
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { getBaseRecipeParts, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
+import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 
@@ -70,7 +70,7 @@ const getHistoryMeta = (type) => {
 }
 
 const OrderHistoryCard = ({ order, type = 'client' }) => {
-  const basesByPlate = order.items.map((item) => getBaseRecipeParts(item.baseRecipe))
+  const basesByPlate = order.items.map((item) => formatBaseRecipe(item.baseRecipe))
   const showCustomer = type !== 'client'
   const showChef = type === 'client' && order.chefId?.name
   const showRepartidor = type === 'client' && order.repartidorId?.name
@@ -120,12 +120,10 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
               <div>{item.complement}</div>
             </div>
             <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
-              {basesByPlate[idx].length > 0 ? (
-                basesByPlate[idx].map((base) => (
-                  <div key={`${order._id}-base-${idx}-${base}`} className="text-sm font-bold text-black/70">
-                    {base}
-                  </div>
-                ))
+              {basesByPlate[idx] ? (
+                <div className="text-sm font-bold text-black/80 uppercase">
+                  {basesByPlate[idx]}
+                </div>
               ) : (
                 <div className="text-sm font-bold text-black/50">Sin base adicional</div>
               )}

@@ -37,7 +37,7 @@ const ConfirmationPage = ({ order, onReset }) => {
                 <div key={idx} className="py-3 border-b border-ui-border last:border-0">
                   <p className="text-xs font-black text-brand-blue uppercase mb-1">Plato {idx + 1}</p>
                   <p className="text-sm font-bold text-ui-text">{plate.sauce} • {plate.protein} • {plate.complement}</p>
-                  {baseStr && <p className="text-xs text-ui-muted italic mt-1">{baseStr}</p>}
+                  {baseStr && <p className="text-sm font-bold text-ui-text uppercase mt-1">{baseStr}</p>}
                 </div>
               )
             })}

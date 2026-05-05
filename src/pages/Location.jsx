@@ -44,9 +44,6 @@ const OTPView = ({ code, setCode, onVerify, onBack, phone, isLoading }) => {
           autoFocus
           className="w-full p-3 sm:p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-base sm:text-lg font-bold tracking-[0.3em] text-center"
         />
-        <p className="mt-2 text-[10px] sm:text-xs font-semibold text-ui-muted">
-          Vista visual temporal. Aquí luego conectarás WhatsApp.
-        </p>
       </div>
 
       <Button
@@ -212,7 +209,7 @@ const LocationPage = ({ onConfirm }) => {
             </div>
 
             <p className="mt-2 text-[10px] sm:text-xs font-semibold text-ui-muted">
-              Te llegará un código para validar el número.
+              Te llegará un código por WhatsApp para validar tu número.
             </p>
           </div>
 

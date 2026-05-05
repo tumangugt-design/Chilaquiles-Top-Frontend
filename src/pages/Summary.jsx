@@ -1,6 +1,6 @@
 
 
-import { getMarginalPrice, formatBaseRecipe } from '../shared/constants/index.jsx'
+import { formatBaseRecipe } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
@@ -64,7 +64,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
         {}
         <div className="flex justify-between items-center text-sm text-ui-muted pt-1 border-t border-ui-border mt-1">
-          <span className="italic text-ui-muted">{formatBaseRecipe(plate.baseRecipe)}</span>
+          <span className="font-bold text-ui-text uppercase">{formatBaseRecipe(plate.baseRecipe)}</span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('BASE_RECIPE')}
                 className="text-brand-orange text-xs font-bold uppercase hover:bg-brand-orange/10 px-2 py-1 rounded transition-colors"

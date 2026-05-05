@@ -75,7 +75,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
             <div className="text-[10px] text-ui-muted leading-tight space-y-0.5 mt-1">
               <div>{getLabel(plate.sauce, OPTIONS_SAUCE)}, {getLabel(plate.protein, OPTIONS_PROTEIN)}</div>
               {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && (
-                <div className="text-ui-text font-bold">{formatBaseRecipe(plate.baseRecipe)}</div>
+                <div className="text-ui-text font-bold uppercase">{formatBaseRecipe(plate.baseRecipe)}</div>
               )}
             </div>
           </div>
@@ -93,7 +93,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
               <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Proteína</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.protein, OPTIONS_PROTEIN)}</span></div>
               <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Complemento</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.complement, OPTIONS_COMPLEMENT)}</span></div>
               {showBaseInSummary && !!formatBaseRecipe(currentPlate.baseRecipe) && (
-                <div className="pt-1 border-t border-ui-border text-ui-text font-bold">
+                <div className="pt-1 border-t border-ui-border text-ui-text font-bold uppercase">
                   {formatBaseRecipe(currentPlate.baseRecipe)}
                 </div>
               )}

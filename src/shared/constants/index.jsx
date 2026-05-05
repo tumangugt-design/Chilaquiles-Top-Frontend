@@ -39,7 +39,7 @@ export const getBaseRecipeParts = (base) => {
   return parts
 }
 
-export const formatBaseRecipe = (base, separator = ' ') => getBaseRecipeParts(base).join(separator)
+export const formatBaseRecipe = (base, separator = ' • ') => getBaseRecipeParts(base).join(separator)
 
 export const INVENTORY_PRODUCT_OPTIONS = [
   { value: 'plato rectangular', label: 'Plato rectangular 32 oz con tapa', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
