@@ -45,9 +45,9 @@ const LandingPage = () => {
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-lg shadow-black/5 py-3' : 'bg-transparent py-5'
           }`}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Logo className="w-36 sm:w-44 h-auto cursor-pointer transition-transform hover:scale-105" />
+            <Logo className="w-32 sm:w-44 h-auto cursor-pointer transition-transform hover:scale-105" />
           </div>
 
           <div className="hidden md:flex items-center gap-12">
@@ -68,7 +68,7 @@ const LandingPage = () => {
 
           <a
             href="https://pedidos.chilaquilestop.com/clientes"
-            className="bg-brand-blue text-white px-8 py-3.5 rounded-full font-semibold text-xs uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-blue/25"
+            className="bg-brand-blue text-white px-5 sm:px-8 py-2.5 sm:py-3.5 rounded-full font-semibold text-[10px] sm:text-xs uppercase tracking-[0.15em] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand-blue/25"
           >
             Pedir Ahora
           </a>
@@ -80,14 +80,14 @@ const LandingPage = () => {
         <div className="absolute top-20 right-[15%] w-[400px] h-[400px] rounded-full bg-brand-blue/5 blur-3xl -z-10" />
         <div className="absolute bottom-10 left-[5%] w-[200px] h-[200px] rounded-full bg-brand-blue/3 blur-2xl -z-10" />
 
-        <div className="max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-2 gap-12 items-center pt-32 pb-20 lg:pt-40 lg:pb-0">
-          <div className="animate-fade-in z-10">
-            <h1 className="text-[2.6rem] sm:text-[3.5rem] lg:text-[4.2rem] font-bold leading-[0.95] tracking-[-0.03em] mb-8">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 w-full grid lg:grid-cols-2 gap-16 lg:gap-12 items-center pt-28 pb-20 lg:pt-40 lg:pb-0">
+          <div className="animate-fade-in z-10 text-center lg:text-left">
+            <h1 className="text-[2.8rem] sm:text-[3.5rem] lg:text-[4.2rem] font-bold leading-[1.1] lg:leading-[0.95] tracking-[-0.03em] mb-8">
               Los <span className="text-brand-blue">primeros y mejores</span> chilaquiles de{' '}
               <span className="text-brand-blue">Guatemala</span>
             </h1>
 
-            <p className="text-gray-400 text-lg sm:text-xl font-medium mb-12 max-w-md leading-relaxed">
+            <p className="text-gray-400 text-lg sm:text-xl font-medium mb-12 max-w-md mx-auto lg:mx-0 leading-relaxed">
               Personaliza tus chilaquiles favoritos y vive una experiencia de sabor sin igual.
             </p>
 
@@ -133,34 +133,31 @@ const LandingPage = () => {
         </button>
       </section>
 
-      <section id="historia" className="py-28 lg:py-40 relative">
+      <section id="historia" className="py-20 lg:py-40 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white -z-10" />
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-block bg-brand-blue/10 text-brand-blue px-5 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] mb-6">
               Nuestra Historia
             </div>
-            <h2 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1]">
+            <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] lg:leading-[1]">
               Aquí
               <br />
               TODO es <span className="text-brand-blue">TOP</span>
             </h2>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-10">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
             {[
               {
-                num: '01',
                 title: 'Comida',
                 desc: 'Ingredientes frescos seleccionados diariamente: salsas artesanales, proteínas premium y complementos de primera para el plato perfecto.',
               },
               {
-                num: '02',
                 title: 'Experiencia',
                 desc: 'Arma tu plato ideal desde tu celular en segundos. Seguimiento en tiempo real desde la cocina hasta tu puerta, sin complicaciones.',
               },
               {
-                num: '03',
                 title: 'Precios',
                 desc: 'Calidad premium a precios accesibles. Desde Q50 por plato individual y promociones especiales en combos de 3 por Q120.',
               },
@@ -184,12 +181,12 @@ const LandingPage = () => {
         <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-brand-blue/5 blur-3xl" />
 
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
             <div>
               <div className="inline-block bg-white/10 text-white px-5 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] mb-8">
                 Contáctanos
               </div>
-              <h2 className="text-5xl sm:text-7xl font-bold tracking-tighter mb-8 leading-[0.95]">
+              <h2 className="text-6xl sm:text-7xl font-bold tracking-tighter mb-8 leading-[0.95]">
                 Hablemos<span className="text-brand-blue">.</span>
               </h2>
               <p className="text-gray-400 text-lg font-medium mb-14 max-w-md leading-relaxed">
@@ -221,10 +218,10 @@ const LandingPage = () => {
               </div>
             </div>
 
-            <form ref={formRef} onSubmit={handleSubmit} className="bg-white p-10 sm:p-12 rounded-[3rem] text-brand-black shadow-2xl">
+            <form ref={formRef} onSubmit={handleSubmit} className="bg-white p-7 sm:p-12 rounded-[2.5rem] sm:rounded-[3rem] text-brand-black shadow-2xl">
               <h3 className="text-2xl font-bold mb-8">Envíanos un mensaje</h3>
 
-              <div className="grid grid-cols-2 gap-5 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-400 ml-1">Nombre</label>
                   <input
