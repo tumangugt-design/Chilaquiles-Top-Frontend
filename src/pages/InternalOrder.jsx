@@ -196,7 +196,7 @@ const InternalOrder = ({ onSuccess }) => {
   }
 
   return (
-    <div className="pb-16 pt-4">
+    <div className="pb-32 lg:pb-16 pt-4">
       <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-start justify-center gap-4 sm:gap-8">
           <div className="flex-1 w-full max-w-3xl">

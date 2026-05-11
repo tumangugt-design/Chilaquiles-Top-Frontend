@@ -173,8 +173,8 @@ const UserHistoryModal = ({ modal, onClose, onSearchChange }) => {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-[2.5rem] border border-ui-border bg-ui-card shadow-2xl">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 px-6 sm:px-8 py-6 border-b border-ui-border">
+      <div className="w-full max-w-6xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-ui-border bg-ui-card shadow-2xl">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 px-4 sm:px-8 py-4 sm:py-6 border-b border-ui-border">
           <div>
             <h3 className="text-2xl sm:text-3xl font-black text-ui-text tracking-tight">{meta.title}</h3>
             <p className="text-ui-muted font-medium mt-2">
@@ -576,8 +576,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       />
 
       <div className="pt-20 flex flex-col min-h-screen">
-        <main className="flex-1 p-6 lg:p-10">
-          <div className="bg-white rounded-[3rem] p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full">
+        <main className="flex-1 p-2 sm:p-6 lg:p-10">
+          <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full">
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
             ) : (

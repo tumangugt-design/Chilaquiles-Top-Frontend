@@ -334,7 +334,23 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         </div>
       </div>
 
-      <div className="flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
+        <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-ui-bg via-ui-bg/95 to-transparent pointer-events-none" />
+        <div className="bg-ui-card border-t border-ui-border shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-5 sm:p-6 pb-8 sm:pb-6 relative flex gap-3">
+          <Button variant="secondary" onClick={onBack} className="w-1/3 py-4 text-lg font-black rounded-2xl">Atrás</Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!isValid || isSubmitting}
+            className="flex-1 py-4 text-lg font-black shadow-xl shadow-brand-blue/30 rounded-2xl"
+          >
+            {isSubmitting ? 'Enviando...' : 'Confirmar'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Desktop Buttons */}
+      <div className="hidden lg:flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
         <Button variant="secondary" onClick={onBack}>Atrás</Button>
         <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>{isSubmitting ? 'Enviando...' : 'Confirmar pedido'}</Button>
       </div>

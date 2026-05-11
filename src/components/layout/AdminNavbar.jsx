@@ -14,7 +14,8 @@ import {
   LayoutDashboard,
   Settings,
   Clock,
-  ChevronDown
+  ChevronDown,
+  Menu
 } from 'lucide-react'
 
 const navigation = {
@@ -34,10 +35,12 @@ const navigation = {
 }
 
 const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   return (
-    <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-6 lg:px-10 justify-between">
+    <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-4 sm:px-6 lg:px-10 justify-between">
       {/* Logo Section */}
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         <div className="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center shadow-lg shadow-brand-blue/20">
           <LayoutDashboard className="text-white" size={24} />
         </div>
@@ -46,8 +49,16 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex-1 flex items-center justify-center px-8 gap-1 max-w-4xl overflow-x-auto no-scrollbar">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="lg:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all ml-auto mr-2"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Navigation Tabs (Desktop) */}
+      <div className="hidden lg:flex flex-1 items-center justify-center px-8 gap-1 max-w-4xl">
         {/* Sales */}
         <div className="flex items-center gap-1 border-r border-ui-border pr-4 mr-4">
           {navigation.sales.map(({ id, label, icon: Icon }) => (
@@ -79,16 +90,16 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
               }`}
             >
               <Icon size={16} />
-              <span className="hidden md:block">{label}</span>
+              <span>{label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* User Actions */}
-      <div className="flex items-center gap-4 shrink-0">
-        <div className="flex items-center gap-3 pr-4 border-r border-ui-border">
-          <div className="hidden sm:block text-right">
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
+          <div className="hidden lg:block text-right">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
               Online
@@ -108,6 +119,69 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
           <LogOut size={20} />
         </button>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-20 left-0 right-0 bg-white border-b border-ui-border shadow-xl lg:hidden flex flex-col p-4 max-h-[calc(100vh-5rem)] overflow-y-auto z-[80]">
+          <div className="mb-4 pb-2 border-b border-ui-border">
+            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Ventas</p>
+            <div className="flex flex-col gap-1">
+              {navigation.sales.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
+                    activeTab === id 
+                      ? 'bg-brand-blue text-white shadow-md' 
+                      : 'text-ui-text hover:bg-ui-bg'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mb-4 pb-2 border-b border-ui-border">
+            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Gestión</p>
+            <div className="flex flex-col gap-1">
+              {navigation.management.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
+                    activeTab === id 
+                      ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
+                      : 'text-ui-text hover:bg-ui-bg'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Inventario</p>
+            <div className="flex flex-col gap-1">
+              {navigation.inventory.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
+                    activeTab === id 
+                      ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
+                      : 'text-ui-text hover:bg-ui-bg'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

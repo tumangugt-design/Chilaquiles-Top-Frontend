@@ -213,7 +213,16 @@ function App() {
 
         if (buildId && storedBuildId && storedBuildId !== buildId && alive) {
           localStorage.setItem('chila_app_build_id', buildId)
-          window.location.reload()
+          // Forzar la recarga ignorando la caché (si hay SW o caché agresiva)
+          if ('caches' in window) {
+            try {
+              const keys = await caches.keys();
+              await Promise.all(keys.map(key => caches.delete(key)));
+            } catch (e) {
+              // Ignore
+            }
+          }
+          window.location.href = window.location.pathname + '?v=' + buildId;
           return
         }
 
