@@ -561,6 +561,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         subtitle="Ingresa con tu usuario y contraseña."
         accentClass="!bg-brand-blue"
         authSession={authSession}
+        isAdmin={true}
       />
     )
   }

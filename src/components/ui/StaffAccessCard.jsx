@@ -7,7 +7,8 @@ const StaffAccessCard = ({
   title,
   subtitle,
   accentClass = '!bg-brand-blue',
-  authSession
+  authSession,
+  isAdmin = false
 }) => {
   const [loginData, setLoginData] = useState({ username: '', password: '' })
 
@@ -37,7 +38,7 @@ const StaffAccessCard = ({
             <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={18} />
             <input
               className="w-full p-4 pl-12 rounded-2xl border border-ui-border bg-ui-bg font-bold outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
-              placeholder="Usuario"
+              placeholder={isAdmin ? "Usuario o Correo Electrónico" : "Usuario"}
               value={loginData.username}
               onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
             />
