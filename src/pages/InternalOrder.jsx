@@ -62,9 +62,6 @@ const InternalPhoneStart = ({ order, updateOrder, availablePlates, onNext }) => 
         <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-3 tracking-tight">
           Nuevo pedido interno
         </h2>
-        <p className="text-ui-muted leading-relaxed text-sm sm:text-base px-2">
-          Ingresa el teléfono del cliente. Este flujo no solicita OTP, pero mantiene los mismos pasos del pedido de cliente.
-        </p>
         {Number(availablePlates || 0) <= 0 && (
           <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-600">
             No hay platos disponibles por el momento. Vuelve en otro momento.
@@ -76,8 +73,8 @@ const InternalPhoneStart = ({ order, updateOrder, availablePlates, onNext }) => 
         <div className="text-left">
           <label className="block text-sm font-bold text-ui-text mb-2 ml-1">Número de teléfono</label>
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-ui-bg px-3 py-3.5 rounded-xl border border-ui-border">
-              <span className="text-sm font-bold text-ui-muted">🇬🇹 +502</span>
+            <div className="shrink-0 flex items-center whitespace-nowrap bg-ui-bg px-3 py-3.5 rounded-xl border border-ui-border">
+              <span className="text-sm font-bold text-ui-muted whitespace-nowrap">🇬🇹 +502</span>
             </div>
             <input
               type="tel"
@@ -87,10 +84,9 @@ const InternalPhoneStart = ({ order, updateOrder, availablePlates, onNext }) => 
               maxLength={8}
               inputMode="numeric"
               autoFocus
-              className="flex-1 p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-lg font-bold tracking-wider"
+              className="min-w-0 flex-1 p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-lg font-bold tracking-wider"
             />
           </div>
-          <p className="mt-2 text-xs font-semibold text-ui-muted">Sin OTP para pedidos creados desde administración.</p>
         </div>
 
         <Button fullWidth onClick={handleContinue} disabled={!canContinue} className="text-base sm:text-lg">

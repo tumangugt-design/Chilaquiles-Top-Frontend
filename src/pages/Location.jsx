@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 import toast from 'react-hot-toast'
-import { getAvailablePlates, sendOtp, verifyOtp } from '../shared/config/api.js'
+import { getAvailablePlates, getOperatingHours, sendOtp, verifyOtp } from '../shared/config/api.js'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
@@ -12,6 +12,15 @@ const normalizeGtPhone = (raw = '') => {
   if (digits.length === 8) return `+502${digits}`
   if (digits.startsWith('502') && digits.length === 11) return `+${digits}`
   return `+502${digits.slice(0, 8)}`
+}
+
+
+const formatHour = (value = '') => {
+  const [rawHour, rawMinute] = String(value || '').split(':').map(Number)
+  if (Number.isNaN(rawHour) || Number.isNaN(rawMinute)) return value
+  const suffix = rawHour >= 12 ? 'PM' : 'AM'
+  const hour = rawHour % 12 || 12
+  return `${hour}:${String(rawMinute).padStart(2, '0')} ${suffix}`
 }
 
 const toGtLocalDigits = (raw = '') => {
@@ -72,6 +81,7 @@ const LocationPage = ({ onConfirm }) => {
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [hours, setHours] = useState({ isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
@@ -79,8 +89,11 @@ const LocationPage = ({ onConfirm }) => {
     let mounted = true
     const loadAvailable = async () => {
       try {
-        const response = await getAvailablePlates()
-        if (mounted) setAvailableCount(Number(response.data?.count || 0))
+        const [platesResponse, hoursResponse] = await Promise.all([getAvailablePlates(), getOperatingHours()])
+        if (mounted) {
+          setAvailableCount(Number(platesResponse.data?.count || 0))
+          setHours(hoursResponse.data || { isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
+        }
       } catch {
         if (mounted) setAvailableCount(0)
       }
@@ -91,6 +104,11 @@ const LocationPage = ({ onConfirm }) => {
   }, [])
 
   const handleSendCode = async () => {
+    if (!hours.isCurrentlyOpen) {
+      toast.error('Estamos cerrados por el momento. Vuelve más tarde.')
+      return
+    }
+
     if (availableCount === 0) {
       toast.error('No hay platos disponibles por el momento. Vuelve en otro momento.')
       return
@@ -167,10 +185,23 @@ const LocationPage = ({ onConfirm }) => {
                 : 'Arma tu orden y completa tus datos al final.'}
             </p>
             {!error && (
-              <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Abierto hoy</p>
-                <p className="text-sm font-black text-green-700">Horario: 8:00 AM - 5:00 PM</p>
-              </div>
+              hours.isCurrentlyOpen ? (
+                <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Abierto hoy</p>
+                  {hours.openTime && hours.closeTime && (
+                    <p className="text-sm font-black text-green-700">Horario: {formatHour(hours.openTime)} - {formatHour(hours.closeTime)}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Cerrado</p>
+                  {hours.openTime && hours.closeTime ? (
+                    <p className="text-sm font-black text-red-700">Horario: {formatHour(hours.openTime)} - {formatHour(hours.closeTime)}</p>
+                  ) : (
+                    <p className="text-sm font-black text-red-700">Vuelve más tarde.</p>
+                  )}
+                </div>
+              )
             )}
           </>
         )}
@@ -194,8 +225,8 @@ const LocationPage = ({ onConfirm }) => {
 
       {step === 'welcome' && !error && (
         <div className="space-y-4">
-          <Button fullWidth onClick={() => setStep('auth')} variant="primary" className="text-lg">
-            Sí, estoy aquí
+          <Button fullWidth onClick={() => setStep('auth')} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
+            {hours.isCurrentlyOpen ? 'Sí, estoy aquí' : 'Cerrado'}
           </Button>
 
           <button
@@ -248,7 +279,7 @@ const LocationPage = ({ onConfirm }) => {
           <Button
             fullWidth
             onClick={handleSendCode}
-            disabled={cleanDigits.length !== 8 || isLoading || availableCount === 0}
+            disabled={cleanDigits.length !== 8 || isLoading || availableCount === 0 || !hours.isCurrentlyOpen}
             className="text-base sm:text-lg"
           >
             {isLoading ? 'Enviando código...' : 'Enviar código →'}

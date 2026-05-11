@@ -30,7 +30,6 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
         </div>
         <div className="hidden sm:block">
           <Logo className="w-32 h-14 drop-shadow-sm" />
-          <p className="text-[9px] font-bold text-ui-muted uppercase tracking-[0.2em] mt-0.5">{meta.label}</p>
         </div>
       </div>
 

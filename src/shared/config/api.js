@@ -49,6 +49,8 @@ export const deleteInventoryItem = (name) => api.delete(`/inventory/${name}`)
 export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount })
 export const toggleInventoryStatus = (name, isActive) => api.patch(`/inventory/${name}/toggle-status`, { isActive })
 export const syncInventory = () => api.post('/inventory/sync')
+export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Date.now()}`)
+export const updateOperatingHours = (payload) => api.patch('/settings/operating-hours', payload)
 
 // Customer OTP
 export const sendOtp = (phone) => api.post('/auth/send-otp', { phone })

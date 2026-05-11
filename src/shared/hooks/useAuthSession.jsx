@@ -72,6 +72,7 @@ export const useAuthSession = (panelRole) => {
     clearStaffToken()
     setSession(null)
     setError('')
+    window.location.reload()
   }
 
   return {

@@ -180,14 +180,12 @@ const ChefPage = ({ authSession, onProfileClick }) => {
 
   if (!session || session.role !== 'CHEF') {
     return (
-      <PanelShell title="Centro de Producción" subtitle="Pedidos activos y terminados">
-        <StaffAccessCard
-          title="Acceso a Cocina"
-          subtitle="Ingresa con tu usuario y contraseña."
-          accentClass="!bg-brand-orange"
-          authSession={authSession}
-        />
-      </PanelShell>
+      <StaffAccessCard
+        title="Acceso a Cocina"
+        subtitle="Ingresa con tu usuario y contraseña."
+        accentClass="!bg-brand-orange"
+        authSession={authSession}
+      />
     )
   }
 

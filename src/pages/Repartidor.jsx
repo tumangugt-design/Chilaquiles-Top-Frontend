@@ -129,14 +129,12 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
 
   if (!session || session.role !== 'REPARTIDOR') {
     return (
-      <PanelShell title="Centro de Entregas" subtitle="Pedidos listos, en camino y entregados">
-        <StaffAccessCard
-          title="Acceso de Repartidor"
-          subtitle="Ingresa con tu usuario y contraseña."
-          accentClass="!bg-[#4CAF50]"
-          authSession={authSession}
-        />
-      </PanelShell>
+      <StaffAccessCard
+        title="Acceso de Repartidor"
+        subtitle="Ingresa con tu usuario y contraseña."
+        accentClass="!bg-[#4CAF50]"
+        authSession={authSession}
+      />
     )
   }
 

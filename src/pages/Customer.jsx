@@ -1,10 +1,36 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import { createOrder } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
+
+const GT_LOCATION_PRESETS = {
+  'zona 1': { lat: 14.6416, lng: -90.5133 },
+  'zona 2': { lat: 14.6575, lng: -90.5150 },
+  'zona 3': { lat: 14.6398, lng: -90.5308 },
+  'zona 4': { lat: 14.6208, lng: -90.5154 },
+  'zona 5': { lat: 14.6247, lng: -90.4934 },
+  'zona 6': { lat: 14.6652, lng: -90.4990 },
+  'zona 7': { lat: 14.6361, lng: -90.5585 },
+  'zona 8': { lat: 14.6098, lng: -90.5268 },
+  'zona 9': { lat: 14.6046, lng: -90.5162 },
+  'zona 10': { lat: 14.5929, lng: -90.5070 },
+  'zona 11': { lat: 14.5996, lng: -90.5523 },
+  'zona 12': { lat: 14.5808, lng: -90.5488 },
+  'zona 13': { lat: 14.5844, lng: -90.5274 },
+  'zona 14': { lat: 14.5843, lng: -90.5047 },
+  'zona 15': { lat: 14.6026, lng: -90.4858 },
+  'zona 16': { lat: 14.6191, lng: -90.4627 },
+  'zona 17': { lat: 14.6399, lng: -90.4704 },
+  'zona 18': { lat: 14.6810, lng: -90.4717 },
+  'zona 19': { lat: 14.6470, lng: -90.5747 },
+  'zona 21': { lat: 14.5590, lng: -90.5593 },
+  'villa nueva': { lat: 14.5251, lng: -90.5875 },
+  'san miguel petapa': { lat: 14.5018, lng: -90.5610 },
+  'mixco': { lat: 14.6333, lng: -90.6064 },
+}
 
 const toGtLocalDigits = (raw = '') => {
   let digits = String(raw).replace(/\D/g, '')
@@ -15,6 +41,35 @@ const toGtLocalDigits = (raw = '') => {
 const normalizeGtPhone = (raw = '') => {
   const digits = toGtLocalDigits(raw)
   return digits ? `+502${digits}` : ''
+}
+
+const parseCoordinates = (raw = '') => {
+  const match = String(raw).trim().match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/)
+  if (!match) return null
+  const lat = Number(match[1])
+  const lng = Number(match[2])
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+  return { lat, lng }
+}
+
+const normalizeSearchKey = (raw = '') => String(raw).trim().toLowerCase().replace(/\s+/g, ' ')
+
+const getGoogleMapsEmbedUrl = (query = 'Guatemala') =>
+  `https://www.google.com/maps?q=${encodeURIComponent(query || 'Guatemala')}&output=embed`
+
+const LocationPreview = ({ location, query }) => {
+  const mapQuery = location?.lat && location?.lng ? `${location.lat},${location.lng}` : query || 'Guatemala'
+  return (
+    <div className="rounded-2xl overflow-hidden border border-ui-border bg-ui-bg shadow-sm">
+      <iframe
+        title="Google Maps"
+        src={getGoogleMapsEmbedUrl(mapQuery)}
+        className="w-full h-56 sm:h-64 border-0"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+    </div>
+  )
 }
 
 const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInternal = false }) => {
@@ -30,22 +85,22 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     location: order.customer?.location || null,
     accessCode: order.customer?.accessCode || '',
   })
-
-  const [touched, setTouched] = useState({
-    name: false,
-    address: false,
-  })
-
+  const [touched, setTouched] = useState({ name: false, address: false })
   const [loadingLoc, setLoadingLoc] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [adminMapSearch, setAdminMapSearch] = useState('Villa Nueva, Guatemala')
+  const [adminCoords, setAdminCoords] = useState(
+    localData.location?.lat && localData.location?.lng ? `${localData.location.lat}, ${localData.location.lng}` : ''
+  )
+  const [mapQuery, setMapQuery] = useState(
+    localData.location?.lat && localData.location?.lng ? `${localData.location.lat},${localData.location.lng}` : 'Villa Nueva, Guatemala'
+  )
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    const nextValue = name === 'phone' ? toGtLocalDigits(value) : value
-    const newData = { ...localData, [name]: nextValue }
+  const hasLocation = useMemo(() => !!localData.location?.lat && !!localData.location?.lng, [localData.location])
+  const hasVerifiedPhone = localData.phone.trim().length === 8
 
+  const updateCustomer = (newData) => {
     setLocalData(newData)
-
     updateOrder({
       customer: {
         ...order.customer,
@@ -55,6 +110,20 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     })
   }
 
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    const nextValue = name === 'phone' ? toGtLocalDigits(value) : value
+    updateCustomer({ ...localData, [name]: nextValue })
+  }
+
+  const setLocation = (location, successMessage = 'Ubicación lista') => {
+    const nextData = { ...localData, location }
+    updateCustomer(nextData)
+    setAdminCoords(`${location.lat}, ${location.lng}`)
+    setMapQuery(`${location.lat},${location.lng}`)
+    toast.success(successMessage)
+  }
+
   const handleLocationClick = () => {
     if (!navigator.geolocation) {
       toast.error('Tu navegador no permite ubicación.')
@@ -62,6 +131,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     }
 
     setLoadingLoc(true)
+    toast.loading('Obteniendo ubicación...', { id: 'gps-location' })
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -69,39 +139,56 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         }
-
-        const newData = { ...localData, location }
-        setLocalData(newData)
-
-        updateOrder({
-          customer: {
-            ...order.customer,
-            ...newData,
-            phone: normalizeGtPhone(newData.phone),
-          },
-        })
-
+        setLocation(location)
+        toast.dismiss('gps-location')
         setLoadingLoc(false)
-        toast.success('Ubicación lista')
       },
       () => {
-        toast.error('No pudimos obtener tu ubicación.')
+        toast.error('No pudimos obtener tu ubicación.', { id: 'gps-location' })
         setLoadingLoc(false)
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
-  const hasVerifiedPhone = localData.phone.trim().length === 8
+  const handleAdminSearch = () => {
+    const coords = parseCoordinates(adminMapSearch)
+    if (coords) {
+      setLocation(coords, 'Coordenadas ubicadas en el mapa')
+      return
+    }
+
+    const key = normalizeSearchKey(adminMapSearch)
+    const presetKey = Object.keys(GT_LOCATION_PRESETS).find((candidate) => key === candidate || key.includes(candidate))
+    const preset = presetKey ? GT_LOCATION_PRESETS[presetKey] : null
+    const query = `${adminMapSearch}, Guatemala`
+    setMapQuery(query)
+
+    if (preset) {
+      setLocation(preset, 'Ubicación aproximada lista')
+      return
+    }
+
+    toast('Mapa actualizado. Para guardar navegación exacta pega coordenadas completas.', { icon: '📍' })
+  }
+
+  const handleAdminCoords = () => {
+    const coords = parseCoordinates(adminCoords)
+    if (!coords) {
+      toast.error('Pega coordenadas válidas, ejemplo: 14.5251, -90.5875')
+      return
+    }
+    setLocation(coords, 'Coordenadas guardadas')
+  }
 
   const isValid =
     localData.name.trim().length > 2 &&
     hasVerifiedPhone &&
+    hasLocation &&
     localData.address.trim().length > 5
 
   const handleSubmit = async () => {
     if (!isValid) return
-
     setIsSubmitting(true)
 
     try {
@@ -115,7 +202,6 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
       }
 
       const allItems = [...order.cart, order.currentPlate]
-
       const response = await createOrder({
         customer: payloadCustomer,
         items: allItems.map((item) => ({
@@ -137,8 +223,6 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     }
   }
 
-  const hasLocation = !!localData.location?.lat && !!localData.location?.lng
-
   return (
     <div className="space-y-6 animate-fade-in relative">
       <div className="mb-4 sm:mb-8">
@@ -156,19 +240,16 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
             onChange={handleChange}
             onBlur={() => setTouched({ ...touched, name: true })}
             placeholder="Juan Pérez"
-            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.trim().length <= 2 ? 'border-red-500' : 'border-ui-border'
-              }`}
+            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm ${touched.name && localData.name.trim().length <= 2 ? 'border-red-500' : 'border-ui-border'}`}
           />
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-bold text-ui-text">Teléfono</label>
-
           <div className="flex items-center justify-between rounded-2xl border border-green-500/40 bg-green-500/10 px-4 py-4">
-            <span className="text-green-400 font-black tracking-wide">
+            <span className="text-green-500 font-black tracking-wide">
               {hasVerifiedPhone ? `+502 ${localData.phone}` : 'Número verificado'}
             </span>
-
             <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
@@ -179,51 +260,64 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
 
         <div>
           <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Código de acceso</label>
-          <input
-            type="text"
-            name="accessCode"
-            value={localData.accessCode}
-            onChange={handleChange}
-            placeholder="1234"
-            className="w-full p-3 sm:p-4 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm"
-          />
+          <input type="text" name="accessCode" value={localData.accessCode} onChange={handleChange} placeholder="1234" className="w-full p-3 sm:p-4 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm" />
         </div>
 
-        <div>
+        <div className="space-y-3">
           <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Ubicación exacta</label>
-          <button
-            type="button"
-            onClick={handleLocationClick}
-            disabled={loadingLoc}
-            className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${hasLocation
-                ? 'bg-green-500/10 border-green-500 text-green-600'
-                : 'bg-ui-bg border-ui-border text-ui-text hover:border-brand-blue/40'
-              }`}
-          >
-            <span className="font-black text-sm">
-              {loadingLoc ? 'Obteniendo ubicación...' : hasLocation ? 'Ubicación lista' : 'Obtener ubicación'}
-            </span>
 
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center ${hasLocation ? 'bg-green-500 text-white' : 'bg-brand-blue/10 text-brand-blue'
-                }`}
-            >
-              {hasLocation ? (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 11c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 1 .448 1 1zm8-1c0 6.627-8 11-8 11S4 16.627 4 10a8 8 0 1116 0z"
-                  />
-                </svg>
+          {isInternal ? (
+            <div className="space-y-3 rounded-2xl border border-ui-border bg-ui-bg/50 p-3 sm:p-4">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <input
+                  type="text"
+                  value={adminMapSearch}
+                  onChange={(e) => setAdminMapSearch(e.target.value)}
+                  placeholder="Buscar zona, colonia o dirección"
+                  className="w-full p-3 rounded-xl border border-ui-border bg-ui-card font-bold outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+                <Button type="button" variant="secondary" onClick={handleAdminSearch}>Buscar</Button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                <input
+                  type="text"
+                  value={adminCoords}
+                  onChange={(e) => setAdminCoords(e.target.value)}
+                  placeholder="14.5251, -90.5875"
+                  className="w-full p-3 rounded-xl border border-ui-border bg-ui-card font-bold outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+                <Button type="button" variant="secondary" onClick={handleAdminCoords}>Usar coords</Button>
+                <Button type="button" variant="secondary" onClick={handleLocationClick} disabled={loadingLoc}>{loadingLoc ? 'Obteniendo...' : 'GPS actual'}</Button>
+              </div>
+
+              <LocationPreview location={localData.location} query={mapQuery} />
+
+              {hasLocation && (
+                <p className="text-xs font-black text-green-600">Ubicación guardada: {Number(localData.location.lat).toFixed(6)}, {Number(localData.location.lng).toFixed(6)}</p>
               )}
             </div>
-          </button>
+          ) : (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleLocationClick}
+                disabled={loadingLoc}
+                className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all ${hasLocation ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-ui-bg border-ui-border text-ui-text hover:border-brand-blue/40'}`}
+              >
+                <span className="font-black text-sm">{loadingLoc ? 'Obteniendo ubicación...' : hasLocation ? 'Ubicación lista' : 'Obtener ubicación actual'}</span>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${hasLocation ? 'bg-green-500 text-white' : 'bg-brand-blue/10 text-brand-blue'}`}>
+                  {hasLocation ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 1 .448 1 1zm8-1c0 6.627-8 11-8 11S4 16.627 4 10a8 8 0 1116 0z" /></svg>
+                  )}
+                </div>
+              </button>
+              {hasLocation && <LocationPreview location={localData.location} />}
+              <p className="text-xs font-bold text-ui-muted">La ubicación se toma únicamente desde el GPS actual del cliente.</p>
+            </div>
+          )}
         </div>
 
         <div>
@@ -235,19 +329,14 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
             onChange={handleChange}
             onBlur={() => setTouched({ ...touched, address: true })}
             placeholder="Casa, calle, número, referencia"
-            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'
-              }`}
+            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
           />
         </div>
       </div>
 
       <div className="flex justify-between pt-6 border-t border-ui-border mt-8 gap-3">
-        <Button variant="secondary" onClick={onBack}>
-          Atrás
-        </Button>
-        <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>
-          {isSubmitting ? 'Enviando...' : 'Confirmar pedido'}
-        </Button>
+        <Button variant="secondary" onClick={onBack}>Atrás</Button>
+        <Button onClick={handleSubmit} disabled={!isValid || isSubmitting}>{isSubmitting ? 'Enviando...' : 'Confirmar pedido'}</Button>
       </div>
     </div>
   )

@@ -200,6 +200,42 @@ function App() {
 
   const authSession = useAuthSession(panelRole)
 
+
+  useEffect(() => {
+    let alive = true
+
+    const checkAppVersion = async () => {
+      try {
+        const response = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+        const data = await response.json()
+        const buildId = data?.buildId
+        const storedBuildId = localStorage.getItem('chila_app_build_id')
+
+        if (buildId && storedBuildId && storedBuildId !== buildId && alive) {
+          localStorage.setItem('chila_app_build_id', buildId)
+          window.location.reload()
+          return
+        }
+
+        if (buildId && !storedBuildId) {
+          localStorage.setItem('chila_app_build_id', buildId)
+        }
+      } catch {
+        // No bloquear la app si no se puede leer la versión.
+      }
+    }
+
+    checkAppVersion()
+    const interval = setInterval(checkAppVersion, 60000)
+    window.addEventListener('focus', checkAppVersion)
+
+    return () => {
+      alive = false
+      clearInterval(interval)
+      window.removeEventListener('focus', checkAppVersion)
+    }
+  }, [])
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)

@@ -12,7 +12,9 @@ import {
   getInventory,
   getOrders,
   syncInventory,
-  toggleInventoryStatus
+  toggleInventoryStatus,
+  getOperatingHours,
+  updateOperatingHours
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
@@ -294,6 +296,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
+  const [scheduleForm, setScheduleForm] = useState({ isOpen: true, openTime: '08:00', closeTime: '17:00' })
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [historyModal, setHistoryModal] = useState({
@@ -340,6 +343,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setInventory(inventoryResponse.data)
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
+      } else if (activeTab === 'schedule') {
+        const scheduleResponse = await getOperatingHours()
+        setScheduleForm({
+          isOpen: Boolean(scheduleResponse.data?.isOpen),
+          openTime: scheduleResponse.data?.openTime || '',
+          closeTime: scheduleResponse.data?.closeTime || '',
+        })
       } else if (activeTab === 'chefs') {
         await loadRoleUsers('CHEF')
       } else if (activeTab === 'drivers') {
@@ -471,6 +481,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const saveSchedule = async (event) => {
+    event.preventDefault()
+    try {
+      const payload = {
+        isOpen: scheduleForm.isOpen,
+        openTime: scheduleForm.openTime,
+        closeTime: scheduleForm.closeTime,
+      }
+      const response = await updateOperatingHours(payload)
+      const next = response.data?.settings || payload
+      setScheduleForm({
+        isOpen: Boolean(next.isOpen),
+        openTime: next.openTime || '',
+        closeTime: next.closeTime || '',
+      })
+      toast.success('Horario actualizado')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo guardar el horario')
+    }
+  }
+
   const openHistoryModal = async (type, user) => {
     setHistoryModal({
       isOpen: true,
@@ -525,14 +556,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   if (!session || session.role !== 'ADMIN') {
     return (
-      <PanelShell title="Panel Chilaquiles TOP" subtitle="Pedidos, cocina, reparto e inventario">
-        <StaffAccessCard
-          title="Acceso Administrativo"
-          subtitle="Ingresa con tu usuario y contraseña."
-          accentClass="!bg-brand-blue"
-          authSession={authSession}
-        />
-      </PanelShell>
+      <StaffAccessCard
+        title="Acceso Administrativo"
+        subtitle="Ingresa con tu usuario y contraseña."
+        accentClass="!bg-brand-blue"
+        authSession={authSession}
+      />
     )
   }
 
@@ -827,6 +856,66 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               )
             })}
           </div>
+        </div>
+      )}
+
+
+      {activeTab === 'schedule' && (
+        <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+          <form onSubmit={saveSchedule} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+            <div className="border-b border-ui-border pb-4">
+              <h2 className="text-2xl font-black tracking-tight text-ui-text">Horario de atención</h2>
+              <p className="text-sm text-ui-muted mt-1">Configura si el negocio está abierto y el horario que verá el cliente antes de pedir.</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-ui-border bg-white p-5">
+              <div>
+                <p className="font-black text-ui-text">Estado del negocio</p>
+                <p className="text-sm text-ui-muted font-bold">Si está cerrado, el cliente no podrá iniciar un pedido.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleForm((prev) => ({ ...prev, isOpen: !prev.isOpen }))}
+                className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${scheduleForm.isOpen ? 'bg-green-500/10 text-green-700 border-green-500/30' : 'bg-red-500/10 text-red-700 border-red-500/30'}`}
+              >
+                {scheduleForm.isOpen ? 'Abierto' : 'Cerrado'}
+              </button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Hora de apertura</label>
+                <input
+                  type="time"
+                  value={scheduleForm.openTime}
+                  onChange={(event) => setScheduleForm({ ...scheduleForm, openTime: event.target.value })}
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-white font-black outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Hora de cierre</label>
+                <input
+                  type="time"
+                  value={scheduleForm.closeTime}
+                  onChange={(event) => setScheduleForm({ ...scheduleForm, closeTime: event.target.value })}
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-white font-black outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
+            </div>
+
+            <div className={`rounded-2xl p-5 border ${scheduleForm.isOpen ? 'border-green-500/20 bg-green-500/10 text-green-700' : 'border-red-500/20 bg-red-500/10 text-red-700'}`}>
+              <p className="text-[10px] font-black uppercase tracking-widest">Vista para cliente</p>
+              <p className="text-lg font-black mt-1">
+                {scheduleForm.isOpen ? 'Abierto hoy' : 'Cerrado'}
+                {scheduleForm.isOpen && scheduleForm.openTime && scheduleForm.closeTime ? ` · ${scheduleForm.openTime} - ${scheduleForm.closeTime}` : ''}
+              </p>
+              {!scheduleForm.isOpen && !scheduleForm.openTime && !scheduleForm.closeTime && (
+                <p className="text-sm font-bold mt-1">Vuelve más tarde.</p>
+              )}
+            </div>
+
+            <Button type="submit" className="w-full !py-5">Guardar horario</Button>
+          </form>
         </div>
       )}
 

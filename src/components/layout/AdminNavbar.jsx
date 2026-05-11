@@ -13,6 +13,7 @@ import {
   Bell,
   LayoutDashboard,
   Settings,
+  Clock,
   ChevronDown
 } from 'lucide-react'
 
@@ -28,6 +29,7 @@ const navigation = {
   inventory: [
     { id: 'entries', label: 'Entradas', icon: PackagePlus },
     { id: 'inventory', label: 'Stock', icon: Box },
+    { id: 'schedule', label: 'Horario', icon: Clock },
   ]
 }
 
@@ -41,7 +43,6 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
         </div>
         <div className="hidden sm:block">
           <Logo className="w-32 h-14 drop-shadow-sm" />
-          <p className="text-[9px] font-bold text-ui-muted uppercase tracking-[0.2em] mt-0.5">Admin</p>
         </div>
       </div>
 
