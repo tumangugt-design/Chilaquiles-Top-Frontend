@@ -5,26 +5,37 @@ import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const [activeNames, setActiveNames] = useState(null)
+  const [activeNames, setActiveNames] = useState([])
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
     getPublicInventoryOptions()
-      .then((response) => mounted && setActiveNames(response.data?.activeNames || []))
-      .catch(() => mounted && setActiveNames(null))
+      .then((response) => {
+        if (mounted) {
+          setActiveNames(response.data?.activeNames || [])
+          setOptionsLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setActiveNames([])
+          setOptionsLoaded(true)
+        }
+      })
     return () => { mounted = false }
   }, [])
 
   const availableOptions = useMemo(() => {
-    if (!activeNames) return OPTIONS_PROTEIN
+    if (!optionsLoaded) return []
     return OPTIONS_PROTEIN.filter((option) => activeNames.includes(option.value.toLowerCase()))
-  }, [activeNames])
+  }, [activeNames, optionsLoaded])
 
   useEffect(() => {
-    if (activeNames && plate.protein && !availableOptions.some((option) => option.value === plate.protein)) {
+    if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein)) {
       updatePlate({ protein: null })
     }
-  }, [activeNames, availableOptions, plate.protein, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.protein, updatePlate])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -35,7 +46,7 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {availableOptions.length === 0 && (
+        {optionsLoaded && availableOptions.length === 0 && (
           <div className="md:col-span-3 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay proteínas disponibles por inventario.</p>
             <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una proteína.</p>

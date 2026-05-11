@@ -7,22 +7,29 @@ import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const [activeNames, setActiveNames] = useState(null)
+  const [activeNames, setActiveNames] = useState([])
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
     getPublicInventoryOptions()
       .then((response) => {
-        if (mounted) setActiveNames(response.data?.activeNames || [])
+        if (mounted) {
+          setActiveNames(response.data?.activeNames || [])
+          setOptionsLoaded(true)
+        }
       })
       .catch(() => {
-        if (mounted) setActiveNames(null)
+        if (mounted) {
+          setActiveNames([])
+          setOptionsLoaded(true)
+        }
       })
     return () => { mounted = false }
   }, [])
 
   const availableOptions = useMemo(() => {
-    if (!activeNames) return OPTIONS_SAUCE
+    if (!optionsLoaded) return []
     const hasRoja = activeNames.includes('salsa roja')
     const hasVerde = activeNames.includes('salsa verde')
     return OPTIONS_SAUCE.filter((option) => {
@@ -31,13 +38,13 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
       if (option.value === 'DIVORCIADOS') return hasRoja && hasVerde
       return true
     })
-  }, [activeNames])
+  }, [activeNames, optionsLoaded])
 
   useEffect(() => {
-    if (activeNames && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce)) {
+    if (optionsLoaded && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce)) {
       updatePlate({ sauce: null })
     }
-  }, [activeNames, availableOptions, plate.sauce, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.sauce, updatePlate])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -50,7 +57,7 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        {availableOptions.length === 0 && (
+        {optionsLoaded && availableOptions.length === 0 && (
           <div className="md:col-span-2 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay salsas disponibles por inventario.</p>
             <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una salsa.</p>

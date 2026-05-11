@@ -166,6 +166,12 @@ const LocationPage = ({ onConfirm }) => {
                 ? 'Por el momento nuestro servicio es exclusivo para residentes y visitantes dentro de Villa Nueva.'
                 : 'Arma tu orden y completa tus datos al final.'}
             </p>
+            {!error && (
+              <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 px-4 py-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Abierto hoy</p>
+                <p className="text-sm font-black text-green-700">Horario: 8:00 AM - 5:00 PM</p>
+              </div>
+            )}
           </>
         )}
 

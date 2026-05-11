@@ -17,10 +17,11 @@ const normalizeGtPhone = (raw = '') => {
   return digits ? `+502${digits}` : ''
 }
 
-const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
-  const storedPhone = sessionStorage.getItem(VERIFIED_PHONE_KEY) || order.customer?.phone || ''
-  const storedPhoneLocal =
-    sessionStorage.getItem(VERIFIED_PHONE_LOCAL_KEY) || toGtLocalDigits(order.customer?.phone || '')
+const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInternal = false }) => {
+  const storedPhone = isInternal ? (order.customer?.phone || '') : (sessionStorage.getItem(VERIFIED_PHONE_KEY) || order.customer?.phone || '')
+  const storedPhoneLocal = isInternal
+    ? toGtLocalDigits(order.customer?.phone || '')
+    : (sessionStorage.getItem(VERIFIED_PHONE_LOCAL_KEY) || toGtLocalDigits(order.customer?.phone || ''))
 
   const [localData, setLocalData] = useState({
     name: order.customer?.name || '',
@@ -123,6 +124,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack }) => {
           complement: item.complement,
           baseRecipe: item.baseRecipe,
         })),
+        ...(isInternal ? { isInternal: true } : {}),
       })
 
       setLastOrder(response.data.order)

@@ -40,7 +40,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
           <LayoutDashboard className="text-white" size={24} />
         </div>
         <div className="hidden sm:block">
-          <Logo className="w-28 h-10 drop-shadow-sm" />
+          <Logo className="w-32 h-14 drop-shadow-sm" />
           <p className="text-[9px] font-bold text-ui-muted uppercase tracking-[0.2em] mt-0.5">Admin</p>
         </div>
       </div>
@@ -86,8 +86,8 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
       {/* User Actions */}
       <div className="flex items-center gap-4 shrink-0">
-        <div className="hidden lg:flex items-center gap-3 pr-4 border-r border-ui-border">
-          <div className="text-right">
+        <div className="flex items-center gap-3 pr-4 border-r border-ui-border">
+          <div className="hidden sm:block text-right">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
               Online

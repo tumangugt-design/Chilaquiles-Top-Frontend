@@ -808,7 +808,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-ui-border gap-2">
+                  <div className="flex items-center justify-between pt-3 gap-2">
                     <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${item.isActive === false ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
                       {item.isActive === false ? 'Inactivo' : 'Activo'}
                     </div>

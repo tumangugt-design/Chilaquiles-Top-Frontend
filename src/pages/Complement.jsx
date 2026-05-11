@@ -11,26 +11,37 @@ const complementNameById = {
 }
 
 const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const [activeNames, setActiveNames] = useState(null)
+  const [activeNames, setActiveNames] = useState([])
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = true
     getPublicInventoryOptions()
-      .then((response) => mounted && setActiveNames(response.data?.activeNames || []))
-      .catch(() => mounted && setActiveNames(null))
+      .then((response) => {
+        if (mounted) {
+          setActiveNames(response.data?.activeNames || [])
+          setOptionsLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setActiveNames([])
+          setOptionsLoaded(true)
+        }
+      })
     return () => { mounted = false }
   }, [])
 
   const availableOptions = useMemo(() => {
-    if (!activeNames) return OPTIONS_COMPLEMENT
+    if (!optionsLoaded) return []
     return OPTIONS_COMPLEMENT.filter((option) => activeNames.includes(complementNameById[option.id]))
-  }, [activeNames])
+  }, [activeNames, optionsLoaded])
 
   useEffect(() => {
-    if (activeNames && plate.complement && !availableOptions.some((option) => option.value === plate.complement)) {
+    if (optionsLoaded && plate.complement && !availableOptions.some((option) => option.value === plate.complement)) {
       updatePlate({ complement: null })
     }
-  }, [activeNames, availableOptions, plate.complement, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.complement, updatePlate])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -41,7 +52,7 @@ const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        {availableOptions.length === 0 && (
+        {optionsLoaded && availableOptions.length === 0 && (
           <div className="md:col-span-3 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay complementos disponibles por inventario.</p>
             <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos un complemento.</p>
