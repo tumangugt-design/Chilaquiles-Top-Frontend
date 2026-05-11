@@ -23,8 +23,8 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
 
   const availableOptions = useMemo(() => {
     if (!activeNames) return OPTIONS_SAUCE
-    const hasRoja = activeNames.includes('salsa roja') && activeNames.includes('plato para salsa') && activeNames.includes('tapadera para salsa')
-    const hasVerde = activeNames.includes('salsa verde') && activeNames.includes('plato para salsa') && activeNames.includes('tapadera para salsa')
+    const hasRoja = activeNames.includes('salsa roja')
+    const hasVerde = activeNames.includes('salsa verde')
     return OPTIONS_SAUCE.filter((option) => {
       if (option.value === 'ROJA') return hasRoja
       if (option.value === 'VERDE') return hasVerde
@@ -53,7 +53,7 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
         {availableOptions.length === 0 && (
           <div className="md:col-span-2 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay salsas disponibles por inventario.</p>
-            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer salsa, plato para salsa y tapadera para salsa.</p>
+            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una salsa.</p>
           </div>
         )}
         {availableOptions.map((opt) => (

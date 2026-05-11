@@ -7,6 +7,7 @@ import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
+import StaffNavbar from '../components/layout/StaffNavbar.jsx'
 
 const getCardTone = (status) => {
   if (status === 'listo_para_despacho') return 'border-[#FBC02D] bg-[#FFF8D6]'
@@ -118,8 +119,8 @@ const RepartidorPage = ({ authSession }) => {
           <div className="w-24 h-24 bg-brand-blue/10 rounded-full flex items-center justify-center mb-8 animate-pulse">
             <svg className="w-12 h-12 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
           </div>
-          <h3 className="text-3xl font-black text-ui-text mb-4">Esperando Aprobación</h3>
-          <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">El administrador debe aprobar tu cuenta antes de que puedas ver las rutas.</p>
+          <h3 className="text-3xl font-black text-ui-text mb-4">Acceso no disponible</h3>
+          <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">Solicita al administrador que cree o habilite tu usuario.</p>
           <Button variant="secondary" onClick={logout} className="!px-10">Cerrar Sesión</Button>
         </div>
       </PanelShell>
@@ -134,7 +135,6 @@ const RepartidorPage = ({ authSession }) => {
           subtitle="Ingresa con tu usuario y contraseña."
           accentClass="!bg-[#4CAF50]"
           authSession={authSession}
-          allowRequest
         />
       </PanelShell>
     )
@@ -209,17 +209,13 @@ const RepartidorPage = ({ authSession }) => {
   }
 
   return (
-    <PanelShell
-      title="Logística de Entrega"
-      subtitle="Pedidos activos y entregados"
-      actions={
-        <div className="flex items-center space-x-4">
-          <div className={`w-2 h-2 rounded-full bg-brand-orange ${isRefreshing ? 'animate-ping' : ''}`} />
-          <StatusBadge value={session.status} />
-          <Button variant="secondary" onClick={logout}>Salir</Button>
-        </div>
-      }
-    >
+    <>
+      <StaffNavbar role="REPARTIDOR" session={session} logout={logout} count={activeOrders.length + deliveredOrders.length} isRefreshing={isRefreshing} />
+      <PanelShell
+        title="Logística de Entrega"
+        subtitle="Pedidos activos y entregados"
+        actions={<StatusBadge value={session.status} />}
+      >
       <div className="grid xl:grid-cols-2 gap-8 animate-fade-in">
         <section className="space-y-5">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
@@ -249,7 +245,8 @@ const RepartidorPage = ({ authSession }) => {
           </div>
         </section>
       </div>
-    </PanelShell>
+      </PanelShell>
+    </>
   )
 }
 

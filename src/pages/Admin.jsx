@@ -217,26 +217,6 @@ const UserHistoryModal = ({ modal, onClose, onSearchChange }) => {
   )
 }
 
-const StaffRequestCard = ({ user, onApprove }) => (
-  <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6">
-    <div className="flex items-start justify-between mb-6">
-      <div>
-        <p className="font-black text-lg text-ui-text leading-tight">{user.name || 'Usuario Nuevo'}</p>
-        <p className="text-xs font-bold text-ui-muted uppercase tracking-widest mt-1">{user.email || user.phone}</p>
-      </div>
-      <StatusBadge value={user.status} />
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <Button className="col-span-2" onClick={() => onApprove(user._id, 'approved', user.role)}>Aprobar como {user.role}</Button>
-      <Button variant="secondary" onClick={() => onApprove(user._id, 'approved', 'CHEF')}>Chef</Button>
-      <Button variant="secondary" onClick={() => onApprove(user._id, 'approved', 'REPARTIDOR')}>Repartidor</Button>
-      <Button variant="secondary" className="col-span-2 !bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => onApprove(user._id, 'rejected', user.role)}>
-        Denegar Acceso
-      </Button>
-    </div>
-  </div>
-)
-
 const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpenHistory }) => {
   const isClient = user?.role === 'CLIENT'
   const hasCoordinates =

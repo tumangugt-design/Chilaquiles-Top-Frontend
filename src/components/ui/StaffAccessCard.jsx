@@ -14,8 +14,7 @@ const StaffAccessCard = ({
   title,
   subtitle,
   accentClass = '!bg-brand-blue',
-  authSession,
-  allowRequest = false,
+  authSession
 }) => {
   const [loginData, setLoginData] = useState({ username: '', password: '' })
 

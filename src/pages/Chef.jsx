@@ -7,6 +7,7 @@ import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
+import StaffNavbar from '../components/layout/StaffNavbar.jsx'
 
 const getCardTone = (status) => {
   if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
@@ -169,8 +170,8 @@ const ChefPage = ({ authSession }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h3 className="text-3xl font-black text-ui-text mb-4">Solicitud Recibida</h3>
-          <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">Tu cuenta está en proceso de revisión por el equipo administrativo.</p>
+          <h3 className="text-3xl font-black text-ui-text mb-4">Acceso no disponible</h3>
+          <p className="text-ui-muted max-w-sm mb-10 leading-relaxed font-medium">Solicita al administrador que cree o habilite tu usuario.</p>
           <Button variant="secondary" onClick={logout} className="!px-10">Cerrar Sesión</Button>
         </div>
       </PanelShell>
@@ -185,24 +186,19 @@ const ChefPage = ({ authSession }) => {
           subtitle="Ingresa con tu usuario y contraseña."
           accentClass="!bg-brand-orange"
           authSession={authSession}
-          allowRequest
         />
       </PanelShell>
     )
   }
 
   return (
-    <PanelShell
-      title="Centro de Producción"
-      subtitle="Pedidos en cocina y pedidos terminados"
-      actions={
-        <div className="flex items-center space-x-4">
-          <div className={`w-2 h-2 rounded-full bg-brand-blue ${isRefreshing ? 'animate-ping' : ''}`} />
-          <StatusBadge value={session.status} />
-          <Button variant="secondary" onClick={logout}>Salir</Button>
-        </div>
-      }
-    >
+    <>
+      <StaffNavbar role="CHEF" session={session} logout={logout} count={activeOrders.length + finishedOrders.filter(o => !archivedOrderIds.includes(o._id)).length} isRefreshing={isRefreshing} />
+      <PanelShell
+        title="Centro de Producción"
+        subtitle="Pedidos en cocina y pedidos terminados"
+        actions={<StatusBadge value={session.status} />}
+      >
       <div className="grid xl:grid-cols-2 gap-8 animate-fade-in">
         <section className="space-y-5">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
@@ -258,7 +254,8 @@ const ChefPage = ({ authSession }) => {
           </div>
         </section>
       </div>
-    </PanelShell>
+      </PanelShell>
+    </>
   )
 }
 
