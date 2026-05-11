@@ -41,21 +41,13 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
     <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-4 sm:px-6 lg:px-10 justify-between">
       {/* Logo Section */}
       <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        <div className="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center shadow-lg shadow-brand-blue/20">
+        <div className="hidden sm:flex w-10 h-10 bg-brand-blue rounded-xl items-center justify-center shadow-lg shadow-brand-blue/20">
           <LayoutDashboard className="text-white" size={24} />
         </div>
-        <div className="hidden sm:block">
-          <Logo className="w-32 h-14 drop-shadow-sm" />
+        <div>
+          <Logo className="w-24 h-10 sm:w-32 sm:h-14 drop-shadow-sm" />
         </div>
       </div>
-
-      {/* Mobile Menu Toggle */}
-      <button 
-        className="lg:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all ml-auto mr-2"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-      >
-        <Menu size={24} />
-      </button>
 
       {/* Navigation Tabs (Desktop) */}
       <div className="hidden lg:flex flex-1 items-center justify-center px-8 gap-1 max-w-4xl">
@@ -96,10 +88,10 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
         </div>
       </div>
 
-      {/* User Actions */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
-          <div className="hidden lg:block text-right">
+      {/* User Actions & Mobile Toggle */}
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
+          <div className="text-right">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
               Online
@@ -113,10 +105,18 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
         <button 
           onClick={logout}
-          className="p-2.5 rounded-xl text-brand-red hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+          className="hidden lg:block p-2.5 rounded-xl text-brand-red hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
           title="Cerrar Sesión"
         >
           <LogOut size={20} />
+        </button>
+
+        {/* Mobile Menu Toggle */}
+        <button 
+          className="lg:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <Menu size={24} />
         </button>
       </div>
 
@@ -161,7 +161,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
               ))}
             </div>
           </div>
-          <div>
+          <div className="mb-4 pb-2 border-b border-ui-border">
             <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Inventario</p>
             <div className="flex flex-col gap-1">
               {navigation.inventory.map(({ id, label, icon: Icon }) => (
@@ -178,6 +178,25 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
                   <span>{label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Cuenta</p>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => { onProfileClick(); setIsMobileMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm text-ui-text hover:bg-ui-bg"
+              >
+                <UserCircle size={18} />
+                <span>Mi Perfil</span>
+              </button>
+              <button
+                onClick={() => { logout(); setIsMobileMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm text-brand-red hover:bg-red-50"
+              >
+                <LogOut size={18} />
+                <span>Cerrar Sesión</span>
+              </button>
             </div>
           </div>
         </div>
