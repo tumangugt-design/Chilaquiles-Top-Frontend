@@ -89,7 +89,7 @@ const ChefOrderCard = ({ order, onAdvance, onArchive }) => (
   </div>
 )
 
-const ChefPage = ({ authSession }) => {
+const ChefPage = ({ authSession, onProfileClick }) => {
   const { session, logout } = authSession
   const [activeOrders, setActiveOrders] = useState([])
   const [finishedOrders, setFinishedOrders] = useState([])
@@ -193,7 +193,7 @@ const ChefPage = ({ authSession }) => {
 
   return (
     <>
-      <StaffNavbar role="CHEF" session={session} logout={logout} count={activeOrders.length + finishedOrders.filter(o => !archivedOrderIds.includes(o._id)).length} isRefreshing={isRefreshing} />
+      <StaffNavbar role="CHEF" session={session} logout={logout} count={activeOrders.length + finishedOrders.filter(o => !archivedOrderIds.includes(o._id)).length} isRefreshing={isRefreshing} onProfileClick={onProfileClick} />
       <PanelShell
         title="Centro de Producción"
         subtitle="Pedidos en cocina y pedidos terminados"

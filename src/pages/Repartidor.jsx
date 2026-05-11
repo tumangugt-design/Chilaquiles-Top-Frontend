@@ -33,7 +33,7 @@ const getActionButtonTone = (status) => {
   return '!bg-[#4CAF50] !text-white hover:!bg-[#388E3C] border border-[#2E7D32]'
 }
 
-const RepartidorPage = ({ authSession }) => {
+const RepartidorPage = ({ authSession, onProfileClick }) => {
   const { session, logout } = authSession
   const [activeOrders, setActiveOrders] = useState([])
   const [deliveredOrders, setDeliveredOrders] = useState([])
@@ -210,7 +210,7 @@ const RepartidorPage = ({ authSession }) => {
 
   return (
     <>
-      <StaffNavbar role="REPARTIDOR" session={session} logout={logout} count={activeOrders.length + deliveredOrders.length} isRefreshing={isRefreshing} />
+      <StaffNavbar role="REPARTIDOR" session={session} logout={logout} count={activeOrders.length + deliveredOrders.length} isRefreshing={isRefreshing} onProfileClick={onProfileClick} />
       <PanelShell
         title="Logística de Entrega"
         subtitle="Pedidos activos y entregados"

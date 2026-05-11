@@ -283,7 +283,7 @@ const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpe
   )
 }
 
-const AdminPage = ({ authSession }) => {
+const AdminPage = ({ authSession, onProfileClick }) => {
   const { session, logout } = authSession
   const [activeTab, setActiveTab] = useState('staff')
   const [orderFilter, setOrderFilter] = useState('all')
@@ -543,6 +543,7 @@ const AdminPage = ({ authSession }) => {
         setActiveTab={setActiveTab} 
         session={session} 
         logout={logout}
+        onProfileClick={onProfileClick}
       />
 
       <div className="pt-20 flex flex-col min-h-screen">

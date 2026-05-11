@@ -1,22 +1,53 @@
-
-
+import { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
+import { getPublicInventoryOptions } from '../shared/config/api.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
+const complementNameById = {
+  AGUACATE: 'aguacate',
+  CEBOLLA_CARAMELIZADA: 'cebolla caramelizada',
+  QUESO_EXTRA: 'queso extra',
+}
+
 const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
+  const [activeNames, setActiveNames] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    getPublicInventoryOptions()
+      .then((response) => mounted && setActiveNames(response.data?.activeNames || []))
+      .catch(() => mounted && setActiveNames(null))
+    return () => { mounted = false }
+  }, [])
+
+  const availableOptions = useMemo(() => {
+    if (!activeNames) return OPTIONS_COMPLEMENT
+    return OPTIONS_COMPLEMENT.filter((option) => activeNames.includes(complementNameById[option.id]))
+  }, [activeNames])
+
+  useEffect(() => {
+    if (activeNames && plate.complement && !availableOptions.some((option) => option.value === plate.complement)) {
+      updatePlate({ complement: null })
+    }
+  }, [activeNames, availableOptions, plate.complement, updatePlate])
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
       <div className="max-w-xl">
-        <p className="text-sm sm:text-base font-black text-brand-blue uppercase tracking-widest mb-2">
-          Plato {plateNumber}
-        </p>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 sm:mb-3">Elige tu complemento</h2>
-        <p className="text-base sm:text-lg text-gray-500">El toque final para elevar el sabor.</p>
+        <p className="text-sm sm:text-base font-black text-brand-blue uppercase tracking-widest mb-2">Plato {plateNumber}</p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2 sm:mb-3">Elige tu complemento</h2>
+        <p className="text-base sm:text-lg text-ui-muted">El toque final para elevar el sabor.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        {OPTIONS_COMPLEMENT.map((opt) => (
+        {availableOptions.length === 0 && (
+          <div className="md:col-span-3 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
+            <p className="font-black text-ui-text">No hay complementos disponibles por inventario.</p>
+            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos un complemento.</p>
+          </div>
+        )}
+        {availableOptions.map((opt) => (
           <OptionCard
             key={opt.id}
             title={opt.label}

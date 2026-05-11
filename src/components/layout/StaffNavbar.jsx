@@ -1,4 +1,5 @@
 import { ChefHat, Truck, UserCircle, LogOut, ClipboardList } from 'lucide-react'
+import Logo from '../Logo.jsx'
 
 const roleMeta = {
   CHEF: {
@@ -17,7 +18,7 @@ const roleMeta = {
   }
 }
 
-const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', count = 0, isRefreshing = false }) => {
+const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', count = 0, isRefreshing = false, onProfileClick }) => {
   const meta = roleMeta[role] || roleMeta.CHEF
   const Icon = meta.Icon
 
@@ -28,9 +29,7 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
           <Icon className="text-white" size={24} />
         </div>
         <div className="hidden sm:block">
-          <h1 className="font-black text-lg text-ui-text leading-none uppercase tracking-tighter italic">
-            Chila<span className="text-brand-blue">Quiles</span>
-          </h1>
+          <Logo className="w-28 h-10 drop-shadow-sm" />
           <p className="text-[9px] font-bold text-ui-muted uppercase tracking-[0.2em] mt-0.5">{meta.label}</p>
         </div>
       </div>
@@ -52,9 +51,9 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
               <span className={`w-1.5 h-1.5 bg-green-500 rounded-full ${isRefreshing ? 'animate-ping' : 'animate-pulse'}`} />
             </p>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-ui-bg border border-ui-border flex items-center justify-center overflow-hidden shadow-sm">
+          <button onClick={onProfileClick} className="w-9 h-9 rounded-xl bg-ui-bg border border-ui-border flex items-center justify-center overflow-hidden shadow-sm hover:border-brand-blue transition-all" title="Editar perfil">
             <UserCircle className="text-ui-muted" size={20} />
-          </div>
+          </button>
         </div>
 
         <button

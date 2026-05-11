@@ -211,15 +211,7 @@ function App() {
 
   const renderPanel = (Component) => (
     <div className="min-h-screen bg-ui-bg transition-colors duration-300">
-      <Header
-        isPanel
-        panelRole={panelRole}
-        userPhoto={authSession.session?.photoUrl}
-        onProfileClick={() => setIsProfileOpen(true)}
-        onToggleTheme={toggleTheme}
-        currentTheme={theme}
-      />
-      <Component authSession={authSession} />
+      <Component authSession={authSession} onProfileClick={() => setIsProfileOpen(true)} />
 
       {authSession.session && (
         <ProfileModal

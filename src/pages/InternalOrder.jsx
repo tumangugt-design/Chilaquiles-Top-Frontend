@@ -72,6 +72,7 @@ const InternalOrder = ({ onSuccess }) => {
   const [map, setMap] = useState(null)
   const [autocomplete, setAutocomplete] = useState(null)
   const [coordInput, setCoordInput] = useState('')
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -155,15 +156,26 @@ const InternalOrder = ({ onSuccess }) => {
   }
 
   const useCurrentLocation = () => {
-    navigator.geolocation?.getCurrentPosition(
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no permite obtener la ubicación.')
+      return
+    }
+    setIsGettingLocation(true)
+    toast.loading('Obteniendo ubicación...', { id: 'admin-gps' })
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         const newPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         setPosition(newPos)
         map?.panTo(newPos)
         map?.setZoom(17)
-        toast.success('Ubicación actual obtenida')
+        setIsGettingLocation(false)
+        toast.success('Ubicación actual obtenida', { id: 'admin-gps' })
       },
-      () => toast.error('No se pudo obtener la ubicación actual')
+      () => {
+        setIsGettingLocation(false)
+        toast.error('No se pudo obtener la ubicación actual', { id: 'admin-gps' })
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
@@ -313,7 +325,7 @@ const InternalOrder = ({ onSuccess }) => {
                   <input type="text" placeholder="Pegar coordenadas o link de Google Maps" value={coordInput} onChange={(e) => setCoordInput(e.target.value)} className="w-full p-4 pr-12 rounded-2xl border border-ui-border bg-ui-bg font-bold outline-none focus:border-brand-blue" />
                   <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-blue"><Target size={20} /></button>
                 </form>
-                <button onClick={useCurrentLocation} className="text-[10px] font-black uppercase tracking-widest text-brand-blue flex items-center gap-2"><Navigation size={12} /> Usar GPS actual</button>
+                <button onClick={useCurrentLocation} className="text-[10px] font-black uppercase tracking-widest text-brand-blue flex items-center gap-2"><Navigation size={12} /> {isGettingLocation ? 'Obteniendo ubicación...' : 'Usar GPS actual'}</button>
                 <div className="h-72 rounded-3xl overflow-hidden border border-ui-border">
                   <GoogleMap mapContainerStyle={{ height: '100%', width: '100%' }} center={position} zoom={14} onLoad={onMapLoad} onClick={handleMapClick} options={mapOptions}>
                     <Marker position={position} />

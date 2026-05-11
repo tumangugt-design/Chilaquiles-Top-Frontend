@@ -1,4 +1,5 @@
 import React from 'react'
+import Logo from '../Logo.jsx'
 import { 
   Users, 
   UserCircle, 
@@ -30,7 +31,7 @@ const navigation = {
   ]
 }
 
-const AdminNavbar = ({ activeTab, setActiveTab, session, logout }) => {
+const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick }) => {
   return (
     <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-6 lg:px-10 justify-between">
       {/* Logo Section */}
@@ -39,9 +40,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout }) => {
           <LayoutDashboard className="text-white" size={24} />
         </div>
         <div className="hidden sm:block">
-          <h1 className="font-black text-lg text-ui-text leading-none uppercase tracking-tighter italic">
-            Chila<span className="text-brand-blue">Quiles</span>
-          </h1>
+          <Logo className="w-28 h-10 drop-shadow-sm" />
           <p className="text-[9px] font-bold text-ui-muted uppercase tracking-[0.2em] mt-0.5">Admin</p>
         </div>
       </div>
@@ -95,9 +94,9 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout }) => {
               <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
             </p>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-ui-bg border border-ui-border flex items-center justify-center overflow-hidden shadow-sm">
+          <button onClick={onProfileClick} className="w-9 h-9 rounded-xl bg-ui-bg border border-ui-border flex items-center justify-center overflow-hidden shadow-sm hover:border-brand-blue transition-all" title="Editar perfil">
             <UserCircle className="text-ui-muted" size={20} />
-          </div>
+          </button>
         </div>
 
         <button 

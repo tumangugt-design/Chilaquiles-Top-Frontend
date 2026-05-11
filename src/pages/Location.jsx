@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 import toast from 'react-hot-toast'
-import { sendOtp, verifyOtp } from '../shared/config/api.js'
+import { getAvailablePlates, sendOtp, verifyOtp } from '../shared/config/api.js'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
@@ -67,6 +67,7 @@ const OTPView = ({ code, setCode, onVerify, onBack, phone, isLoading }) => {
 
 const LocationPage = ({ onConfirm }) => {
   const [error, setError] = useState(false)
+  const [availableCount, setAvailableCount] = useState(null)
   const [step, setStep] = useState('welcome')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -74,7 +75,27 @@ const LocationPage = ({ onConfirm }) => {
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
+  useEffect(() => {
+    let mounted = true
+    const loadAvailable = async () => {
+      try {
+        const response = await getAvailablePlates()
+        if (mounted) setAvailableCount(Number(response.data?.count || 0))
+      } catch {
+        if (mounted) setAvailableCount(0)
+      }
+    }
+    loadAvailable()
+    const interval = setInterval(loadAvailable, 15000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
+
   const handleSendCode = async () => {
+    if (availableCount === 0) {
+      toast.error('No hay platos disponibles por el momento. Vuelve en otro momento.')
+      return
+    }
+
     if (cleanDigits.length !== 8) {
       toast.error('Ingresa un número válido de 8 dígitos.')
       return
@@ -156,6 +177,11 @@ const LocationPage = ({ onConfirm }) => {
             <p className="text-ui-muted leading-relaxed text-sm sm:text-base px-2">
               Ingresa tu número y te enviaremos un código para continuar con tu pedido.
             </p>
+            {availableCount === 0 && (
+              <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-600">
+                No hay platos disponibles por el momento. Vuelve en otro momento.
+              </div>
+            )}
           </>
         )}
       </div>
@@ -216,7 +242,7 @@ const LocationPage = ({ onConfirm }) => {
           <Button
             fullWidth
             onClick={handleSendCode}
-            disabled={cleanDigits.length !== 8 || isLoading}
+            disabled={cleanDigits.length !== 8 || isLoading || availableCount === 0}
             className="text-base sm:text-lg"
           >
             {isLoading ? 'Enviando código...' : 'Enviar código →'}
