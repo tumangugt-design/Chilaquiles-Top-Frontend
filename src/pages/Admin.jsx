@@ -3,18 +3,39 @@ import PanelShell from '../components/ui/PanelShell.jsx'
 import Button from '../components/ui/Button.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import {
-  getPendingStaff,
   getUsersByRole,
   getUserOrderHistory,
   saveInventoryItem,
-  updateStaffStatus,
+  createStaffUser,
+  updateStaffUser,
+  deleteUser,
   getInventory,
-  getOrders
+  getOrders,
+  syncInventory,
+  toggleInventoryStatus
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
+import InternalOrder from './InternalOrder.jsx'
+import { 
+  Users, 
+  UserCircle, 
+  ChefHat, 
+  Truck, 
+  PackagePlus, 
+  Box, 
+  ClipboardList, 
+  PlusCircle, 
+  LogOut,
+  Bell,
+  Menu,
+  X,
+  Search,
+  Settings
+} from 'lucide-react'
+import AdminNavbar from '../components/layout/AdminNavbar.jsx'
 
 const emptyItem = { name: '', amount: '', unit: '' }
 
@@ -286,13 +307,13 @@ const AdminPage = ({ authSession }) => {
   const { session, logout } = authSession
   const [activeTab, setActiveTab] = useState('staff')
   const [orderFilter, setOrderFilter] = useState('all')
-  const [pendingUsers, setPendingUsers] = useState([])
   const [inventory, setInventory] = useState([])
   const [clientUsers, setClientUsers] = useState([])
   const [chefUsers, setChefUsers] = useState([])
   const [driverUsers, setDriverUsers] = useState([])
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
+  const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [historyModal, setHistoryModal] = useState({
@@ -332,13 +353,10 @@ const AdminPage = ({ authSession }) => {
 
         if (hasNewOrder) playNotificationSound()
         setOrdersCache((prev) => ({ ...prev, [orderFilter]: orders }))
-      } else if (['staff', 'entries', 'inventory'].includes(activeTab)) {
-        const [pendingResponse, inventoryResponse] = await Promise.all([
-          getPendingStaff(),
-          getInventory()
-        ])
-
-        setPendingUsers(pendingResponse.data)
+      } else if (activeTab === 'staff') {
+        await Promise.all([loadRoleUsers('CHEF'), loadRoleUsers('REPARTIDOR')])
+      } else if (['entries', 'inventory'].includes(activeTab)) {
+        const inventoryResponse = await getInventory()
         setInventory(inventoryResponse.data)
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
@@ -366,13 +384,55 @@ const AdminPage = ({ authSession }) => {
     }
   }, [session, activeTab, orderFilter])
 
-  const changeStatus = async (userId, status, role) => {
+  const submitStaffUser = async (e) => {
+    e.preventDefault()
+    if (!staffForm.name || !staffForm.phone || !staffForm.username || (!staffForm.id && !staffForm.password)) {
+      return toast.error('Completa nombre, teléfono, usuario, contraseña y rol')
+    }
+
     try {
-      await updateStaffStatus(userId, { status, role })
-      toast.success('Usuario actualizado')
+      const payload = {
+        name: staffForm.name,
+        phone: staffForm.phone,
+        username: staffForm.username,
+        role: staffForm.role,
+      }
+      if (staffForm.password) payload.password = staffForm.password
+
+      if (staffForm.id) {
+        await updateStaffUser(staffForm.id, payload)
+        toast.success('Usuario actualizado')
+      } else {
+        await createStaffUser(payload)
+        toast.success('Usuario creado')
+      }
+      setStaffForm({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
       loadData()
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo actualizar el usuario.')
+      toast.error(err.response?.data?.message || 'No se pudo guardar el usuario')
+    }
+  }
+
+  const editStaffUser = (user) => {
+    setStaffForm({
+      id: user._id,
+      name: user.name || '',
+      phone: user.phone || '',
+      username: user.username || '',
+      password: '',
+      role: user.role || 'CHEF',
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const removeStaffUser = async (user) => {
+    if (!window.confirm(`¿Eliminar a ${user.name || user.username}?`)) return
+    try {
+      await deleteUser(user._id)
+      toast.success('Usuario eliminado')
+      loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo eliminar el usuario')
     }
   }
 
@@ -408,6 +468,27 @@ const AdminPage = ({ authSession }) => {
       amount: itemForm.amount,
       unit: product?.unit || '',
     })
+  }
+
+  const handleSyncInventory = async () => {
+    const loadingToast = toast.loading('Sincronizando catálogo...')
+    try {
+      await syncInventory()
+      toast.success('Inventario sincronizado', { id: loadingToast })
+      loadData()
+    } catch (err) {
+      toast.error('Error al sincronizar', { id: loadingToast })
+    }
+  }
+
+  const handleToggleStatus = async (name, currentStatus) => {
+    try {
+      await toggleInventoryStatus(name, !currentStatus)
+      toast.success(`Producto ${!currentStatus ? 'activado' : 'desactivado'}`)
+      loadData()
+    } catch (err) {
+      toast.error('No se pudo cambiar el estado')
+    }
   }
 
   const openHistoryModal = async (type, user) => {
@@ -476,61 +557,86 @@ const AdminPage = ({ authSession }) => {
   }
 
   return (
-    <PanelShell
-      title="Dashboard Administrativo"
-      subtitle="Staff, usuarios, entradas de inventario, inventario y pedidos"
-      actions={
-        <div className="flex items-center space-x-4">
-          <div className={`w-2 h-2 rounded-full bg-brand-blue ${isRefreshing ? 'animate-ping' : ''}`} />
-          <StatusBadge value={session.status} />
-          <Button variant="secondary" onClick={logout}>Salir</Button>
-        </div>
-      }
-    >
-      <div className="flex flex-wrap gap-3 mb-10 justify-center">
-        {[
-          ['staff', 'Accesos'],
-          ['clients', 'Clientes'],
-          ['chefs', 'Usuarios Cocineros'],
-          ['drivers', 'Usuarios Repartidores'],
-          ['entries', 'Entrada Inventario'],
-          ['inventory', 'Inventario'],
-          ['orders', 'Pedidos'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === id ? 'bg-brand-blue text-white shadow-lg' : 'bg-ui-bg text-ui-muted border border-ui-border'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="min-h-screen bg-ui-bg">
+      <AdminNavbar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        session={session} 
+        logout={logout}
+      />
+
+      <div className="pt-20 flex flex-col min-h-screen">
+        <main className="flex-1 p-6 lg:p-10">
+          <div className="bg-white rounded-[3rem] p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full">
+            {activeTab === 'internal_order' ? (
+              <InternalOrder onSuccess={() => setActiveTab('orders')} />
+            ) : (
+              <>
 
       {activeTab === 'staff' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-ui-border pb-4">
-            <h2 className="text-xl font-black tracking-tight text-ui-text">Solicitudes</h2>
-            <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">
-              {pendingUsers.length} pendientes
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            {pendingUsers.length === 0 ? (
-              <div className="text-center py-12 bg-ui-bg/50 rounded-[2rem] border border-dashed border-ui-border">
-                <p className="text-ui-muted text-sm font-medium">No hay solicitudes pendientes.</p>
+        <div className="space-y-8 animate-fade-in">
+          <form onSubmit={submitStaffUser} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-ui-border pb-4">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-ui-text">Usuarios</h2>
+                <p className="text-sm text-ui-muted mt-1">El admin crea las cuentas de Chef y Repartidor. Ya no hay solicitudes ni aprobaciones.</p>
               </div>
-            ) : (
-              pendingUsers.map((user) => (
-                <StaffRequestCard key={user._id} user={user} onApprove={changeStatus} />
-              ))
-            )}
+              {staffForm.id && (
+                <Button type="button" variant="secondary" onClick={() => setStaffForm({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })}>
+                  Cancelar edición
+                </Button>
+              )}
+            </div>
+
+            <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-4">
+              <input className="p-4 rounded-2xl border border-ui-border bg-white font-bold" placeholder="Nombre completo" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} />
+              <input className="p-4 rounded-2xl border border-ui-border bg-white font-bold" placeholder="Teléfono" value={staffForm.phone} onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })} />
+              <input className="p-4 rounded-2xl border border-ui-border bg-white font-bold" placeholder="Usuario" value={staffForm.username} onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value.toLowerCase() })} disabled={Boolean(staffForm.id)} />
+              <input type="password" className="p-4 rounded-2xl border border-ui-border bg-white font-bold" placeholder={staffForm.id ? 'Nueva contraseña opcional' : 'Contraseña'} value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} />
+              <select className="p-4 rounded-2xl border border-ui-border bg-white font-bold" value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}>
+                <option value="CHEF">Chef</option>
+                <option value="REPARTIDOR">Repartidor</option>
+              </select>
+            </div>
+
+            <Button type="submit" className="w-full md:w-auto !px-10 !py-4">
+              {staffForm.id ? 'Guardar cambios' : 'Crear usuario'}
+            </Button>
+          </form>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {[{ title: 'Chefs', users: chefUsers }, { title: 'Repartidores', users: driverUsers }].map((group) => (
+              <div key={group.title} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-ui-border pb-3">
+                  <h3 className="font-black text-ui-text text-lg">{group.title}</h3>
+                  <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-black">{group.users.length}</span>
+                </div>
+                {group.users.length === 0 ? (
+                  <p className="text-center py-10 text-ui-muted font-bold">No hay usuarios creados.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {group.users.map((user) => (
+                      <div key={user._id} className="rounded-2xl border border-ui-border bg-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <p className="font-black text-ui-text">{user.name || user.username}</p>
+                          <p className="text-xs font-bold text-ui-muted">{user.phone || 'Sin teléfono'} · {user.username}</p>
+                          <p className="text-[10px] font-black text-brand-blue uppercase mt-1">{user.role}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="secondary" onClick={() => editStaffUser(user)}>Editar</Button>
+                          <Button type="button" variant="secondary" className="!bg-red-500/10 !text-brand-red !border-red-500/20" onClick={() => removeStaffUser(user)}>Eliminar</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {activeTab === 'clients' && (
+      {activeTab === 'clients'  && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between border-b border-ui-border pb-4">
             <h2 className="text-xl font-black tracking-tight text-ui-text">Clientes</h2>
@@ -694,28 +800,47 @@ const AdminPage = ({ authSession }) => {
       {activeTab === 'inventory' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between border-b border-ui-border pb-4">
-            <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
-            <span className="text-xs font-black uppercase tracking-widest text-ui-muted">Solo lectura</span>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
+              <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Estado de stock y catálogo</p>
+            </div>
+            <Button variant="secondary" className="!bg-brand-blue/10 !text-brand-blue !border-brand-blue/20" onClick={handleSyncInventory}>
+              Sincronizar Catálogo
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {inventory.map((item) => {
               const meta = INVENTORY_PRODUCT_MAP[item.name]
               return (
-                <div key={item._id} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-5">
+                <div key={item._id} className={`rounded-[2rem] border border-ui-border p-5 transition-all ${item.isActive === false ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
                   <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <h3 className="font-black text-ui-text capitalize leading-tight">{meta?.label || item.name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="font-black text-ui-text capitalize leading-tight truncate">{meta?.label || item.name}</h3>
                       <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1">{meta?.category || 'Inventario'}</p>
                     </div>
-                    <span className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
-                      {Number(item.stock).toFixed(2)}
-                    </span>
+                    <div className="text-right">
+                      <p className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
+                        {Number(item.stock).toFixed(2)}
+                      </p>
+                      <p className="text-[10px] font-bold text-ui-muted uppercase">{item.unit}</p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-ui-muted font-bold uppercase tracking-widest border-t border-ui-border pt-3">
-                    <span>Unidad</span>
-                    <span>{item.unit}</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-ui-border gap-2">
+                    <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${item.isActive === false ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
+                      {item.isActive === false ? 'Inactivo' : 'Activo'}
+                    </div>
+                    <button 
+                      onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
+                      className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-xl transition-all border ${
+                        item.isActive === false 
+                          ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
+                          : 'border-brand-red text-brand-red hover:bg-brand-red/10'
+                      }`}
+                    >
+                      {item.isActive === false ? 'Activar' : 'Desactivar'}
+                    </button>
                   </div>
                 </div>
               )
@@ -725,7 +850,28 @@ const AdminPage = ({ authSession }) => {
       )}
 
       {activeTab === 'orders' && (
-        <div className="space-y-8 animate-fade-in">
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-ui-border pb-6 mb-8">
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-ui-text">Pedidos</h2>
+              <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Gestión de órdenes en tiempo real</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${isRefreshing ? 'bg-brand-blue/10 text-brand-blue animate-pulse' : 'bg-ui-bg text-ui-muted border border-ui-border'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${isRefreshing ? 'bg-brand-blue' : 'bg-ui-muted'}`} />
+                {isRefreshing ? 'Sincronizando...' : 'Sincronizado'}
+              </span>
+              <button
+                onClick={() => loadData(true)}
+                disabled={isRefreshing}
+                className="p-2.5 rounded-2xl bg-ui-bg border border-ui-border text-ui-text hover:bg-ui-bg/80 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                title="Refrescar Pedidos"
+              >
+                <Bell size={20} className={isRefreshing ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2 justify-center mb-8">
             {[
               { id: 'all', label: 'Todas' },
@@ -757,13 +903,24 @@ const AdminPage = ({ authSession }) => {
           </div>
         </div>
       )}
+              </>
+            )}
+          </div>
+        </main>
+      </div>
 
       <UserHistoryModal
         modal={historyModal}
         onClose={closeHistoryModal}
         onSearchChange={updateHistorySearch}
       />
-    </PanelShell>
+      
+      <footer className="py-10 text-center">
+        <p className="text-[10px] font-black text-ui-muted uppercase tracking-[0.2em] opacity-40">
+          Chilaquiles TOP · Sistema de Gestión Administrativa
+        </p>
+      </footer>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react'
-import { authStaffLogin, registerStaff, getSession, setStaffToken, clearStaffToken, getStaffToken } from '../config/api.js'
+import { authStaffLogin, getSession, setStaffToken, clearStaffToken, getStaffToken } from '../config/api.js'
 
 export const useAuthSession = (panelRole) => {
   const [session, setSession] = useState(null)
@@ -68,21 +68,6 @@ export const useAuthSession = (panelRole) => {
     }
   }
 
-  const registerStaffRequest = async ({ name, phone, username, password }) => {
-    try {
-      setLoading(true)
-      setError('')
-      const response = await registerStaff({ name, phone, username, password, role: panelRole })
-      return response.data
-    } catch (registerError) {
-      const message = registerError.response?.data?.message || 'No se pudo crear la solicitud.'
-      setError(message)
-      throw new Error(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const logout = async () => {
     clearStaffToken()
     setSession(null)
@@ -94,7 +79,6 @@ export const useAuthSession = (panelRole) => {
     loading,
     error,
     loginWithCredentials,
-    registerStaffRequest,
     logout,
     refreshSession,
   }

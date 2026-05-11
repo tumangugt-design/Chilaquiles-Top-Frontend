@@ -17,31 +17,13 @@ const StaffAccessCard = ({
   authSession,
   allowRequest = false,
 }) => {
-  const [mode, setMode] = useState('login')
   const [loginData, setLoginData] = useState({ username: '', password: '' })
-  const [requestData, setRequestData] = useState({ name: '', phone: '', username: '', password: '' })
-  const [message, setMessage] = useState('')
 
   const handleLogin = async (event) => {
     event.preventDefault()
-    const ok = await authSession.loginWithCredentials(loginData)
-    if (ok) setMessage('')
+    await authSession.loginWithCredentials(loginData)
   }
 
-  const handleRequest = async (event) => {
-    event.preventDefault()
-    try {
-      await authSession.registerStaffRequest({
-        ...requestData,
-        phone: normalizeGtPhone(requestData.phone),
-      })
-      setMessage('Solicitud enviada.')
-      setMode('login')
-      setRequestData({ name: '', phone: '', username: '', password: '' })
-    } catch {
-
-    }
-  }
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -53,36 +35,18 @@ const StaffAccessCard = ({
       <h3 className="text-2xl font-black text-ui-text mb-2">{title}</h3>
       <p className="text-ui-muted max-w-sm mb-8">{subtitle}</p>
 
-      {allowRequest && (
-        <div className="mb-5 flex gap-2 rounded-2xl bg-ui-bg p-1 border border-ui-border">
-          <button type="button" className={`px-4 py-2 rounded-xl text-sm font-black ${mode === 'login' ? 'bg-ui-card text-ui-text' : 'text-ui-muted'}`} onClick={() => setMode('login')}>Ingresar</button>
-          <button type="button" className={`px-4 py-2 rounded-xl text-sm font-black ${mode === 'request' ? 'bg-ui-card text-ui-text' : 'text-ui-muted'}`} onClick={() => setMode('request')}>Solicitar</button>
-        </div>
-      )}
 
-      {mode === 'login' ? (
-        <form className="w-full max-w-sm space-y-4" onSubmit={handleLogin}>
-          <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Usuario" value={loginData.username} onChange={(e) => setLoginData({ ...loginData, username: e.target.value })} />
-          <input type="password" className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Contraseña" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} />
-          <Button type="submit" className={`w-full !py-4 shadow-xl ${accentClass}`} disabled={authSession.loading}>
-            {authSession.loading ? 'Validando...' : 'Ingresar'}
-          </Button>
-        </form>
-      ) : (
-        <form className="w-full max-w-sm space-y-4" onSubmit={handleRequest}>
-          <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Nombre completo" value={requestData.name} onChange={(e) => setRequestData({ ...requestData, name: e.target.value })} />
-          <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Teléfono" value={requestData.phone} onChange={(e) => setRequestData({ ...requestData, phone: e.target.value })} />
-          <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Usuario" value={requestData.username} onChange={(e) => setRequestData({ ...requestData, username: e.target.value.toLowerCase() })} />
-          <input type="password" className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Contraseña" value={requestData.password} onChange={(e) => setRequestData({ ...requestData, password: e.target.value })} />
-          <Button type="submit" className={`w-full !py-4 shadow-xl ${accentClass}`} disabled={authSession.loading}>
-            {authSession.loading ? 'Enviando...' : 'Enviar solicitud'}
-          </Button>
-        </form>
-      )}
+      <form className="w-full max-w-sm space-y-4" onSubmit={handleLogin}>
+        <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Usuario" value={loginData.username} onChange={(e) => setLoginData({ ...loginData, username: e.target.value })} />
+        <input type="password" className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg font-bold" placeholder="Contraseña" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} />
+        <Button type="submit" className={`w-full !py-4 shadow-xl ${accentClass}`} disabled={authSession.loading}>
+          {authSession.loading ? 'Validando...' : 'Ingresar'}
+        </Button>
+      </form>
 
-      {(message || authSession.error) && (
+      {authSession.error && (
         <div className="mt-6 w-full max-w-sm rounded-2xl border border-ui-border bg-ui-bg/60 p-4 text-sm font-bold text-ui-text">
-          {message || authSession.error}
+          {authSession.error}
         </div>
       )}
     </div>

@@ -59,6 +59,8 @@ export const INVENTORY_PRODUCT_OPTIONS = [
   { value: 'aguacate', label: 'Aguacate', unit: 'und', category: 'Complementos', usedPerPlate: 0.5 },
   { value: 'cebolla caramelizada', label: 'Cebolla caramelizada', unit: 'g', category: 'Complementos', usedPerPlate: 20 },
   { value: 'queso extra', label: 'Queso extra', unit: 'g', category: 'Complementos', usedPerPlate: 30 },
+  { value: 'plato para salsa', label: 'Plato para salsa', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
+  { value: 'tapadera para salsa', label: 'Tapadera para salsa', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
 ]
 
 export const INVENTORY_PRODUCT_MAP = Object.fromEntries(

@@ -32,7 +32,7 @@ const getActionButtonTone = (status) => {
   return '!bg-[#4CAF50] !text-white hover:!bg-[#388E3C] border border-[#2E7D32]'
 }
 
-const ChefOrderCard = ({ order, onAdvance }) => (
+const ChefOrderCard = ({ order, onAdvance, onArchive }) => (
   <div className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
     <div className="flex items-start justify-between gap-4 mb-5">
       <div>
@@ -63,17 +63,28 @@ const ChefOrderCard = ({ order, onAdvance }) => (
       })}
     </div>
 
-    {order.status !== 'listo_para_despacho' && order.status !== 'recolectado' && order.status !== 'en_camino' && order.status !== 'entregado' && (
-      <div className="mt-6">
+    <div className="mt-6 flex flex-col gap-2">
+      {order.status !== 'listo_para_despacho' && order.status !== 'recolectado' && order.status !== 'en_camino' && order.status !== 'entregado' && (
         <Button
           fullWidth
           onClick={() => onAdvance(order)}
           className={getActionButtonTone(order.status)}
         >
-          {order.status === 'recibido' ? 'Tomar pedido' : 'Listo para despacho'}
+          {order.status === 'recibido' ? 'Tomar pedido' : 'Completar pedido'}
         </Button>
-      </div>
-    )}
+      )}
+
+      {(order.status === 'listo_para_despacho' || order.status === 'recolectado' || order.status === 'en_camino' || order.status === 'entregado') && (
+        <Button
+          fullWidth
+          variant="secondary"
+          onClick={() => onArchive(order._id)}
+          className="!bg-black/5 !text-black/60 hover:!bg-black/10 border-none"
+        >
+          Archivar pedido
+        </Button>
+      )}
+    </div>
   </div>
 )
 
@@ -81,8 +92,16 @@ const ChefPage = ({ authSession }) => {
   const { session, logout } = authSession
   const [activeOrders, setActiveOrders] = useState([])
   const [finishedOrders, setFinishedOrders] = useState([])
+  const [archivedOrderIds, setArchivedOrderIds] = useState(() => {
+    const saved = localStorage.getItem('chef_archived_orders')
+    return saved ? JSON.parse(saved) : []
+  })
   const [isRefreshing, setIsRefreshing] = useState(false)
   const knownOrderIds = useRef(new Set())
+
+  useEffect(() => {
+    localStorage.setItem('chef_archived_orders', JSON.stringify(archivedOrderIds))
+  }, [archivedOrderIds])
 
   const loadOrders = async () => {
     setIsRefreshing(true)
@@ -117,13 +136,24 @@ const ChefPage = ({ authSession }) => {
     }
   }, [session])
 
+  const archiveOrder = (orderId) => {
+    setArchivedOrderIds(prev => [...prev, orderId])
+    toast.success('Pedido archivado')
+  }
+
+  const clearFinished = () => {
+    const currentFinishedIds = finishedOrders.map(o => o._id)
+    setArchivedOrderIds(prev => [...new Set([...prev, ...currentFinishedIds])])
+    toast.success('Lista de terminados despejada')
+  }
+
   const advance = async (order) => {
     const nextStatus = order.status === 'recibido' ? 'en_proceso' : order.status === 'en_proceso' ? 'listo_para_despacho' : ''
     if (!nextStatus) return
 
     try {
       await updateOrderStatus(order._id, nextStatus)
-      toast.success(nextStatus === 'en_proceso' ? '¡Pedido tomado!' : '¡Pedido listo para despacho!')
+      toast.success(nextStatus === 'listo_para_despacho' ? '¡Pedido completado!' : '¡Pedido tomado!')
       loadOrders()
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el estado.')
@@ -183,7 +213,14 @@ const ChefPage = ({ authSession }) => {
             {activeOrders.length === 0 ? (
               <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold">No hay pedidos activos.</div>
             ) : (
-              activeOrders.map((order) => <ChefOrderCard key={order._id} order={order} onAdvance={advance} />)
+              activeOrders.map((order) => (
+                <ChefOrderCard 
+                  key={order._id} 
+                  order={order} 
+                  onAdvance={advance} 
+                  onArchive={archiveOrder} 
+                />
+              ))
             )}
           </div>
         </section>
@@ -191,13 +228,32 @@ const ChefPage = ({ authSession }) => {
         <section className="space-y-5">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Terminados</h2>
-            <span className="text-xs font-black uppercase tracking-widest text-ui-muted">{finishedOrders.length}</span>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={clearFinished}
+                className="text-[10px] font-black uppercase tracking-widest text-brand-blue hover:underline"
+              >
+                Limpiar lista
+              </button>
+              <span className="text-xs font-black uppercase tracking-widest text-ui-muted">
+                {finishedOrders.filter(o => !archivedOrderIds.includes(o._id)).length}
+              </span>
+            </div>
           </div>
           <div className="space-y-5">
-            {finishedOrders.length === 0 ? (
+            {finishedOrders.filter(o => !archivedOrderIds.includes(o._id)).length === 0 ? (
               <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold">No hay pedidos terminados.</div>
             ) : (
-              finishedOrders.map((order) => <ChefOrderCard key={order._id} order={order} onAdvance={advance} />)
+              finishedOrders
+                .filter(o => !archivedOrderIds.includes(o._id))
+                .map((order) => (
+                  <ChefOrderCard 
+                    key={order._id} 
+                    order={order} 
+                    onAdvance={advance} 
+                    onArchive={archiveOrder} 
+                  />
+                ))
             )}
           </div>
         </section>
