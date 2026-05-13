@@ -652,11 +652,25 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                             <p className="text-3xl font-black text-brand-blue">Q{period.data?.revenue?.toFixed(2) || '0.00'}</p>
                             <p className="text-[10px] font-bold text-ui-muted mt-2">{period.data?.orderCount || 0} pedidos completados</p>
                           </div>
-...
+
+                          <div className="rounded-[2.5rem] border border-ui-border bg-brand-orange/5 p-8 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-brand-orange/10 rounded-xl text-brand-orange">
+                                <DollarSign size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Costos (Entradas)</p>
+                            </div>
                             <p className="text-3xl font-black text-brand-orange">Q{period.data?.costs?.toFixed(2) || '0.00'}</p>
                             <p className="text-[10px] font-bold text-ui-muted mt-2">Inversión en ingredientes</p>
                           </div>
-...
+
+                          <div className="rounded-[2.5rem] border border-ui-border bg-green-500/5 p-8 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-green-500/10 rounded-xl text-green-600">
+                                <Box size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Utilidades</p>
+                            </div>
                             <p className={`text-3xl font-black ${(period.data?.utilities || 0) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
                               Q{period.data?.utilities?.toFixed(2) || '0.00'}
                             </p>
