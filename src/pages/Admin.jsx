@@ -14,7 +14,8 @@ import {
   syncInventory,
   toggleInventoryStatus,
   getOperatingHours,
-  updateOperatingHours
+  updateOperatingHours,
+  getFinancesSummary
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
@@ -35,11 +36,15 @@ import {
   Menu,
   X,
   Search,
-  Settings
+  Settings,
+  TrendingUp,
+  Calendar,
+  Filter,
+  DollarSign
 } from 'lucide-react'
 import AdminNavbar from '../components/layout/AdminNavbar.jsx'
 
-const emptyItem = { name: '', amount: '', unit: '' }
+const emptyItem = { name: '', amount: '', unit: '', price: '' }
 
 const getCardTone = (status) => {
   if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
@@ -296,9 +301,19 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
-  const [scheduleForm, setScheduleForm] = useState({ isOpen: true, openTime: '08:00', closeTime: '17:00' })
+  const [scheduleForm, setScheduleForm] = useState({ 
+    weekly: {}, 
+    specialDates: {}, 
+    dateRanges: [], 
+    isOpen: true, 
+    openTime: '08:00', 
+    closeTime: '17:00' 
+  })
   const [isSaving, setIsSaving] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [financesSummary, setFinancesSummary] = useState(null)
+  const [financesLoading, setFinancesLoading] = useState(false)
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL')
   const [historyModal, setHistoryModal] = useState({
     isOpen: false,
     loading: false,
@@ -316,11 +331,25 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (role === 'REPARTIDOR') setDriverUsers(response.data)
   }
 
+  const loadFinances = async () => {
+    setFinancesLoading(true)
+    try {
+      const response = await getFinancesSummary()
+      setFinancesSummary(response.data)
+    } catch (err) {
+      toast.error('No se pudieron cargar las finanzas')
+    } finally {
+      setFinancesLoading(false)
+    }
+  }
+
   const loadData = async () => {
     setIsRefreshing(true)
 
     try {
-      if (activeTab === 'orders') {
+      if (activeTab === 'finances') {
+        await loadFinances()
+      } else if (activeTab === 'orders') {
         const response = await getOrders(orderFilter)
         const orders = response.data
 
@@ -345,10 +374,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
         const scheduleResponse = await getOperatingHours()
+        const data = scheduleResponse.data
         setScheduleForm({
-          isOpen: Boolean(scheduleResponse.data?.isOpen),
-          openTime: scheduleResponse.data?.openTime || '',
-          closeTime: scheduleResponse.data?.closeTime || '',
+          weekly: data?.weekly || {},
+          specialDates: data?.specialDates || {},
+          dateRanges: data?.dateRanges || [],
+          isOpen: Boolean(data?.isOpen),
+          openTime: data?.openTime || '',
+          closeTime: data?.closeTime || '',
         })
       } else if (activeTab === 'chefs') {
         await loadRoleUsers('CHEF')
@@ -438,7 +471,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       await saveInventoryItem({
         name: itemForm.name,
         unit: itemForm.unit,
-        amount: Number(itemForm.amount)
+        amount: Number(itemForm.amount),
+        price: Number(itemForm.price || 0)
       })
 
       toast.success('Entrada de inventario registrada')
@@ -482,23 +516,24 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const saveSchedule = async (event) => {
-    event.preventDefault()
+    if (event) event.preventDefault()
+    setIsSaving(true)
     try {
-      const payload = {
-        isOpen: scheduleForm.isOpen,
-        openTime: scheduleForm.openTime,
-        closeTime: scheduleForm.closeTime,
-      }
-      const response = await updateOperatingHours(payload)
-      const next = response.data?.settings || payload
+      const response = await updateOperatingHours(scheduleForm)
+      const data = response.data?.settings || scheduleForm
       setScheduleForm({
-        isOpen: Boolean(next.isOpen),
-        openTime: next.openTime || '',
-        closeTime: next.closeTime || '',
+        weekly: data.weekly || {},
+        specialDates: data.specialDates || {},
+        dateRanges: data.dateRanges || [],
+        isOpen: Boolean(data.isOpen),
+        openTime: data.openTime || '',
+        closeTime: data.closeTime || '',
       })
-      toast.success('Horario actualizado')
+      toast.success('Horario actualizado con éxito')
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo guardar el horario')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -581,6 +616,70 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full">
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
+            ) : activeTab === 'finances' ? (
+              <div className="space-y-8 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-ui-border pb-6">
+                  <div>
+                    <h2 className="text-3xl font-black tracking-tight text-ui-text">Finanzas</h2>
+                    <p className="text-sm text-ui-muted mt-1">Resumen de ventas, costos y utilidades.</p>
+                  </div>
+                  {financesLoading && <div className="animate-pulse text-brand-blue font-black text-xs uppercase">Cargando datos...</div>}
+                </div>
+
+                {!financesSummary ? (
+                  <div className="py-20 text-center rounded-[3rem] border border-dashed border-ui-border bg-ui-bg/20">
+                    <p className="text-ui-muted font-bold">No hay datos financieros disponibles por el momento.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-10">
+                    {[
+                      { title: 'Hoy', data: financesSummary.daily },
+                      { title: 'Esta Semana', data: financesSummary.weekly },
+                      { title: 'Este Mes', data: financesSummary.monthly }
+                    ].map((period) => (
+                      <div key={period.title} className="space-y-5">
+                        <h3 className="text-xl font-black text-ui-text ml-2">{period.title}</h3>
+                        <div className="grid md:grid-cols-3 gap-6">
+                          <div className="rounded-[2.5rem] border border-ui-border bg-brand-blue/5 p-8 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-brand-blue/10 rounded-xl text-brand-blue">
+                                <TrendingUp size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Ventas</p>
+                            </div>
+                            <p className="text-3xl font-black text-brand-blue">Q{period.data.revenue.toFixed(2)}</p>
+                            <p className="text-[10px] font-bold text-ui-muted mt-2">{period.data.orderCount} pedidos completados</p>
+                          </div>
+
+                          <div className="rounded-[2.5rem] border border-ui-border bg-brand-orange/5 p-8 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-brand-orange/10 rounded-xl text-brand-orange">
+                                <DollarSign size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Costos (Entradas)</p>
+                            </div>
+                            <p className="text-3xl font-black text-brand-orange">Q{period.data.costs.toFixed(2)}</p>
+                            <p className="text-[10px] font-bold text-ui-muted mt-2">Inversión en ingredientes</p>
+                          </div>
+
+                          <div className="rounded-[2.5rem] border border-ui-border bg-green-500/5 p-8 shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-green-500/10 rounded-xl text-green-600">
+                                <Box size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Utilidades</p>
+                            </div>
+                            <p className={`text-3xl font-black ${period.data.utilities >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                              Q{period.data.utilities.toFixed(2)}
+                            </p>
+                            <p className="text-[10px] font-bold text-ui-muted mt-2">Ganancia neta aproximada</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <>
 
@@ -761,7 +860,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </select>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad</label>
                 <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" value={itemForm.unit} readOnly />
@@ -777,6 +876,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   onChange={(e) => setItemForm({ ...itemForm, amount: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio Total (Q)</label>
+                <input
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={itemForm.price}
+                  placeholder="0.00"
+                  onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
+                />
+              </div>
             </div>
 
             <Button type="submit" className="w-full !py-5" disabled={isSaving}>
@@ -790,19 +901,31 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </div>
 
             <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
-              {INVENTORY_PRODUCT_OPTIONS.map((product) => (
-                <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-black text-ui-text">{product.label}</p>
-                      <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">{product.category}</p>
+              {INVENTORY_PRODUCT_OPTIONS.map((product) => {
+                const inventoryItem = inventory.find(i => i.name === product.value)
+                const unitCost = inventoryItem?.lastPrice || 0
+                const totalCost = unitCost * product.usedPerPlate
+                return (
+                  <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-black text-ui-text truncate">{product.label}</p>
+                        <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
+                          {product.category} · Q{unitCost.toFixed(2)}/{product.unit}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-brand-blue">
+                          {product.usedPerPlate} {product.unit}
+                        </p>
+                        <p className="text-[10px] font-black text-green-600 mt-0.5">
+                          Q{totalCost.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-sm font-black text-brand-blue">
-                      {product.usedPerPlate} {product.unit}
-                    </span>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -815,13 +938,36 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
               <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Estado de stock y catálogo</p>
             </div>
-            <Button variant="secondary" className="!bg-brand-blue/10 !text-brand-blue !border-brand-blue/20" onClick={handleSyncInventory}>
-              Sincronizar Catálogo
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative w-full sm:w-64">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
+                <select 
+                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+                  value={inventoryCategoryFilter}
+                  onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                >
+                  <option value="ALL">Todas las categorías</option>
+                  <option value="Base">Bases</option>
+                  <option value="Salsas">Salsas</option>
+                  <option value="Proteínas">Proteínas</option>
+                  <option value="Complementos">Complementos</option>
+                  <option value="Empaque">Empaque</option>
+                </select>
+              </div>
+              <Button variant="secondary" className="w-full sm:w-auto !bg-brand-blue/10 !text-brand-blue !border-brand-blue/20" onClick={handleSyncInventory}>
+                Sincronizar Catálogo
+              </Button>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {inventory.map((item) => {
+            {inventory
+              .filter(item => {
+                if (inventoryCategoryFilter === 'ALL') return true
+                const meta = INVENTORY_PRODUCT_MAP[item.name]
+                return meta?.category === inventoryCategoryFilter
+              })
+              .map((item) => {
               const meta = INVENTORY_PRODUCT_MAP[item.name]
               return (
                 <div key={item._id} className={`rounded-[2rem] border border-ui-border p-5 transition-all ${item.isActive === false ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
@@ -862,61 +1008,149 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
 
       {activeTab === 'schedule' && (
-        <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-          <form onSubmit={saveSchedule} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
-            <div className="border-b border-ui-border pb-4">
-              <h2 className="text-2xl font-black tracking-tight text-ui-text">Horario de atención</h2>
-              <p className="text-sm text-ui-muted mt-1">Configura si el negocio está abierto y el horario que verá el cliente antes de pedir.</p>
-            </div>
+        <div className="space-y-8 animate-fade-in">
+          <div className="border-b border-ui-border pb-4">
+            <h2 className="text-2xl font-black tracking-tight text-ui-text">Configuración de Horario</h2>
+            <p className="text-sm text-ui-muted mt-1">Administra el horario semanal, fechas especiales y cierres temporales.</p>
+          </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-ui-border bg-white p-5">
-              <div>
-                <p className="font-black text-ui-text">Estado del negocio</p>
-                <p className="text-sm text-ui-muted font-bold">Si está cerrado, el cliente no podrá iniciar un pedido.</p>
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Weekly Schedule */}
+            <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Clock className="text-brand-blue" size={24} />
+                <h3 className="text-xl font-black text-ui-text">Horario Semanal</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setScheduleForm((prev) => ({ ...prev, isOpen: !prev.isOpen }))}
-                className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${scheduleForm.isOpen ? 'bg-green-500/10 text-green-700 border-green-500/30' : 'bg-red-500/10 text-red-700 border-red-500/30'}`}
-              >
-                {scheduleForm.isOpen ? 'Abierto' : 'Cerrado'}
-              </button>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Hora de apertura</label>
-                <input
-                  type="time"
-                  value={scheduleForm.openTime}
-                  onChange={(event) => setScheduleForm({ ...scheduleForm, openTime: event.target.value })}
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-white font-black outline-none focus:ring-2 focus:ring-brand-blue/20"
-                />
+              <div className="space-y-3">
+                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                  const dayNames = { monday: 'Lunes', tuesday: 'Martes', wednesday: 'Miércoles', thursday: 'Jueves', friday: 'Viernes', saturday: 'Sábado', sunday: 'Domingo' }
+                  const config = scheduleForm.weekly[day] || { isOpen: false, openTime: '08:00', closeTime: '17:00' }
+                  return (
+                    <div key={day} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-ui-border shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="checkbox" 
+                          checked={config.isOpen} 
+                          onChange={(e) => setScheduleForm({
+                            ...scheduleForm,
+                            weekly: { ...scheduleForm.weekly, [day]: { ...config, isOpen: e.target.checked } }
+                          })}
+                          className="w-5 h-5 rounded-lg border-ui-border text-brand-blue focus:ring-brand-blue"
+                        />
+                        <span className="font-bold text-ui-text w-24">{dayNames[day]}</span>
+                      </div>
+                      {config.isOpen && (
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="time" 
+                            value={config.openTime} 
+                            onChange={(e) => setScheduleForm({
+                              ...scheduleForm,
+                              weekly: { ...scheduleForm.weekly, [day]: { ...config, openTime: e.target.value } }
+                            })}
+                            className="p-2 text-xs font-black rounded-lg border border-ui-border bg-ui-bg"
+                          />
+                          <span className="text-ui-muted text-xs font-black">-</span>
+                          <input 
+                            type="time" 
+                            value={config.closeTime} 
+                            onChange={(e) => setScheduleForm({
+                              ...scheduleForm,
+                              weekly: { ...scheduleForm.weekly, [day]: { ...config, closeTime: e.target.value } }
+                            })}
+                            className="p-2 text-xs font-black rounded-lg border border-ui-border bg-ui-bg"
+                          />
+                        </div>
+                      )}
+                      {!config.isOpen && <span className="text-[10px] font-black uppercase text-brand-red tracking-widest px-3 py-1 bg-red-50 rounded-full">Cerrado</span>}
+                    </div>
+                  )
+                })}
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Hora de cierre</label>
-                <input
-                  type="time"
-                  value={scheduleForm.closeTime}
-                  onChange={(event) => setScheduleForm({ ...scheduleForm, closeTime: event.target.value })}
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-white font-black outline-none focus:ring-2 focus:ring-brand-blue/20"
-                />
+            </div>
+
+            {/* Special Dates & Ranges */}
+            <div className="space-y-8">
+              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Calendar className="text-brand-orange" size={24} />
+                  <h3 className="text-xl font-black text-ui-text">Fechas Especiales</h3>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-xs text-ui-muted font-bold">Programa cierres o cambios de horario para días específicos (ej. Navidad, Feriados).</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <input 
+                      type="date" 
+                      id="special-date-input"
+                      className="p-3 rounded-xl border border-ui-border bg-white text-xs font-black"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const dateInput = document.getElementById('special-date-input')
+                        if (dateInput.value) {
+                          setScheduleForm({
+                            ...scheduleForm,
+                            specialDates: { ...scheduleForm.specialDates, [dateInput.value]: { isOpen: false, note: 'Cerrado' } }
+                          })
+                          dateInput.value = ''
+                        }
+                      }}
+                      className="bg-brand-blue text-white rounded-xl text-xs font-black uppercase tracking-widest px-4 hover:shadow-lg transition-all"
+                    >
+                      Añadir Día
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                    {Object.entries(scheduleForm.specialDates).map(([date, config]) => (
+                      <div key={date} className="flex items-center justify-between p-3 rounded-xl bg-white border border-ui-border">
+                        <div>
+                          <p className="text-xs font-black text-ui-text">{date}</p>
+                          <p className="text-[10px] font-bold text-brand-red uppercase">{config.isOpen ? 'Horario Especial' : 'Cerrado Total'}</p>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const newSpecial = { ...scheduleForm.specialDates }
+                            delete newSpecial[date]
+                            setScheduleForm({ ...scheduleForm, specialDates: newSpecial })
+                          }}
+                          className="p-2 text-brand-red hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    {Object.keys(scheduleForm.specialDates).length === 0 && (
+                      <p className="text-center py-4 text-[10px] font-black uppercase text-ui-muted tracking-widest">No hay fechas especiales</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className={`rounded-2xl p-5 border ${scheduleForm.isOpen ? 'border-green-500/20 bg-green-500/10 text-green-700' : 'border-red-500/20 bg-red-500/10 text-red-700'}`}>
-              <p className="text-[10px] font-black uppercase tracking-widest">Vista para cliente</p>
-              <p className="text-lg font-black mt-1">
-                {scheduleForm.isOpen ? 'Abierto hoy' : 'Cerrado'}
-                {scheduleForm.isOpen && scheduleForm.openTime && scheduleForm.closeTime ? ` · ${scheduleForm.openTime} - ${scheduleForm.closeTime}` : ''}
-              </p>
-              {!scheduleForm.isOpen && !scheduleForm.openTime && !scheduleForm.closeTime && (
-                <p className="text-sm font-bold mt-1">Vuelve más tarde.</p>
-              )}
-            </div>
+              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Box className="text-green-600" size={24} />
+                  <h3 className="text-xl font-black text-ui-text">Estado Manual (Legacy)</h3>
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-ui-border">
+                  <p className="text-sm font-bold text-ui-text">Forzar apertura inmediata</p>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleForm({ ...scheduleForm, isOpen: !scheduleForm.isOpen })}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${scheduleForm.isOpen ? 'bg-green-500/10 text-green-700 border-green-500/30' : 'bg-red-500/10 text-red-700 border-red-500/30'}`}
+                  >
+                    {scheduleForm.isOpen ? 'Abierto' : 'Cerrado'}
+                  </button>
+                </div>
+              </div>
 
-            <Button type="submit" className="w-full !py-5">Guardar horario</Button>
-          </form>
+              <Button onClick={saveSchedule} className="w-full !py-6 !text-lg" disabled={isSaving}>
+                {isSaving ? 'Guardando...' : 'Aplicar Todos los Cambios'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

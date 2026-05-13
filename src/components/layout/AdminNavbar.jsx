@@ -15,7 +15,8 @@ import {
   Settings,
   Clock,
   ChevronDown,
-  Menu
+  Menu,
+  TrendingUp
 } from 'lucide-react'
 
 const navigation = {
@@ -26,6 +27,7 @@ const navigation = {
   management: [
     { id: 'staff', label: 'Personal', icon: Users },
     { id: 'clients', label: 'Clientes', icon: UserCircle },
+    { id: 'finances', label: 'Finanzas', icon: TrendingUp },
   ],
   inventory: [
     { id: 'entries', label: 'Entradas', icon: PackagePlus },

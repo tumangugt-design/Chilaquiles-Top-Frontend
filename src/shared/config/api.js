@@ -52,6 +52,7 @@ export const syncInventory = () => api.post('/inventory/sync')
 export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Date.now()}`)
 export const updateOperatingHours = (payload) => api.patch('/settings/operating-hours', payload)
 
+export const getFinancesSummary = () => api.get(`/finances/summary?t=${Date.now()}`)
 // Customer OTP
 export const sendOtp = (phone) => api.post('/auth/send-otp', { phone })
 export const verifyOtp = (phone, code) => api.post('/auth/verify-otp', { phone, code })
