@@ -408,6 +408,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   useEffect(() => {
     if (session?.role === 'ADMIN' && session?.status === 'approved') {
       loadData()
+
+      // Evita que formularios editables, como Horario, Entradas, Stock o Usuarios,
+      // se reinicien cada 5 segundos mientras el admin está escribiendo.
+      // El refresco automático solo es necesario en Pedidos para detectar órdenes nuevas.
+      if (activeTab !== 'orders') return
+
       const interval = setInterval(loadData, 5000)
       return () => clearInterval(interval)
     }
