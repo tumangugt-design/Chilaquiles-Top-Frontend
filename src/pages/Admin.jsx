@@ -14,6 +14,7 @@ import {
   syncInventory,
   toggleInventoryStatus,
   updateInventoryPrice,
+  updateInventoryStock,
   getOperatingHours,
   updateOperatingHours,
   getFinancesSummary
@@ -303,6 +304,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
   const [priceEditForm, setPriceEditForm] = useState({ name: null, price: '' })
+  const [stockEditForm, setStockEditForm] = useState({ name: null, stock: '' })
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [scheduleForm, setScheduleForm] = useState({ 
     weekly: {}, 
@@ -530,6 +532,39 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       setIsSaving(false)
     }
   }
+
+  const handleStartStockEdit = (item) => {
+    setStockEditForm({
+      name: item.name,
+      stock: String(Number(item.stock || 0))
+    })
+  }
+
+  const handleCancelStockEdit = () => {
+    setStockEditForm({ name: null, stock: '' })
+  }
+
+  const handleSaveStockEdit = async (item) => {
+    const stock = Number(stockEditForm.stock)
+    const meta = INVENTORY_PRODUCT_MAP[item.name]
+
+    if (Number.isNaN(stock) || stock < 0) {
+      return toast.error('Ingresa un stock válido mayor o igual a cero')
+    }
+
+    setIsSaving(true)
+    try {
+      await updateInventoryStock(item.name, stock)
+      toast.success(`Stock actualizado para ${meta?.label || item.name}`)
+      setStockEditForm({ name: null, stock: '' })
+      loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo actualizar el stock')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
 
   const handleSyncInventory = async () => {
     const loadingToast = toast.loading('Sincronizando catálogo...')
@@ -1071,27 +1106,71 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3 border-t border-ui-border/60 min-w-0">
-                    <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
-                      {!isActive ? 'Inactivo' : 'Activo'}
-                    </div>
-                    {isPackaging ? (
-                      <div className="w-fit text-[10px] font-black uppercase tracking-widest py-1.5 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
-                        Fijo
+                  {stockEditForm.name === item.name ? (
+                    <div className="mt-4 rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-3 sm:p-4 min-w-0">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-ui-muted mb-2">
+                        Nuevo stock ({item.unit})
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 min-w-0">
+                        <input
+                          className="w-full min-w-0 rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={stockEditForm.stock}
+                          onChange={(e) => setStockEditForm({ ...stockEditForm, stock: e.target.value })}
+                          placeholder="Stock actual"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveStockEdit(item)}
+                          disabled={isSaving}
+                          className="w-full sm:w-auto rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelStockEdit}
+                          className="w-full sm:w-auto rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
+                        >
+                          Cancelar
+                        </button>
                       </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
-                        className={`w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
-                          item.isActive === false 
-                            ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
-                            : 'border-brand-red text-brand-red hover:bg-brand-red/10'
-                        }`}
-                      >
-                        {item.isActive === false ? 'Activar' : 'Desactivar'}
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3 border-t border-ui-border/60 min-w-0">
+                      <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
+                        {!isActive ? 'Inactivo' : 'Activo'}
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartStockEdit(item)}
+                          className="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
+                        >
+                          Editar stock
+                        </button>
+                        {isPackaging ? (
+                          <div className="w-full sm:w-fit text-center text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
+                            Fijo
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
+                            className={`w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
+                              item.isActive === false 
+                                ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
+                                : 'border-brand-red text-brand-red hover:bg-brand-red/10'
+                            }`}
+                          >
+                            {item.isActive === false ? 'Activar' : 'Desactivar'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
