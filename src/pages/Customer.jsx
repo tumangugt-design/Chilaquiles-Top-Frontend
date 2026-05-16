@@ -301,7 +301,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
   }
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
+    <div className="space-y-6 animate-fade-in relative pb-40 lg:pb-0">
       <div className="mb-4 sm:mb-8">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2">Finalizar pedido</h2>
         <p className="text-ui-muted">Completa tus datos.</p>
@@ -338,6 +338,19 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         <div>
           <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Código de acceso</label>
           <input type="text" name="accessCode" value={localData.accessCode} onChange={handleChange} placeholder="1234" className="w-full p-3 sm:p-4 border border-ui-border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Dirección</label>
+          <textarea
+            name="address"
+            rows={3}
+            value={localData.address}
+            onChange={handleChange}
+            onBlur={() => setTouched({ ...touched, address: true })}
+            placeholder="Casa, calle, número, referencia"
+            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
+          />
         </div>
 
         <div className="space-y-3">
@@ -402,18 +415,6 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Dirección</label>
-          <textarea
-            name="address"
-            rows={3}
-            value={localData.address}
-            onChange={handleChange}
-            onBlur={() => setTouched({ ...touched, address: true })}
-            placeholder="Casa, calle, número, referencia"
-            className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
-          />
-        </div>
       </div>
 
       {/* Mobile Sticky Bottom Bar */}
