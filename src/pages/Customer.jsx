@@ -55,10 +55,28 @@ const parseCoordinates = (raw = '') => {
 const normalizeSearchKey = (raw = '') => String(raw).trim().toLowerCase().replace(/\s+/g, ' ')
 
 const ZONA_6_VILLA_NUEVA_BOUNDS = {
-  minLat: 14.52590,
-  maxLat: 14.55356,
-  minLng: -90.59499,
-  maxLng: -90.56193,
+  // Cobertura real de Zona 6 de Villa Nueva con margen para errores normales de GPS móvil.
+  // La validación anterior era demasiado cerrada y rechazaba puntos válidos cercanos a 6a/8a/11 avenida.
+  minLat: 14.50000,
+  maxLat: 14.56500,
+  minLng: -90.62000,
+  maxLng: -90.53500,
+}
+
+const ZONA_6_VILLA_NUEVA_CENTER = { lat: 14.53280, lng: -90.58420 }
+const ZONA_6_VILLA_NUEVA_RADIUS_KM = 5.2
+
+const getDistanceKm = (pointA, pointB) => {
+  const earthRadiusKm = 6371
+  const toRad = (value) => (value * Math.PI) / 180
+  const dLat = toRad(pointB.lat - pointA.lat)
+  const dLng = toRad(pointB.lng - pointA.lng)
+  const lat1 = toRad(pointA.lat)
+  const lat2 = toRad(pointB.lat)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 const isInsideZona6VillaNueva = (location) => {
@@ -67,12 +85,16 @@ const isInsideZona6VillaNueva = (location) => {
 
   if (Number.isNaN(lat) || Number.isNaN(lng)) return false
 
-  return (
+  const insideBounds =
     lat >= ZONA_6_VILLA_NUEVA_BOUNDS.minLat &&
     lat <= ZONA_6_VILLA_NUEVA_BOUNDS.maxLat &&
     lng >= ZONA_6_VILLA_NUEVA_BOUNDS.minLng &&
     lng <= ZONA_6_VILLA_NUEVA_BOUNDS.maxLng
-  )
+
+  const insideRadius =
+    getDistanceKm({ lat, lng }, ZONA_6_VILLA_NUEVA_CENTER) <= ZONA_6_VILLA_NUEVA_RADIUS_KM
+
+  return insideBounds && insideRadius
 }
 
 const CUSTOMER_COVERAGE_QUERY = 'Zona 6 de Villa Nueva, Villa Nueva, Guatemala'
@@ -155,35 +177,54 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
       return
     }
 
+    const handleSuccess = (position) => {
+      const location = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      }
+
+      if (!isInternal && !isInsideZona6VillaNueva(location)) {
+        const nextData = { ...localData, location: null }
+        updateCustomer(nextData)
+        setCoverageError('Rango fuera de cobertura. Solo atendemos Zona 6 de Villa Nueva.')
+        toast.error('Cobertura fuera de rango. Solo atendemos Zona 6 de Villa Nueva.', { id: 'gps-location' })
+        setMapQuery(CUSTOMER_COVERAGE_QUERY)
+        setLoadingLoc(false)
+        return
+      }
+
+      setLocation(location)
+      toast.dismiss('gps-location')
+      setLoadingLoc(false)
+    }
+
+    const handleError = (error, didRetry = false) => {
+      if (!didRetry && error?.code !== error?.PERMISSION_DENIED) {
+        navigator.geolocation.getCurrentPosition(
+          handleSuccess,
+          (retryError) => handleError(retryError, true),
+          { enableHighAccuracy: false, timeout: 25000, maximumAge: 10 * 60 * 1000 }
+        )
+        return
+      }
+
+      const message =
+        error?.code === error?.PERMISSION_DENIED
+          ? 'Activa el permiso de ubicación del navegador para confirmar tu pedido.'
+          : 'No pudimos obtener tu ubicación. Verifica GPS/señal e intenta otra vez.'
+
+      toast.error(message, { id: 'gps-location' })
+      setLoadingLoc(false)
+    }
+
     setLoadingLoc(true)
+    setCoverageError('')
     toast.loading('Obteniendo ubicación...', { id: 'gps-location' })
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        }
-
-        if (!isInternal && !isInsideZona6VillaNueva(location)) {
-          const nextData = { ...localData, location: null }
-          updateCustomer(nextData)
-          setCoverageError('Rango fuera de cobertura. Solo atendemos Zona 6 de Villa Nueva.')
-          toast.error('Cobertura fuera de rango. Solo atendemos Zona 6 de Villa Nueva.', { id: 'gps-location' })
-          setMapQuery(CUSTOMER_COVERAGE_QUERY)
-          setLoadingLoc(false)
-          return
-        }
-
-        setLocation(location)
-        toast.dismiss('gps-location')
-        setLoadingLoc(false)
-      },
-      () => {
-        toast.error('No pudimos obtener tu ubicación.', { id: 'gps-location' })
-        setLoadingLoc(false)
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      handleSuccess,
+      (error) => handleError(error, false),
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 2 * 60 * 1000 }
     )
   }
 
