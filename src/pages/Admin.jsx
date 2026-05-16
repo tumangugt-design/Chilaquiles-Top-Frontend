@@ -20,7 +20,7 @@ import {
   getFinancesSummary
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP } from '../shared/constants/index.jsx'
+import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, getAllowedInputUnits, convertInventoryAmountToBaseUnit } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import InternalOrder from './InternalOrder.jsx'
@@ -304,7 +304,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
   const [priceEditForm, setPriceEditForm] = useState({ name: null, price: '' })
-  const [stockEditForm, setStockEditForm] = useState({ name: null, stock: '' })
+  const [stockEditForm, setStockEditForm] = useState({ name: null, stock: '', unit: '' })
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [scheduleForm, setScheduleForm] = useState({ 
     weekly: {}, 
@@ -474,14 +474,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     setIsSaving(true)
 
     try {
+      const product = INVENTORY_PRODUCT_MAP[itemForm.name]
+      const storedAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, product)
+
       await saveInventoryItem({
         name: itemForm.name,
-        unit: itemForm.unit,
+        inputUnit: itemForm.unit,
         amount: Number(itemForm.amount),
-        price: Number(itemForm.price || 0)
+        totalPrice: itemForm.price === '' ? null : Number(itemForm.price)
       })
 
-      toast.success('Entrada de inventario registrada')
+      toast.success(`Entrada registrada: ${storedAmount.toFixed(2)} ${product?.unit || ''}`)
       setItemForm(emptyItem)
       loadData()
     } catch (err) {
@@ -493,13 +496,21 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const handleProductChange = (value) => {
     const product = INVENTORY_PRODUCT_MAP[value]
+    const allowedUnits = getAllowedInputUnits(product)
     setItemForm({
       name: value,
       amount: itemForm.amount,
-      unit: product?.unit || '',
+      unit: allowedUnits[0]?.value || product?.unit || '',
       price: itemForm.price,
     })
   }
+
+  const selectedInventoryProduct = INVENTORY_PRODUCT_MAP[itemForm.name]
+  const entryStoredAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, selectedInventoryProduct)
+  const entryTotalPrice = itemForm.price === '' ? null : Number(itemForm.price)
+  const entryUnitPrice = entryStoredAmount > 0 && entryTotalPrice !== null && !Number.isNaN(entryTotalPrice)
+    ? entryTotalPrice / entryStoredAmount
+    : 0
 
 
   const handleStartPriceEdit = (product, currentPrice) => {
@@ -534,14 +545,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const handleStartStockEdit = (item) => {
+    const meta = INVENTORY_PRODUCT_MAP[item.name]
+    const allowedUnits = getAllowedInputUnits(meta)
     setStockEditForm({
       name: item.name,
-      stock: String(Number(item.stock || 0))
+      stock: String(Number(item.stock || 0)),
+      unit: allowedUnits[0]?.value || meta?.unit || item.unit || ''
     })
   }
 
   const handleCancelStockEdit = () => {
-    setStockEditForm({ name: null, stock: '' })
+    setStockEditForm({ name: null, stock: '', unit: '' })
   }
 
   const handleSaveStockEdit = async (item) => {
@@ -554,9 +568,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
     setIsSaving(true)
     try {
-      await updateInventoryStock(item.name, stock)
-      toast.success(`Stock actualizado para ${meta?.label || item.name}`)
-      setStockEditForm({ name: null, stock: '' })
+      const storedStock = convertInventoryAmountToBaseUnit(stock, stockEditForm.unit, meta)
+      await updateInventoryStock(item.name, stock, stockEditForm.unit)
+      toast.success(`Stock actualizado para ${meta?.label || item.name}: ${storedStock.toFixed(2)} ${meta?.unit || item.unit}`)
+      setStockEditForm({ name: null, stock: '', unit: '' })
       loadData()
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el stock')
@@ -942,8 +957,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad</label>
-                <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" value={itemForm.unit} readOnly />
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad de entrada</label>
+                <select
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
+                  value={itemForm.unit}
+                  onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
+                  disabled={!itemForm.name}
+                >
+                  {getAllowedInputUnits(selectedInventoryProduct).map((unit) => (
+                    <option key={unit.value} value={unit.value}>{unit.label}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Cantidad</label>
@@ -954,10 +978,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   step="0.01"
                   value={itemForm.amount}
                   onChange={(e) => setItemForm({ ...itemForm, amount: e.target.value })}
+                  placeholder="Ej. 10"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio por unidad (Q)</label>
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Costo total de entrada (Q)</label>
                 <input
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
                   type="number"
@@ -969,6 +994,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 />
               </div>
             </div>
+
+            {selectedInventoryProduct && entryStoredAmount > 0 && (
+              <div className="rounded-2xl border border-brand-blue/15 bg-brand-blue/5 px-4 py-3 text-sm font-bold text-ui-muted">
+                Se guardará como <span className="text-brand-blue font-black">{entryStoredAmount.toFixed(2)} {selectedInventoryProduct.unit}</span> en stock.
+                {entryTotalPrice !== null && !Number.isNaN(entryTotalPrice) && (
+                  <span> Costo base calculado: <span className="text-brand-blue font-black">Q{entryUnitPrice.toFixed(4)} por {selectedInventoryProduct.unit}</span>.</span>
+                )}
+              </div>
+            )}
 
             <Button type="submit" className="w-full !py-5" disabled={isSaving}>
               {isSaving ? 'Guardando...' : 'Registrar entrada'}
@@ -992,7 +1026,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <div className="min-w-0">
                         <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
                         <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
-                          {product.category} · Q{unitCost.toFixed(2)}/{product.unit}
+                          {product.category} · Costo base Q{unitCost.toFixed(4)}/{product.unit}
                         </p>
                       </div>
                       <div className="text-left sm:text-right shrink-0">
@@ -1014,7 +1048,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           step="0.01"
                           value={priceEditForm.price}
                           onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
-                          placeholder="Precio por unidad"
+                          placeholder="Costo por unidad base"
                         />
                         <button
                           type="button"
@@ -1039,7 +1073,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           onClick={() => handleStartPriceEdit(product, unitCost)}
                           className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
                         >
-                          Editar precio
+                          Editar costo base
                         </button>
                       </div>
                     )}
@@ -1091,6 +1125,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               const meta = INVENTORY_PRODUCT_MAP[item.name]
               const isPackaging = meta?.category === 'Empaque'
               const isActive = isPackaging ? true : item.isActive !== false
+              const stockStoredPreview = stockEditForm.name === item.name
+                ? convertInventoryAmountToBaseUnit(stockEditForm.stock, stockEditForm.unit, meta)
+                : 0
               return (
                 <div key={item._id} className={`w-full min-w-0 overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-ui-border p-4 sm:p-5 transition-all ${!isActive ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 min-w-0">
@@ -1109,9 +1146,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   {stockEditForm.name === item.name ? (
                     <div className="mt-4 rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-3 sm:p-4 min-w-0">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-ui-muted mb-2">
-                        Nuevo stock ({item.unit})
+                        Nuevo stock
                       </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 min-w-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr,0.85fr,auto,auto] gap-2 min-w-0">
                         <input
                           className="w-full min-w-0 rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
                           type="number"
@@ -1119,8 +1156,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           step="0.01"
                           value={stockEditForm.stock}
                           onChange={(e) => setStockEditForm({ ...stockEditForm, stock: e.target.value })}
-                          placeholder="Stock actual"
+                          placeholder="Cantidad"
                         />
+                        <select
+                          className="w-full min-w-0 rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
+                          value={stockEditForm.unit}
+                          onChange={(e) => setStockEditForm({ ...stockEditForm, unit: e.target.value })}
+                        >
+                          {getAllowedInputUnits(meta).map((unit) => (
+                            <option key={unit.value} value={unit.value}>{unit.label}</option>
+                          ))}
+                        </select>
                         <button
                           type="button"
                           onClick={() => handleSaveStockEdit(item)}
@@ -1137,6 +1183,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           Cancelar
                         </button>
                       </div>
+                      {stockStoredPreview > 0 && (
+                        <p className="mt-3 text-xs font-bold text-ui-muted">
+                          Se guardará como <span className="font-black text-brand-blue">{stockStoredPreview.toFixed(2)} {meta?.unit || item.unit}</span>.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3 border-t border-ui-border/60 min-w-0">

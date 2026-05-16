@@ -67,6 +67,43 @@ export const INVENTORY_PRODUCT_MAP = Object.fromEntries(
   INVENTORY_PRODUCT_OPTIONS.map((item) => [item.value, item])
 )
 
+export const INVENTORY_INPUT_UNITS = [
+  { value: 'lb', label: 'Lbs' },
+  { value: 'g', label: 'Gramos' },
+  { value: 'und', label: 'Unidad' },
+  { value: 'oz', label: 'Oz' },
+  { value: 'ml', label: 'Ml' },
+  { value: 'l', label: 'Ltrs' },
+]
+
+const UNIT_OPTIONS_BY_BASE_UNIT = {
+  g: ['g', 'lb', 'oz'],
+  ml: ['ml', 'l', 'oz'],
+  und: ['und'],
+}
+
+export const getAllowedInputUnits = (product) => {
+  if (!product) return INVENTORY_INPUT_UNITS
+  if (product.category === 'Empaque') return INVENTORY_INPUT_UNITS.filter((unit) => unit.value === 'und')
+  const allowed = UNIT_OPTIONS_BY_BASE_UNIT[product.unit] || [product.unit]
+  return INVENTORY_INPUT_UNITS.filter((unit) => allowed.includes(unit.value))
+}
+
+export const convertInventoryAmountToBaseUnit = (amount, inputUnit, product) => {
+  const numericAmount = Number(amount)
+  if (!product || Number.isNaN(numericAmount) || numericAmount <= 0) return 0
+
+  const conversions = {
+    g: { g: 1, lb: 453.59237, oz: 28.349523125 },
+    ml: { ml: 1, l: 1000, oz: 29.5735295625 },
+    und: { und: 1 },
+  }
+
+  const factor = conversions[product.unit]?.[inputUnit]
+  if (!factor) return 0
+  return Math.round(numericAmount * factor * 1000) / 1000
+}
+
 export const STEPS_ORDER = [
   'LOCATION',
   'SIZE',
