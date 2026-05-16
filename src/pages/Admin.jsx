@@ -508,12 +508,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const handleToggleStatus = async (name, currentStatus) => {
+    const meta = INVENTORY_PRODUCT_MAP[name]
+    const isPackaging = meta?.category === 'Empaque'
+
+    if (isPackaging && currentStatus !== false) {
+      toast.error('Los productos de empaque son obligatorios y no se pueden desactivar.')
+      return
+    }
+
     try {
       await toggleInventoryStatus(name, !currentStatus)
       toast.success(`Producto ${!currentStatus ? 'activado' : 'desactivado'}`)
       loadData()
     } catch (err) {
-      toast.error('No se pudo cambiar el estado')
+      toast.error(err.response?.data?.message || 'No se pudo cambiar el estado')
     }
   }
 
@@ -604,7 +612,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   return (
-    <div className="min-h-screen bg-ui-bg">
+    <div className="min-h-screen bg-ui-bg overflow-x-hidden">
       <AdminNavbar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -614,8 +622,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       />
 
       <div className="pt-20 flex flex-col min-h-screen">
-        <main className="flex-1 p-2 sm:p-6 lg:p-10">
-          <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden p-2 sm:p-6 lg:p-10">
+          <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full overflow-hidden">
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
             ) : activeTab === 'finances' ? (
@@ -839,8 +847,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       )}
 
       {activeTab === 'entries' && (
-        <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8 animate-fade-in">
-          <form onSubmit={submitInventory} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 space-y-5">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 animate-fade-in min-w-0">
+          <form onSubmit={submitInventory} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-5 min-w-0">
             <div className="border-b border-ui-border pb-4">
               <h2 className="text-xl font-black text-ui-text">Entrada de Inventario</h2>
               <p className="text-sm text-ui-muted mt-1">Selecciona el producto y registra la cantidad ingresada.</p>
@@ -862,7 +870,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </select>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad</label>
                 <input className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold" value={itemForm.unit} readOnly />
@@ -897,7 +905,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </Button>
           </form>
 
-          <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-6 space-y-4">
+          <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
             <div className="border-b border-ui-border pb-4">
               <h3 className="text-xl font-black text-ui-text">Consumo por plato</h3>
             </div>
@@ -909,15 +917,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 const totalCost = unitCost * product.usedPerPlate
                 return (
                   <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
                       <div className="min-w-0">
-                        <p className="font-black text-ui-text truncate">{product.label}</p>
+                        <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
                         <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
                           {product.category} · Q{unitCost.toFixed(2)}/{product.unit}
                         </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-brand-blue">
+                      <div className="text-left sm:text-right shrink-0">
+                        <p className="text-sm font-black text-brand-blue break-words">
                           {product.usedPerPlate} {product.unit}
                         </p>
                         <p className="text-[10px] font-black text-green-600 mt-0.5">
@@ -934,8 +942,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       )}
 
       {activeTab === 'inventory' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-ui-border pb-4">
+        <div className="space-y-6 animate-fade-in min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ui-border pb-4 min-w-0">
             <div>
               <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
               <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Estado de stock y catálogo</p>
@@ -962,7 +970,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 min-w-0">
             {inventory
               .filter(item => {
                 if (inventoryCategoryFilter === 'ALL') return true
@@ -971,35 +979,43 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               })
               .map((item) => {
               const meta = INVENTORY_PRODUCT_MAP[item.name]
+              const isPackaging = meta?.category === 'Empaque'
+              const isActive = isPackaging ? true : item.isActive !== false
               return (
-                <div key={item._id} className={`rounded-[2rem] border border-ui-border p-5 transition-all ${item.isActive === false ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="min-w-0">
-                      <h3 className="font-black text-ui-text capitalize leading-tight truncate">{meta?.label || item.name}</h3>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1">{meta?.category || 'Inventario'}</p>
+                <div key={item._id} className={`w-full min-w-0 overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-ui-border p-4 sm:p-5 transition-all ${!isActive ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 min-w-0">
+                    <div className="min-w-0 max-w-full">
+                      <h3 className="font-black text-ui-text capitalize leading-tight break-words">{meta?.label || item.name}</h3>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1 break-words">{meta?.category || 'Inventario'}</p>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-xl font-black ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
+                    <div className="text-left sm:text-right shrink-0 max-w-full">
+                      <p className={`text-2xl sm:text-xl font-black break-words ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
                         {Number(item.stock).toFixed(2)}
                       </p>
-                      <p className="text-[10px] font-bold text-ui-muted uppercase">{item.unit}</p>
+                      <p className="text-[10px] font-bold text-ui-muted uppercase break-words">{item.unit}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 gap-2">
-                    <div className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${item.isActive === false ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
-                      {item.isActive === false ? 'Inactivo' : 'Activo'}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3 border-t border-ui-border/60 min-w-0">
+                    <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
+                      {!isActive ? 'Inactivo' : 'Activo'}
                     </div>
-                    <button 
-                      onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
-                      className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 rounded-xl transition-all border ${
-                        item.isActive === false 
-                          ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
-                          : 'border-brand-red text-brand-red hover:bg-brand-red/10'
-                      }`}
-                    >
-                      {item.isActive === false ? 'Activar' : 'Desactivar'}
-                    </button>
+                    {isPackaging ? (
+                      <div className="w-fit text-[10px] font-black uppercase tracking-widest py-1.5 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
+                        Fijo
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
+                        className={`w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
+                          item.isActive === false 
+                            ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
+                            : 'border-brand-red text-brand-red hover:bg-brand-red/10'
+                        }`}
+                      >
+                        {item.isActive === false ? 'Activar' : 'Desactivar'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
