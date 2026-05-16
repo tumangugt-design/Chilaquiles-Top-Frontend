@@ -13,6 +13,7 @@ import {
   getOrders,
   syncInventory,
   toggleInventoryStatus,
+  updateInventoryPrice,
   getOperatingHours,
   updateOperatingHours,
   getFinancesSummary
@@ -301,6 +302,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [driverUsers, setDriverUsers] = useState([])
   const [ordersCache, setOrdersCache] = useState({})
   const [itemForm, setItemForm] = useState(emptyItem)
+  const [priceEditForm, setPriceEditForm] = useState({ name: null, price: '' })
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [scheduleForm, setScheduleForm] = useState({ 
     weekly: {}, 
@@ -493,7 +495,40 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       name: value,
       amount: itemForm.amount,
       unit: product?.unit || '',
+      price: itemForm.price,
     })
+  }
+
+
+  const handleStartPriceEdit = (product, currentPrice) => {
+    setPriceEditForm({
+      name: product.value,
+      price: String(Number(currentPrice || 0))
+    })
+  }
+
+  const handleCancelPriceEdit = () => {
+    setPriceEditForm({ name: null, price: '' })
+  }
+
+  const handleSaveProductPrice = async (product) => {
+    const price = Number(priceEditForm.price)
+
+    if (Number.isNaN(price) || price < 0) {
+      return toast.error('Ingresa un precio válido mayor o igual a cero')
+    }
+
+    setIsSaving(true)
+    try {
+      await updateInventoryPrice(product.value, price)
+      toast.success(`Precio actualizado para ${product.label}`)
+      setPriceEditForm({ name: null, price: '' })
+      loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo actualizar el precio')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSyncInventory = async () => {
@@ -887,7 +922,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio Total (Q)</label>
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio por unidad (Q)</label>
                 <input
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
                   type="number"
@@ -913,10 +948,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
               {INVENTORY_PRODUCT_OPTIONS.map((product) => {
                 const inventoryItem = inventory.find(i => i.name === product.value)
-                const unitCost = inventoryItem?.lastPrice || 0
+                const unitCost = Number(inventoryItem?.lastPrice || 0)
                 const totalCost = unitCost * product.usedPerPlate
+                const isEditingPrice = priceEditForm.name === product.value
                 return (
-                  <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4">
+                  <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
                       <div className="min-w-0">
                         <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
@@ -933,6 +969,45 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         </p>
                       </div>
                     </div>
+
+                    {isEditingPrice ? (
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
+                        <input
+                          className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={priceEditForm.price}
+                          onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
+                          placeholder="Precio por unidad"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveProductPrice(product)}
+                          disabled={isSaving}
+                          className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelPriceEdit}
+                          className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleStartPriceEdit(product, unitCost)}
+                          className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
+                        >
+                          Editar precio
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
