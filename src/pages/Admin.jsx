@@ -514,10 +514,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const selectedInventoryProduct = INVENTORY_PRODUCT_MAP[itemForm.name]
   const entryStoredAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, selectedInventoryProduct)
   const entryTotalPrice = itemForm.price === '' ? null : Number(itemForm.price)
-  const entryUnitPrice = entryStoredAmount > 0 && entryTotalPrice !== null && !Number.isNaN(entryTotalPrice)
-    ? entryTotalPrice / entryStoredAmount
-    : 0
-
 
   const handleStartPriceEdit = (product, currentPrice) => {
     setPriceEditForm({
@@ -988,7 +984,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Costo total de entrada (Q)</label>
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio fijo del producto (Q)</label>
                 <input
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
                   type="number"
@@ -1005,7 +1001,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <div className="rounded-2xl border border-brand-blue/15 bg-brand-blue/5 px-4 py-3 text-sm font-bold text-ui-muted">
                 Se guardará como <span className="text-brand-blue font-black">{entryStoredAmount.toFixed(2)} {selectedInventoryProduct.unit}</span> en stock.
                 {entryTotalPrice !== null && !Number.isNaN(entryTotalPrice) && (
-                  <span> Costo base calculado: <span className="text-brand-blue font-black">Q{entryUnitPrice.toFixed(4)} por {selectedInventoryProduct.unit}</span>.</span>
+                  <span> Precio fijo registrado: <span className="text-brand-blue font-black">Q{entryTotalPrice.toFixed(2)}</span>.</span>
                 )}
               </div>
             )}
@@ -1023,8 +1019,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
               {INVENTORY_PRODUCT_OPTIONS.map((product) => {
                 const inventoryItem = inventory.find(i => i.name === product.value)
-                const unitCost = Number(inventoryItem?.lastPrice || 0)
-                const totalCost = unitCost * product.usedPerPlate
+                const fixedPrice = Number(inventoryItem?.lastPrice || 0)
                 const isEditingPrice = priceEditForm.name === product.value
                 return (
                   <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
@@ -1032,7 +1027,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <div className="min-w-0">
                         <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
                         <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
-                          {product.category} · Costo base Q{unitCost.toFixed(4)}/{product.unit}
+                          {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
                         </p>
                       </div>
                       <div className="text-left sm:text-right shrink-0">
@@ -1040,7 +1035,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           {product.usedPerPlate} {product.unit}
                         </p>
                         <p className="text-[10px] font-black text-green-600 mt-0.5">
-                          Q{totalCost.toFixed(2)}
+                          Precio fijo Q{fixedPrice.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -1054,7 +1049,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           step="0.01"
                           value={priceEditForm.price}
                           onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
-                          placeholder="Costo por unidad base"
+                          placeholder="Precio fijo del producto"
                         />
                         <button
                           type="button"
@@ -1076,10 +1071,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
                         <button
                           type="button"
-                          onClick={() => handleStartPriceEdit(product, unitCost)}
+                          onClick={() => handleStartPriceEdit(product, fixedPrice)}
                           className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
                         >
-                          Editar costo base
+                          Editar precio
                         </button>
                       </div>
                     )}
