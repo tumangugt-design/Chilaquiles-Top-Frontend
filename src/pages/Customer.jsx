@@ -54,6 +54,29 @@ const parseCoordinates = (raw = '') => {
 
 const normalizeSearchKey = (raw = '') => String(raw).trim().toLowerCase().replace(/\s+/g, ' ')
 
+const ZONA_6_VILLA_NUEVA_BOUNDS = {
+  minLat: 14.52590,
+  maxLat: 14.55356,
+  minLng: -90.59499,
+  maxLng: -90.56193,
+}
+
+const isInsideZona6VillaNueva = (location) => {
+  const lat = Number(location?.lat)
+  const lng = Number(location?.lng)
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return false
+
+  return (
+    lat >= ZONA_6_VILLA_NUEVA_BOUNDS.minLat &&
+    lat <= ZONA_6_VILLA_NUEVA_BOUNDS.maxLat &&
+    lng >= ZONA_6_VILLA_NUEVA_BOUNDS.minLng &&
+    lng <= ZONA_6_VILLA_NUEVA_BOUNDS.maxLng
+  )
+}
+
+const CUSTOMER_COVERAGE_QUERY = 'Zona 6 de Villa Nueva, Villa Nueva, Guatemala'
+
 const getGoogleMapsEmbedUrl = (query = 'Guatemala') =>
   `https://www.google.com/maps?q=${encodeURIComponent(query || 'Guatemala')}&output=embed`
 
@@ -87,6 +110,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
   })
   const [touched, setTouched] = useState({ name: false, address: false })
   const [loadingLoc, setLoadingLoc] = useState(false)
+  const [coverageError, setCoverageError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [adminMapSearch, setAdminMapSearch] = useState('Villa Nueva, Guatemala')
   const [adminCoords, setAdminCoords] = useState(
@@ -117,6 +141,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
   }
 
   const setLocation = (location, successMessage = 'Ubicación lista') => {
+    setCoverageError('')
     const nextData = { ...localData, location }
     updateCustomer(nextData)
     setAdminCoords(`${location.lat}, ${location.lng}`)
@@ -139,6 +164,17 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         }
+
+        if (!isInternal && !isInsideZona6VillaNueva(location)) {
+          const nextData = { ...localData, location: null }
+          updateCustomer(nextData)
+          setCoverageError('Rango fuera de cobertura. Solo atendemos Zona 6 de Villa Nueva.')
+          toast.error('Cobertura fuera de rango. Solo atendemos Zona 6 de Villa Nueva.', { id: 'gps-location' })
+          setMapQuery(CUSTOMER_COVERAGE_QUERY)
+          setLoadingLoc(false)
+          return
+        }
+
         setLocation(location)
         toast.dismiss('gps-location')
         setLoadingLoc(false)
@@ -314,8 +350,13 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
                   )}
                 </div>
               </button>
-              {hasLocation && <LocationPreview location={localData.location} />}
-              <p className="text-xs font-bold text-ui-muted">La ubicación se toma únicamente desde el GPS actual del cliente.</p>
+              <LocationPreview location={hasLocation ? localData.location : null} query={hasLocation ? undefined : CUSTOMER_COVERAGE_QUERY} />
+              {coverageError && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-black text-red-600">
+                  {coverageError}
+                </div>
+              )}
+              <p className="text-xs font-bold text-ui-muted">La ubicación se toma únicamente desde el GPS actual del cliente. Cobertura válida: Zona 6 de Villa Nueva.</p>
             </div>
           )}
         </div>
