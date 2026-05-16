@@ -49,6 +49,29 @@ import AdminNavbar from '../components/layout/AdminNavbar.jsx'
 
 const emptyItem = { name: '', amount: '', unit: '', price: '' }
 
+const SCHEDULE_DAY_INDEX = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+}
+
+const normalizeScheduleWeekly = (weekly = {}) => {
+  return Object.entries(SCHEDULE_DAY_INDEX).reduce((acc, [day, index]) => {
+    const current = weekly?.[day] || weekly?.[String(index)] || weekly?.[index] || {}
+    acc[day] = {
+      isOpen: current.isOpen === undefined ? true : Boolean(current.isOpen),
+      openTime: current.openTime || '08:00',
+      closeTime: current.closeTime || '17:00',
+    }
+    return acc
+  }, {})
+}
+
+
 const getCardTone = (status) => {
   if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
   if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFE8D1]'
@@ -307,7 +330,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [stockEditForm, setStockEditForm] = useState({ name: null, stock: '', unit: '' })
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [scheduleForm, setScheduleForm] = useState({ 
-    weekly: {}, 
+    weekly: normalizeScheduleWeekly(), 
     specialDates: {}, 
     dateRanges: [], 
     isOpen: true, 
@@ -382,12 +405,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         const scheduleResponse = await getOperatingHours()
         const data = scheduleResponse.data
         setScheduleForm({
-          weekly: data?.weekly || {},
+          weekly: normalizeScheduleWeekly(data?.weekly || {}),
           specialDates: data?.specialDates || {},
           dateRanges: data?.dateRanges || [],
-          isOpen: Boolean(data?.isOpen),
-          openTime: data?.openTime || '',
-          closeTime: data?.closeTime || '',
+          isOpen: data?.isOpen === undefined ? true : Boolean(data?.isOpen),
+          openTime: data?.openTime || '08:00',
+          closeTime: data?.closeTime || '17:00',
         })
       } else if (activeTab === 'chefs') {
         await loadRoleUsers('CHEF')
@@ -619,12 +642,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       const response = await updateOperatingHours(scheduleForm)
       const data = response.data?.settings || scheduleForm
       setScheduleForm({
-        weekly: data.weekly || {},
+        weekly: normalizeScheduleWeekly(data.weekly || {}),
         specialDates: data.specialDates || {},
         dateRanges: data.dateRanges || [],
-        isOpen: Boolean(data.isOpen),
-        openTime: data.openTime || '',
-        closeTime: data.closeTime || '',
+        isOpen: data.isOpen === undefined ? true : Boolean(data.isOpen),
+        openTime: data.openTime || '08:00',
+        closeTime: data.closeTime || '17:00',
       })
       toast.success('Horario actualizado con éxito')
     } catch (err) {
