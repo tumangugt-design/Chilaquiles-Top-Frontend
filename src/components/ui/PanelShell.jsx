@@ -1,9 +1,9 @@
-const PanelShell = ({ title, subtitle, actions, children }) => {
+const PanelShell = ({ title, subtitle, actions, children, compactTop = false }) => {
   return (
     <div className="min-h-screen bg-ui-bg font-sans text-ui-text transition-colors duration-300">
       {}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 ${compactTop ? 'pt-5 pb-16 sm:pt-6 lg:pt-8 lg:pb-20' : 'py-20 lg:py-28'}`}>
         <div className="bg-ui-card rounded-[2.5rem] p-6 sm:p-12 shadow-xl border border-ui-border animate-fade-in transition-all">
           <div className="mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-ui-border pb-8">
             <div>

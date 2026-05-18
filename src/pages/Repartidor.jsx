@@ -140,7 +140,7 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
 
   const renderOrderCard = (order) => {
     return (
-      <div key={order._id} className={`rounded-[2rem] border-2 p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
+      <div key={order._id} className={`rounded-[2rem] border-2 p-5 sm:p-6 shadow-sm ${getCardTone(order.status)} ${getCardTextTone(order.status)}`}>
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
             <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de orden</p>
@@ -213,9 +213,10 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
         title="Logística de Entrega"
         subtitle="Pedidos activos y entregados"
         actions={<StatusBadge value={session.status} />}
+        compactTop
       >
-      <div className="grid xl:grid-cols-2 gap-8 animate-fade-in">
-        <section className="space-y-5">
+      <div className="grid xl:grid-cols-2 gap-6 sm:gap-8 animate-fade-in">
+        <section className="space-y-5 scroll-mt-24">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Activos</h2>
             <span className="text-xs font-black uppercase tracking-widest text-ui-muted">{activeOrders.length}</span>
@@ -229,7 +230,7 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
           </div>
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-5 scroll-mt-24">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Entregados</h2>
             <span className="text-xs font-black uppercase tracking-widest text-ui-muted">{deliveredOrders.length}</span>

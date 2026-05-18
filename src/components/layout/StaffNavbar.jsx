@@ -23,8 +23,8 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
   const Icon = meta.Icon
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-6 lg:px-10 justify-between">
-      <div className="flex items-center gap-4 shrink-0">
+    <nav className="sticky top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-4 sm:px-6 lg:px-10 justify-between">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${meta.accentClass}`}>
           <Icon className="text-white" size={24} />
         </div>
@@ -33,7 +33,7 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-8 gap-2 overflow-x-auto no-scrollbar">
+      <div className="flex-1 flex items-center justify-center px-3 sm:px-8 gap-2 overflow-x-auto no-scrollbar">
         <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider whitespace-nowrap ${meta.activeClass}`}>
           <ClipboardList size={16} />
           <span>{activeLabel}</span>
@@ -41,8 +41,8 @@ const StaffNavbar = ({ role = 'CHEF', session, logout, activeLabel = 'Pedidos', 
         </button>
       </div>
 
-      <div className="flex items-center gap-4 shrink-0">
-        <div className="flex items-center gap-3 pr-4 border-r border-ui-border">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4 border-r border-ui-border">
           <div className="hidden sm:block text-right">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || meta.label}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
