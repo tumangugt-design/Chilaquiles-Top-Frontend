@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_PROTEIN } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
+import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const [activeNames, setActiveNames] = useState([])
+const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+  const [inventoryItems, setInventoryItems] = useState([])
   const [optionsLoaded, setOptionsLoaded] = useState(false)
 
   useEffect(() => {
@@ -13,13 +14,13 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
     getPublicInventoryOptions()
       .then((response) => {
         if (mounted) {
-          setActiveNames(response.data?.activeNames || [])
+          setInventoryItems(response.data?.items || [])
           setOptionsLoaded(true)
         }
       })
       .catch(() => {
         if (mounted) {
-          setActiveNames([])
+          setInventoryItems([])
           setOptionsLoaded(true)
         }
       })
@@ -28,11 +29,14 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
 
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
-    return OPTIONS_PROTEIN.filter((option) => activeNames.includes(option.value.toLowerCase()))
-  }, [activeNames, optionsLoaded])
+    const statusMap = buildInventoryStatusMap(inventoryItems)
+    return OPTIONS_PROTEIN
+      .map((option) => ({ ...option, availability: getProductAvailability(statusMap, option.value.toLowerCase()) }))
+      .filter((option) => showUnavailable || option.availability.available)
+  }, [inventoryItems, optionsLoaded, showUnavailable])
 
   useEffect(() => {
-    if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein)) {
+    if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein && option.availability.available)) {
       updatePlate({ protein: null })
     }
   }, [optionsLoaded, availableOptions, plate.protein, updatePlate])
@@ -49,7 +53,7 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
         {optionsLoaded && availableOptions.length === 0 && (
           <div className="md:col-span-3 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay proteínas disponibles por inventario.</p>
-            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una proteína.</p>
+            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una proteína con el stock suficiente.</p>
           </div>
         )}
         {availableOptions.map((opt) => (
@@ -60,6 +64,10 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
             selected={plate.protein === opt.value}
             illustration={opt.illustration}
             spicyLevel={opt.spicyLevel}
+            disabled={!opt.availability.available}
+            availabilityStatus={opt.availability.availabilityStatus}
+            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityDetail={opt.availability.availabilityDetail}
             onClick={() => updatePlate({ protein: opt.value })}
           />
         ))}

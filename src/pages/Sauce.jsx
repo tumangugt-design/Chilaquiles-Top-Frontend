@@ -1,13 +1,27 @@
-
-
 import { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_SAUCE } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
+import { buildInventoryStatusMap, combineAvailabilities, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const [activeNames, setActiveNames] = useState([])
+const getSauceAvailability = (statusMap, option) => {
+  if (option.value === 'ROJA') return getProductAvailability(statusMap, 'salsa roja', 236)
+  if (option.value === 'VERDE') return getProductAvailability(statusMap, 'salsa verde', 236)
+  if (option.value === 'DIVORCIADOS') {
+    return combineAvailabilities(
+      [
+        getProductAvailability(statusMap, 'salsa roja', 118),
+        getProductAvailability(statusMap, 'salsa verde', 118),
+      ],
+      'Requiere 118 ml de salsa roja y 118 ml de salsa verde.'
+    )
+  }
+  return { available: true, availabilityStatus: 'available' }
+}
+
+const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+  const [inventoryItems, setInventoryItems] = useState([])
   const [optionsLoaded, setOptionsLoaded] = useState(false)
 
   useEffect(() => {
@@ -15,13 +29,13 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
     getPublicInventoryOptions()
       .then((response) => {
         if (mounted) {
-          setActiveNames(response.data?.activeNames || [])
+          setInventoryItems(response.data?.items || [])
           setOptionsLoaded(true)
         }
       })
       .catch(() => {
         if (mounted) {
-          setActiveNames([])
+          setInventoryItems([])
           setOptionsLoaded(true)
         }
       })
@@ -30,18 +44,14 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
 
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
-    const hasRoja = activeNames.includes('salsa roja')
-    const hasVerde = activeNames.includes('salsa verde')
-    return OPTIONS_SAUCE.filter((option) => {
-      if (option.value === 'ROJA') return hasRoja
-      if (option.value === 'VERDE') return hasVerde
-      if (option.value === 'DIVORCIADOS') return hasRoja && hasVerde
-      return true
-    })
-  }, [activeNames, optionsLoaded])
+    const statusMap = buildInventoryStatusMap(inventoryItems)
+    return OPTIONS_SAUCE
+      .map((option) => ({ ...option, availability: getSauceAvailability(statusMap, option) }))
+      .filter((option) => showUnavailable || option.availability.available)
+  }, [inventoryItems, optionsLoaded, showUnavailable])
 
   useEffect(() => {
-    if (optionsLoaded && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce)) {
+    if (optionsLoaded && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce && option.availability.available)) {
       updatePlate({ sauce: null })
     }
   }, [optionsLoaded, availableOptions, plate.sauce, updatePlate])
@@ -60,7 +70,7 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
         {optionsLoaded && availableOptions.length === 0 && (
           <div className="md:col-span-2 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
             <p className="font-black text-ui-text">No hay salsas disponibles por inventario.</p>
-            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una salsa.</p>
+            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer al menos una salsa con el stock suficiente.</p>
           </div>
         )}
         {availableOptions.map((opt) => (
@@ -71,6 +81,10 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
             selected={plate.sauce === opt.value}
             illustration={opt.illustration}
             badge={opt.badge}
+            disabled={!opt.availability.available}
+            availabilityStatus={opt.availability.availabilityStatus}
+            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityDetail={opt.availability.availabilityDetail}
             onClick={() => updatePlate({ sauce: opt.value })}
           />
         ))}

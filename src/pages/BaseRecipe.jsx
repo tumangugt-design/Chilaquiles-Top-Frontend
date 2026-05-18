@@ -1,11 +1,70 @@
-
-
+import { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_BASE_RECIPE } from '../shared/constants/index.jsx'
+import { getPublicInventoryOptions } from '../shared/config/api.js'
+import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => {
-  const toggleBase = (key) => {
+const baseNameById = {
+  cream: 'crema',
+  onion: 'cebolla',
+  cilantro: 'cilantro',
+}
+
+const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+  const [inventoryItems, setInventoryItems] = useState([])
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    getPublicInventoryOptions()
+      .then((response) => {
+        if (mounted) {
+          setInventoryItems(response.data?.items || [])
+          setOptionsLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setInventoryItems([])
+          setOptionsLoaded(true)
+        }
+      })
+    return () => { mounted = false }
+  }, [])
+
+  const availableOptions = useMemo(() => {
+    if (!optionsLoaded) return []
+    const statusMap = buildInventoryStatusMap(inventoryItems)
+    return OPTIONS_BASE_RECIPE
+      .map((option) => ({ ...option, availability: getProductAvailability(statusMap, baseNameById[option.id]) }))
+      .filter((option) => showUnavailable || option.availability.available)
+  }, [inventoryItems, optionsLoaded, showUnavailable])
+
+  useEffect(() => {
+    if (!optionsLoaded) return
+    const unavailableSelected = availableOptions
+      .filter((option) => !option.availability.available && plate.baseRecipe?.[option.id])
+      .map((option) => option.id)
+
+    const hiddenUnavailable = OPTIONS_BASE_RECIPE
+      .filter((option) => !availableOptions.some((available) => available.id === option.id))
+      .filter((option) => plate.baseRecipe?.[option.id])
+      .map((option) => option.id)
+
+    const keysToDisable = [...new Set([...unavailableSelected, ...hiddenUnavailable])]
+    if (keysToDisable.length === 0) return
+
+    updatePlate({
+      baseRecipe: {
+        ...plate.baseRecipe,
+        ...Object.fromEntries(keysToDisable.map((key) => [key, false])),
+      },
+    })
+  }, [optionsLoaded, availableOptions, plate.baseRecipe, updatePlate])
+
+  const toggleBase = (key, canSelect = true) => {
+    if (!canSelect) return
     updatePlate({
       baseRecipe: {
         ...plate.baseRecipe,
@@ -27,15 +86,25 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack }) => 
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-        {OPTIONS_BASE_RECIPE.map((opt) => (
+        {optionsLoaded && availableOptions.length === 0 && (
+          <div className="sm:col-span-3 rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/60 p-8 text-center">
+            <p className="font-black text-ui-text">No hay ingredientes de base disponibles por inventario.</p>
+            <p className="text-sm text-ui-muted mt-2">El administrador debe activar y abastecer crema, cebolla o cilantro.</p>
+          </div>
+        )}
+        {availableOptions.map((opt) => (
           <OptionCard
             key={opt.id}
             title={opt.label}
             description={opt.description}
             illustration={opt.illustration}
-            selected={plate.baseRecipe[opt.id]}
-            onClick={() => toggleBase(opt.id)}
+            selected={Boolean(plate.baseRecipe[opt.id]) && opt.availability.available}
+            onClick={() => toggleBase(opt.id, opt.availability.available)}
             multiSelect
+            disabled={!opt.availability.available}
+            availabilityStatus={opt.availability.availabilityStatus}
+            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityDetail={opt.availability.availabilityDetail}
           />
         ))}
       </div>
