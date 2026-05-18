@@ -15,12 +15,14 @@ export const buildInventoryStatusMap = (items = []) => {
   )
 }
 
-export const getProductAvailability = (statusMap, productName, customRequired = null) => {
+export const getProductAvailability = (statusMap, productName, customRequired = null, requiredDisplay = null) => {
   const normalizedName = normalizeName(productName)
   const meta = INVENTORY_PRODUCT_MAP[normalizedName]
   const item = statusMap.get(normalizedName)
   const required = Number(customRequired ?? item?.required ?? meta?.usedPerPlate ?? 1)
   const unit = item?.unit || meta?.unit || ''
+  const displayRequired = requiredDisplay || { amount: required, unit }
+  const formatDisplay = (display) => `${formatAmount(display.amount)} ${display.unit || unit}`.trim()
 
   if (!item) {
     return {
@@ -46,6 +48,7 @@ export const getProductAvailability = (statusMap, productName, customRequired = 
       availabilityLabel: 'Desactivado',
       availabilityDetail: 'Producto desactivado desde inventario.',
       required,
+      requiredDisplay: displayRequired,
       stock,
       unit,
     }
@@ -57,8 +60,9 @@ export const getProductAvailability = (statusMap, productName, customRequired = 
       available: false,
       availabilityStatus: 'insufficient',
       availabilityLabel: 'Stock insuficiente',
-      availabilityDetail: `Disponible ${formatAmount(stock)} ${unit}. Requiere ${formatAmount(required)} ${unit}.`,
+      availabilityDetail: `Disponible ${formatAmount(stock)} ${unit}. Requiere ${formatDisplay(displayRequired)}.`,
       required,
+      requiredDisplay: displayRequired,
       stock,
       unit,
     }
@@ -71,6 +75,7 @@ export const getProductAvailability = (statusMap, productName, customRequired = 
     availabilityLabel: '',
     availabilityDetail: '',
     required,
+    requiredDisplay: displayRequired,
     stock,
     unit,
   }

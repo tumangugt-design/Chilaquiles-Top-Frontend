@@ -3,6 +3,7 @@ import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 import toast from 'react-hot-toast'
 import { getAvailablePlates, getOperatingHours, sendOtp, verifyOtp } from '../shared/config/api.js'
+import menuImage from '../assets/menu_chilaquiles_top.png'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
@@ -82,6 +83,7 @@ const LocationPage = ({ onConfirm }) => {
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [hours, setHours] = useState({ isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
@@ -225,6 +227,10 @@ const LocationPage = ({ onConfirm }) => {
 
       {step === 'welcome' && !error && (
         <div className="space-y-4">
+          <Button fullWidth type="button" onClick={() => setIsMenuOpen(true)} variant="secondary" className="text-lg !border-brand-blue/30 !text-brand-blue !bg-brand-blue/5">
+            Ver menú
+          </Button>
+
           <Button fullWidth onClick={() => setStep('auth')} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
             {hours.isCurrentlyOpen ? 'Sí, estoy aquí' : 'Cerrado'}
           </Button>
@@ -306,6 +312,24 @@ const LocationPage = ({ onConfirm }) => {
           phone={cleanDigits}
           isLoading={isLoading}
         />
+      )}
+
+
+
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 sm:p-6 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
+          <div className="relative w-full max-w-5xl max-h-[92vh] overflow-auto rounded-3xl bg-white p-2 sm:p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(false)}
+              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-2xl font-black text-ui-text shadow-lg transition hover:scale-105"
+              aria-label="Cerrar menú"
+            >
+              ×
+            </button>
+            <img src={menuImage} alt="Menú Chilaquiles TOP" className="h-auto w-full rounded-2xl object-contain" />
+          </div>
+        </div>
       )}
 
       <div className="mt-6 pt-4 sm:mt-8 sm:pt-6 border-t border-ui-border/50">

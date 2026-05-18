@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_SAUCE } from '../shared/constants/index.jsx'
+import { OPTIONS_SAUCE, SAUCE_PORTIONS } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, combineAvailabilities, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const getSauceAvailability = (statusMap, option) => {
-  if (option.value === 'ROJA') return getProductAvailability(statusMap, 'salsa roja', 236)
-  if (option.value === 'VERDE') return getProductAvailability(statusMap, 'salsa verde', 236)
+  if (option.value === 'ROJA') return getProductAvailability(statusMap, 'salsa roja', SAUCE_PORTIONS.fullMl, { amount: SAUCE_PORTIONS.fullOz, unit: 'oz' })
+  if (option.value === 'VERDE') return getProductAvailability(statusMap, 'salsa verde', SAUCE_PORTIONS.fullMl, { amount: SAUCE_PORTIONS.fullOz, unit: 'oz' })
   if (option.value === 'DIVORCIADOS') {
     return combineAvailabilities(
       [
-        getProductAvailability(statusMap, 'salsa roja', 118),
-        getProductAvailability(statusMap, 'salsa verde', 118),
+        getProductAvailability(statusMap, 'salsa roja', SAUCE_PORTIONS.halfMl, { amount: SAUCE_PORTIONS.halfOz, unit: 'oz' }),
+        getProductAvailability(statusMap, 'salsa verde', SAUCE_PORTIONS.halfMl, { amount: SAUCE_PORTIONS.halfOz, unit: 'oz' }),
       ],
-      'Requiere 118 ml de salsa roja y 118 ml de salsa verde.'
+      'Requiere 4 oz de salsa roja y 4 oz de salsa verde.'
     )
   }
   return { available: true, availabilityStatus: 'available' }

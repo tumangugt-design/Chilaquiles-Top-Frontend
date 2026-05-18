@@ -17,7 +17,8 @@ import {
   updateInventoryStock,
   getOperatingHours,
   updateOperatingHours,
-  getFinancesSummary
+  getFinancesSummary,
+  getAvailablePlates
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, getAllowedInputUnits, convertInventoryAmountToBaseUnit } from '../shared/constants/index.jsx'
@@ -71,6 +72,40 @@ const normalizeScheduleWeekly = (weekly = {}) => {
   }, {})
 }
 
+
+
+const formatInventoryAmount = (value) => {
+  const numeric = Number(value || 0)
+  if (Number.isNaN(numeric)) return '0'
+  if (Number.isInteger(numeric)) return String(numeric)
+  return numeric.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
+}
+
+const getPlatesByIngredient = (item) => {
+  const meta = INVENTORY_PRODUCT_MAP[item.name]
+  const required = Number(meta?.usedPerPlate || 0)
+  if (!required || required <= 0) return null
+  return Math.floor(Number(item.stock || 0) / required)
+}
+
+const getStockAlertItems = (items = []) => {
+  return items
+    .map((item) => {
+      const meta = INVENTORY_PRODUCT_MAP[item.name]
+      const required = Number(meta?.usedPerPlate || 0)
+      const stock = Number(item.stock || 0)
+      if (!meta || !required || required <= 0 || item.isActive === false || stock >= required) return null
+      return {
+        name: meta.label || item.name,
+        stock,
+        unit: meta.unit || item.unit || '',
+        required,
+        requiredUnit: meta.displayUnit || meta.unit || item.unit || '',
+        requiredLabel: `${formatInventoryAmount(meta.displayUsedPerPlate ?? required)} ${meta.displayUnit || meta.unit || item.unit || ''}`.trim(),
+      }
+    })
+    .filter(Boolean)
+}
 
 const getCardTone = (status) => {
   if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
@@ -350,6 +385,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     user: null,
     orders: []
   })
+  const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
+  const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
 
   const loadRoleUsers = async (role) => {
@@ -428,6 +465,24 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const currentOrders = ordersCache[orderFilter] || []
 
+  const loadStockAlert = async () => {
+    try {
+      const [inventoryResponse, platesResponse] = await Promise.all([getInventory(), getAvailablePlates()])
+      const items = Array.isArray(inventoryResponse.data) ? inventoryResponse.data : []
+      const platesCount = Number(platesResponse.data?.count ?? 0)
+      const alertItems = getStockAlertItems(items)
+
+      setStockAlert({
+        isOpen: alertItems.length > 0 || platesCount <= 5,
+        platesCount,
+        items: alertItems,
+      })
+    } catch (error) {
+      console.error('No se pudo cargar alerta de inventario:', error)
+    }
+  }
+
+
   useEffect(() => {
     if (session?.role === 'ADMIN' && session?.status === 'approved') {
       loadData()
@@ -441,6 +496,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       return () => clearInterval(interval)
     }
   }, [session, activeTab, orderFilter])
+
+
+  useEffect(() => {
+    if (session?.role === 'ADMIN' && session?.status === 'approved' && !stockAlertLoaded.current) {
+      stockAlertLoaded.current = true
+      loadStockAlert()
+    }
+  }, [session])
+
+  const openStockFromAlert = () => {
+    setStockAlert((prev) => ({ ...prev, isOpen: false }))
+    setActiveTab('inventory')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const submitStaffUser = async (e) => {
     e.preventDefault()
@@ -730,6 +799,49 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         logout={logout}
         onProfileClick={onProfileClick}
       />
+
+
+      {stockAlert.isOpen && (
+        <div className="fixed inset-x-3 top-24 z-[70] mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[2rem] border border-orange-300 bg-white p-4 shadow-2xl shadow-orange-900/10 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Alerta de inventario</p>
+              <h3 className="mt-1 text-lg font-black text-ui-text">Revisar stock antes de vender</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStockAlert((prev) => ({ ...prev, isOpen: false }))}
+              className="rounded-full border border-ui-border bg-ui-bg px-3 py-1 text-xs font-black text-ui-muted"
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {stockAlert.platesCount !== null && stockAlert.platesCount <= 5 && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-black text-red-700">
+                Quedan solo {stockAlert.platesCount} platos disponibles.
+              </div>
+            )}
+
+            {stockAlert.items.slice(0, 6).map((item) => (
+              <div key={item.name} className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-900">
+                <span className="font-black">{item.name}</span>: disponible {formatInventoryAmount(item.stock)} {item.unit}. Necesario para 1 plato: {item.requiredLabel}.
+              </div>
+            ))}
+
+            {stockAlert.items.length > 6 && (
+              <p className="text-xs font-bold text-ui-muted">Y {stockAlert.items.length - 6} productos más con stock insuficiente.</p>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <Button type="button" onClick={openStockFromAlert} className="!py-3">
+              Revisar stock
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="pt-20 flex flex-col min-h-screen">
         <main className="flex-1 w-full max-w-full overflow-x-hidden p-2 sm:p-6 lg:p-10">
@@ -1154,16 +1266,21 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 : 0
               return (
                 <div key={item._id} className={`w-full min-w-0 overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-ui-border p-4 sm:p-5 transition-all ${!isActive ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 min-w-0">
+                  <div className="flex flex-row items-start justify-between gap-3 sm:gap-4 mb-4 min-w-0">
                     <div className="min-w-0 max-w-full">
                       <h3 className="font-black text-ui-text capitalize leading-tight break-words">{meta?.label || item.name}</h3>
                       <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1 break-words">{meta?.category || 'Inventario'}</p>
                     </div>
-                    <div className="text-left sm:text-right shrink-0 max-w-full">
+                    <div className="text-right shrink-0 max-w-[45%]">
                       <p className={`text-2xl sm:text-xl font-black break-words ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
                         {Number(item.stock).toFixed(2)}
                       </p>
                       <p className="text-[10px] font-bold text-ui-muted uppercase break-words">{item.unit}</p>
+                      {getPlatesByIngredient(item) !== null && (
+                        <p className="mt-1 rounded-full bg-brand-blue/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand-blue">
+                          {getPlatesByIngredient(item)} platos
+                        </p>
+                      )}
                     </div>
                   </div>
 
