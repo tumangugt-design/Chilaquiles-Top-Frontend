@@ -268,7 +268,22 @@ const LandingPage = () => {
       <footer className="py-14 border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <Logo className="w-32 h-auto opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-          <p className="text-[10px] font-semibold text-gray-300 uppercase tracking-[0.2em]">
+          
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+            <a href="/privacidad" className="hover:text-brand-blue transition-colors">
+              Política de Privacidad
+            </a>
+            <span className="hidden md:inline text-gray-200">|</span>
+            <a href="/terminos" className="hover:text-brand-blue transition-colors">
+              Condiciones del Servicio
+            </a>
+            <span className="hidden md:inline text-gray-200">|</span>
+            <a href="/eliminacion-datos" className="hover:text-brand-blue transition-colors">
+              Eliminación de Datos
+            </a>
+          </div>
+
+          <p className="text-[10px] font-semibold text-gray-300 uppercase tracking-[0.2em] text-center md:text-right">
             © 2026 Chilaquiles TOP. Todos los derechos reservados.
           </p>
         </div>

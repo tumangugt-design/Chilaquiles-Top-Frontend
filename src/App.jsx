@@ -20,6 +20,10 @@ import ChefPage from './pages/Chef.jsx'
 import RepartidorPage from './pages/Repartidor.jsx'
 import ProfileModal from './components/ui/ProfileModal.jsx'
 import LandingPage from './pages/Landing.jsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
+import TermsOfService from './pages/TermsOfService.jsx'
+import DataDeletion from './pages/DataDeletion.jsx'
+
 
 function CustomerFlow({ onToggleTheme, currentTheme }) {
   const [currentStep, setCurrentStep] = useState('LOCATION')
@@ -148,9 +152,15 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                 <div className="bg-ui-card rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-10 shadow-xl border border-ui-border min-h-[400px] sm:min-h-[500px] animate-fade-in transition-all">
                   {renderStep()}
                 </div>
-                <div className="mt-8 text-center text-xs text-ui-muted font-medium space-y-1 mb-8">
-                  <p>© 2026 Chilaquiles TOP.</p>
-                  <p className="opacity-75">Hecho al momento.</p>
+                <div className="mt-8 text-center text-xs text-ui-muted font-medium space-y-2 mb-8">
+                  <p>© 2026 Chilaquiles TOP. <span className="opacity-75">Hecho al momento.</span></p>
+                  <div className="flex justify-center gap-4 text-[10px] opacity-75">
+                    <a href="/privacidad" className="hover:text-brand-blue transition-colors">Privacidad</a>
+                    <span>•</span>
+                    <a href="/terminos" className="hover:text-brand-blue transition-colors">Condiciones</a>
+                    <span>•</span>
+                    <a href="/eliminacion-datos" className="hover:text-brand-blue transition-colors">Eliminación de datos</a>
+                  </div>
                 </div>
               </div>
               <OrderSummary order={order} currentStep={currentStep} onEdit={goToStep} onNext={nextStep} onAddAnother={handleAddCurrentPlateToCart} />
@@ -273,6 +283,9 @@ function App() {
   if (path === '/chef') return renderPanel(ChefPage)
   if (path === '/repartidor') return renderPanel(RepartidorPage)
   if (path === '/clientes') return <CustomerFlow onToggleTheme={toggleTheme} currentTheme={theme} />
+  if (path === '/privacidad') return <PrivacyPolicy />
+  if (path === '/terminos') return <TermsOfService />
+  if (path === '/eliminacion-datos') return <DataDeletion />
   if (path === '/') return <LandingPage />
 
   return <LandingPage />
