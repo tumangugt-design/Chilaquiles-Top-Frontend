@@ -167,6 +167,7 @@ const LocationPage = ({ onConfirm }) => {
   }
 
   return (
+    <>
     <div className="bg-ui-card rounded-3xl p-6 sm:p-12 shadow-2xl max-w-md w-full text-center relative overflow-hidden animate-slide-up border border-ui-border transition-colors duration-300">
       <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-blue to-brand-orange" />
 
@@ -316,22 +317,6 @@ const LocationPage = ({ onConfirm }) => {
 
 
 
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 sm:p-6 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}>
-          <div className="relative w-full max-w-5xl max-h-[92vh] overflow-auto rounded-3xl bg-white p-2 sm:p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-2xl font-black text-ui-text shadow-lg transition hover:scale-105"
-              aria-label="Cerrar menú"
-            >
-              ×
-            </button>
-            <img src={menuImage} alt="Menú Chilaquiles TOP" className="h-auto w-full rounded-2xl object-contain" />
-          </div>
-        </div>
-      )}
-
       <div className="mt-6 pt-4 sm:mt-8 sm:pt-6 border-t border-ui-border/50">
         <div className="flex items-center justify-center space-x-2">
           <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500" />
@@ -339,6 +324,33 @@ const LocationPage = ({ onConfirm }) => {
         </div>
       </div>
     </div>
+
+    {isMenuOpen && (
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
+        onClick={() => setIsMenuOpen(false)}
+      >
+        <div
+          className="relative w-full max-h-[92vh] overflow-auto rounded-3xl bg-white p-2 shadow-2xl sm:p-4 md:flex md:h-[92vh] md:max-w-[96vw] md:items-center md:justify-center md:overflow-hidden md:p-6"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen(false)}
+            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-2xl font-black text-ui-text shadow-lg transition hover:scale-105 md:right-6 md:top-6"
+            aria-label="Cerrar menú"
+          >
+            ×
+          </button>
+          <img
+            src={menuImage}
+            alt="Menú Chilaquiles TOP"
+            className="h-auto w-full rounded-2xl object-contain md:max-h-[86vh] md:w-auto md:max-w-full"
+          />
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
