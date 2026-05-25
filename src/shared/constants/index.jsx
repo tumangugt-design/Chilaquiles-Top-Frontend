@@ -62,16 +62,18 @@ export const INVENTORY_PRODUCT_OPTIONS = [
   { value: 'crema', label: 'Crema', unit: 'ml', category: 'Base', usedPerPlate: 25 },
   { value: 'cebolla', label: 'Cebolla', unit: 'g', category: 'Base', usedPerPlate: 15 },
   { value: 'cilantro', label: 'Cilantro', unit: 'g', category: 'Base', usedPerPlate: 10 },
-  { value: 'salsa roja', label: 'Salsa Roja', unit: 'ml', category: 'Salsas', usedPerPlate: SAUCE_PORTIONS.fullMl, displayUsedPerPlate: SAUCE_PORTIONS.fullOz, displayUnit: 'oz' },
-  { value: 'salsa verde', label: 'Salsa Verde', unit: 'ml', category: 'Salsas', usedPerPlate: SAUCE_PORTIONS.fullMl, displayUsedPerPlate: SAUCE_PORTIONS.fullOz, displayUnit: 'oz' },
+  { value: 'salsa roja', label: 'Salsa Roja', unit: 'ml', category: 'Salsas', usedPerPlate: 200, displayUsedPerPlate: 200, displayUnit: 'ml' },
+  { value: 'salsa verde', label: 'Salsa Verde', unit: 'ml', category: 'Salsas', usedPerPlate: 200, displayUsedPerPlate: 200, displayUnit: 'ml' },
   { value: 'steak', label: 'Steak', unit: 'g', category: 'Proteínas', usedPerPlate: 60 },
   { value: 'pollo', label: 'Pollo', unit: 'g', category: 'Proteínas', usedPerPlate: 60 },
   { value: 'chorizo', label: 'Chorizo', unit: 'g', category: 'Proteínas', usedPerPlate: 60 },
   { value: 'aguacate', label: 'Aguacate', unit: 'und', category: 'Complementos', usedPerPlate: 0.5 },
-  { value: 'cebolla caramelizada', label: 'Cebolla caramelizada', unit: 'g', category: 'Complementos', usedPerPlate: 20 },
+  { value: 'cebolla caramelizada', label: 'Cebolla caramelizada', unit: 'g', category: 'Complementos', usedPerPlate: 30 },
   { value: 'queso extra', label: 'Queso extra', unit: 'g', category: 'Complementos', usedPerPlate: 30 },
-  { value: 'plato para salsa', label: 'Plato para salsa', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
-  { value: 'tapadera para salsa', label: 'Tapadera para salsa', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
+  { value: 'plato de 8 onz', label: 'Plato de 8 onz', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
+  { value: 'tapadera de 8 onz', label: 'Tapadera de 8 onz', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
+  { value: 'plato de 4 onz', label: 'Plato de 4 onz', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
+  { value: 'tapadera de 4 onz', label: 'Tapadera de 4 onz', unit: 'und', category: 'Empaque', usedPerPlate: 1 },
 ]
 
 export const INVENTORY_PRODUCT_MAP = Object.fromEntries(
