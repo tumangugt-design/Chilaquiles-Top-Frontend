@@ -39,6 +39,11 @@ const ChefOrderCard = ({ order, onAdvance, onArchive }) => (
       <div>
         <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de Orden</p>
         <h3 className="text-2xl font-black text-black/80">{order.orderNumber || order._id.slice(-6)}</h3>
+        {order.sauceTemperature && (
+          <div className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${order.sauceTemperature === 'FRIO' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+            <span className="text-sm">{order.sauceTemperature === 'FRIO' ? '🧊' : '♨️'}</span> Salsa {order.sauceTemperature}
+          </div>
+        )}
       </div>
       <StatusBadge value={order.status} />
     </div>

@@ -18,6 +18,7 @@ const createInitialOrder = () => ({
   cart: [],
   currentPlate: createInitialPlate(),
   requestedCount: null,
+  sauceTemperature: null,
   customer: {
     name: '',
     phone: '',

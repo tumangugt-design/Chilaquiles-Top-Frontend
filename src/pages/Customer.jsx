@@ -281,6 +281,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
       const allItems = [...order.cart, order.currentPlate]
       const response = await createOrder({
         customer: payloadCustomer,
+        sauceTemperature: order.sauceTemperature,
         items: allItems.map((item) => ({
           sauce: item.sauce,
           protein: item.protein,

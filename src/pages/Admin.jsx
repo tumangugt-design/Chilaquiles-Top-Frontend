@@ -171,6 +171,11 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
           <p className="text-[10px] font-black text-black/55 uppercase tracking-widest">Número de orden</p>
           <p className="font-black text-xl text-black/80">{order.orderNumber || order._id?.slice(-6)}</p>
           <p className="text-xs font-bold text-black/60 mt-1">{formatDate(order.createdAt)}</p>
+          {order.sauceTemperature && (
+            <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${order.sauceTemperature === 'FRIO' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+              <span className="text-xs">{order.sauceTemperature === 'FRIO' ? '🧊' : '♨️'}</span> Salsa {order.sauceTemperature}
+            </div>
+          )}
         </div>
         <StatusBadge value={order.status} />
       </div>
