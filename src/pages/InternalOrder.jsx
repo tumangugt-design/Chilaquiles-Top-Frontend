@@ -12,6 +12,7 @@ import ProteinPage from './Protein.jsx'
 import ComplementPage from './Complement.jsx'
 import BaseRecipePage from './BaseRecipe.jsx'
 import SummaryPage from './Summary.jsx'
+import TemperaturePage from './Temperature.jsx'
 import CustomerPage from './Customer.jsx'
 import ConfirmationPage from './Confirmation.jsx'
 import toast from 'react-hot-toast'
@@ -178,6 +179,8 @@ const InternalOrder = ({ onSuccess }) => {
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+      case 'TEMPERATURE':
+        return <TemperaturePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'CUSTOMER':
         return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} isInternal />
       case 'CONFIRMATION':

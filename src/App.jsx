@@ -13,6 +13,7 @@ import ProteinPage from './pages/Protein.jsx'
 import ComplementPage from './pages/Complement.jsx'
 import BaseRecipePage from './pages/BaseRecipe.jsx'
 import SummaryPage from './pages/Summary.jsx'
+import TemperaturePage from './pages/Temperature.jsx'
 import CustomerPage from './pages/Customer.jsx'
 import ConfirmationPage from './pages/Confirmation.jsx'
 import AdminPage from './pages/Admin.jsx'
@@ -126,6 +127,8 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+      case 'TEMPERATURE':
+        return <TemperaturePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'CUSTOMER':
         return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} />
       case 'CONFIRMATION':

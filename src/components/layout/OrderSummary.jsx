@@ -26,6 +26,8 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
         return true
       case 'SUMMARY':
         return !!currentPlate.sauce && !!currentPlate.protein && !!currentPlate.complement
+      case 'TEMPERATURE':
+        return !!order.sauceTemperature
       case 'CUSTOMER':
         return order.customer.name.length > 2 && order.customer.phone.length >= 8 && order.customer.address.length > 5
       default:
@@ -38,6 +40,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
       if (totalItems < (order.requestedCount || 1)) return 'Personalizar Siguiente'
       return 'Finalizar Pedido'
     }
+    if (currentStep === 'TEMPERATURE') return 'Continuar'
     if (currentStep === 'CUSTOMER') return 'Confirmar Datos'
     return 'Siguiente'
   }
@@ -57,7 +60,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
     return option ? option.label : value
   }
 
-  const showBaseInSummary = ['BASE_RECIPE', 'SUMMARY', 'CUSTOMER'].includes(currentStep)
+  const showBaseInSummary = ['BASE_RECIPE', 'SUMMARY', 'TEMPERATURE', 'CUSTOMER'].includes(currentStep)
 
   const SummaryContent = () => (
     <div className="space-y-6">

@@ -125,6 +125,7 @@ export const STEPS_ORDER = [
   'COMPLEMENT',
   'BASE_RECIPE',
   'SUMMARY',
+  'TEMPERATURE',
   'CUSTOMER',
   'CONFIRMATION',
 ]
@@ -137,6 +138,7 @@ export const STEP_LABELS = {
   COMPLEMENT: 'Complemento',
   BASE_RECIPE: 'Receta Base',
   SUMMARY: 'Resumen',
+  TEMPERATURE: 'Temperatura',
   CUSTOMER: 'Datos',
   CONFIRMATION: 'Confirmación',
 }

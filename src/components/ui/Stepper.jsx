@@ -13,6 +13,7 @@ const Stepper = ({ currentStep }) => {
     { label: 'Complemento', step: 'COMPLEMENT' },
     { label: 'Base', step: 'BASE_RECIPE' },
     { label: 'Confirmar', step: 'SUMMARY' },
+    { label: 'Temperatura', step: 'TEMPERATURE' },
     { label: 'Datos', step: 'CUSTOMER' },
   ]
 
