@@ -87,6 +87,80 @@ const LocationPage = ({ onConfirm }) => {
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
+  const nextOpenText = useMemo(() => {
+    if (!hours) return ''
+    const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const DAY_NAMES_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+    // Get current date/time in Guatemala (UTC-6)
+    const now = new Date()
+    const gtTime = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+    
+    const currentMinutes = gtTime.getUTCHours() * 60 + gtTime.getUTCMinutes()
+
+    const toMinutes = (timeStr) => {
+      if (!timeStr) return null
+      const [h, m] = timeStr.split(':').map(Number)
+      return h * 60 + m
+    }
+
+    const getScheduleForOffset = (offset) => {
+      const checkDate = new Date(gtTime.getTime() + offset * 24 * 60 * 60 * 1000)
+      const checkDateStr = `${checkDate.getUTCFullYear()}-${String(checkDate.getUTCMonth() + 1).padStart(2, '0')}-${String(checkDate.getUTCDate()).padStart(2, '0')}`
+      const checkDayOfWeek = checkDate.getUTCDay()
+      const dayKey = DAY_KEYS[checkDayOfWeek]
+
+      let schedule = null
+
+      // 1. Check special dates (exceptions)
+      if (hours.specialDates && hours.specialDates[checkDateStr]) {
+        schedule = hours.specialDates[checkDateStr]
+      }
+
+      // 2. Check date ranges
+      if (!schedule && hours.dateRanges && Array.isArray(hours.dateRanges)) {
+        const activeRange = hours.dateRanges.find(r => checkDateStr >= r.start && checkDateStr <= r.end)
+        if (activeRange) {
+          schedule = activeRange
+        }
+      }
+
+      // 3. Check weekly schedule
+      if (!schedule && hours.weekly) {
+        schedule = hours.weekly[dayKey] || hours.weekly[String(checkDayOfWeek)] || hours.weekly[checkDayOfWeek]
+      }
+
+      // 4. Fallback to top-level/default
+      if (!schedule) {
+        schedule = { isOpen: hours.isOpen !== false, openTime: hours.openTime || '08:00', closeTime: hours.closeTime || '17:00' }
+      }
+
+      return {
+        isOpen: schedule.isOpen !== false,
+        openTime: schedule.openTime || '08:00',
+        closeTime: schedule.closeTime || '17:00',
+        dayOfWeek: checkDayOfWeek
+      }
+    }
+
+    for (let i = 0; i < 14; i++) {
+      const sched = getScheduleForOffset(i)
+      if (sched.isOpen) {
+        const openMin = toMinutes(sched.openTime)
+        if (i === 0) {
+          if (currentMinutes < openMin) {
+            return `Abierto hoy de ${formatHour(sched.openTime)} a ${formatHour(sched.closeTime)}`
+          }
+        } else {
+          const prefix = i === 1 ? 'mañana' : `el día ${DAY_NAMES_ES[sched.dayOfWeek]}`
+          return `Abierto desde ${prefix} de ${formatHour(sched.openTime)} a ${formatHour(sched.closeTime)}`
+        }
+      }
+    }
+
+    return ''
+  }, [hours])
+
   useEffect(() => {
     let mounted = true
     const loadAvailable = async () => {
@@ -198,7 +272,9 @@ const LocationPage = ({ onConfirm }) => {
               ) : (
                 <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3">
                   <p className="text-[10px] font-black uppercase tracking-widest text-red-600">Cerrado</p>
-                  {hours.openTime && hours.closeTime ? (
+                  {nextOpenText ? (
+                    <p className="text-sm font-black text-red-700">{nextOpenText}</p>
+                  ) : hours.openTime && hours.closeTime ? (
                     <p className="text-sm font-black text-red-700">Horario: {formatHour(hours.openTime)} - {formatHour(hours.closeTime)}</p>
                   ) : (
                     <p className="text-sm font-black text-red-700">Vuelve más tarde.</p>
