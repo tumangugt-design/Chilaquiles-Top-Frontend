@@ -417,7 +417,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [simulatedCosts, setSimulatedCosts] = useState({})
-  const [calcSelectedBases, setCalcSelectedBases] = useState(['totopos', 'queso', 'crema', 'cebolla', 'cilantro'])
+  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cebolla', 'cilantro'])
   const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
   const [isOpenBases, setIsOpenBases] = useState(false)
   const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
@@ -628,6 +628,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (!itemForm.name || !itemForm.amount) {
       return toast.error('Selecciona un producto y una cantidad')
     }
+    if (!itemForm.price || Number(itemForm.price) <= 0) {
+      return toast.error('Ingresa el costo total de compra para calcular precios correctamente')
+    }
 
     setIsSaving(true)
 
@@ -819,9 +822,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (calcSelectedEmpaques.includes('servilleta')) cost += getIngredientCost('servilleta', plate)
     if (calcSelectedEmpaques.includes('sticker')) cost += getIngredientCost('sticker', plate)
     
-    // Base
-    if (calcSelectedBases.includes('totopos')) cost += getIngredientCost('totopos', plate)
-    if (calcSelectedBases.includes('queso')) cost += getIngredientCost('queso', plate)
+    // Base (solo Crema, Cebolla, Cilantro — Totopos y Queso no aplican aquí)
     if (calcSelectedBases.includes('crema')) cost += getIngredientCost('crema', plate)
     if (calcSelectedBases.includes('cebolla')) cost += getIngredientCost('cebolla', plate)
     if (calcSelectedBases.includes('cilantro')) cost += getIngredientCost('cilantro', plate)
@@ -1357,14 +1358,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio fijo del producto (Q)</label>
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Costo Total de Compra (Q) <span className="text-red-500">*</span></label>
                 <input
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
+                  required
                   value={itemForm.price}
-                  placeholder="0.00"
+                  placeholder="Ej. 100.00"
                   onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
                 />
               </div>
@@ -1406,9 +1408,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </div>
                 ) : (
                   inventoryLogs.map((log) => {
-                    const hasPrice = log.reason?.includes('| Costo Total')
-                    const priceMatch = log.reason?.match(new RegExp('Costo Total Q([\\d.]+)'))
-                    const totalPrice = priceMatch ? Number(priceMatch[1]) : null
+                    const priceFromReason = log.reason?.match(new RegExp('Costo Total Q([\\d.]+)'))
+                    const totalPrice = priceFromReason
+                      ? Number(priceFromReason[1])
+                      : (log.price && log.price > 0 ? log.price : null)
                     const amtMatch = log.reason?.match(new RegExp('Entrada de inventario:\\s*([\\d.]+)\\s*(\\w+)'))
                     const entryAmt = amtMatch ? `${amtMatch[1]} ${amtMatch[2]}` : ''
                     const dateStr = log.createdAt
@@ -1427,10 +1430,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           <p className="text-[10px] text-ui-muted mt-0.5">{dateStr}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          {hasPrice && totalPrice !== null ? (
+                          {totalPrice !== null ? (
                             <p className="text-sm font-black text-green-600">Q{totalPrice.toFixed(2)}</p>
                           ) : (
-                            <p className="text-[10px] font-bold text-ui-muted/60 italic">Sin precio</p>
+                            <p className="text-[10px] font-bold text-orange-400 italic">Sin costo registrado</p>
                           )}
                           <p className="text-[10px] font-bold text-brand-blue mt-0.5">
                             {log.amountChanged > 0 ? `+${log.amountChanged}` : log.amountChanged} {product?.unit || ''}
@@ -1912,7 +1915,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <span className="truncate">
                       {calcSelectedBases.length === 0 
                         ? 'Ninguno' 
-                        : calcSelectedBases.length === 5 
+                        : calcSelectedBases.length === 3 
                           ? 'Todos' 
                           : calcSelectedBases.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
                       }
@@ -1922,7 +1925,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   
                   {isOpenBases && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
-                      {['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].map((name) => {
+                      {['crema', 'cebolla', 'cilantro'].map((name) => {
                         const product = INVENTORY_PRODUCT_MAP[name]
                         if (!product) return null
                         const isChecked = calcSelectedBases.includes(name)
@@ -2052,7 +2055,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   {
                     title: 'Ingredientes Base',
                     items: activeIngredients.filter(name => 
-                      ['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].includes(name)
+                      ['crema', 'cebolla', 'cilantro'].includes(name)
                     )
                   },
                   {
