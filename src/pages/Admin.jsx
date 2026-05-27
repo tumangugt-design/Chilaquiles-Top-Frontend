@@ -87,6 +87,42 @@ const formatInventoryAmount = (value) => {
   return numeric.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
 }
 
+const formatCurrency = (value) => {
+  const numeric = Number(value || 0)
+  if (Number.isNaN(numeric)) return '0.00'
+  return numeric.toFixed(2)
+}
+
+const getCostSource = (source = '') => {
+  if (source === 'inventory') return 'Última entrada'
+  if (source === 'log') return 'Historial de entradas'
+  if (source === 'inventory-price') return 'Precio guardado'
+  if (source === 'manual') return 'Simulación manual'
+  return 'Entradas'
+}
+
+const mergeCostSources = (lastPurchases = {}, calculatorCosts = {}) => {
+  const merged = { ...(lastPurchases || {}) }
+
+  Object.entries(calculatorCosts || {}).forEach(([key, override]) => {
+    if (!override || typeof override !== 'object') return
+    const base = merged[key] || {}
+    const next = { ...base }
+
+    Object.entries(override).forEach(([field, value]) => {
+      if (value === undefined || value === null || value === '') return
+      next[field] = value
+    })
+
+    if (Object.keys(next).length > 0) {
+      next.source = override.source || 'manual'
+      merged[key] = next
+    }
+  })
+
+  return merged
+}
+
 const getPlatesByIngredient = (item) => {
   const meta = INVENTORY_PRODUCT_MAP[item.name]
   const required = Number(meta?.usedPerPlate || 0)
@@ -514,12 +550,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         const lastPurchases = lastPurchasesResponse.data || {}
         const calcCosts = calcCostsResponse.data || {}
         
-        const merged = { ...lastPurchases }
-        Object.keys(calcCosts).forEach((key) => {
-          merged[key] = calcCosts[key]
-        })
-        
-        setSimulatedCosts(merged)
+        setSimulatedCosts(mergeCostSources(lastPurchases, calcCosts))
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -820,19 +851,24 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const getIngredientCost = (name, plate) => {
     const sim = simulatedCosts[name]
+    const product = INVENTORY_PRODUCT_MAP[name]
     const qtyVal = sim?.qty !== undefined && sim?.qty !== '' ? Number(sim.qty) : 0
     const priceVal = sim?.price !== undefined && sim?.price !== '' ? Number(sim.price) : 0
-    
-    if (qtyVal > 0 && priceVal > 0) {
-      const product = INVENTORY_PRODUCT_MAP[name]
-      if (product) {
-        const baseQty = convertInventoryAmountToBaseUnit(qtyVal, sim.unit, product)
-        if (baseQty > 0) {
-          const costPerBaseUnit = priceVal / baseQty
-          return costPerBaseUnit * (product.usedPerPlate || 0)
-        }
+
+    // Primero usa la última entrada completa: cantidad comprada + costo total.
+    if (qtyVal > 0 && priceVal > 0 && product) {
+      const baseQty = convertInventoryAmountToBaseUnit(qtyVal, sim.unit, product)
+      if (baseQty > 0) {
+        const costPerBaseUnit = priceVal / baseQty
+        return costPerBaseUnit * (product.usedPerPlate || 0)
       }
     }
+
+    // Si una entrada antigua no tiene costo total, usa lastPrice del inventario,
+    // que ya representa el costo de la porción usada por plato.
+    const inventoryItem = inventory.find(i => i.name === name)
+    const fallbackPortionPrice = Number(sim?.portionPrice || inventoryItem?.lastPrice || 0)
+    if (fallbackPortionPrice > 0) return fallbackPortionPrice
 
     return 0
   }
@@ -906,12 +942,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       const lastPurchasesResponse = await getLastPurchases().catch(() => ({ data: {} }))
       const lastPurchases = lastPurchasesResponse.data || {}
       
-      const merged = { ...lastPurchases }
-      Object.keys(updated).forEach((key) => {
-        merged[key] = updated[key]
-      })
-      
-      setSimulatedCosts(merged)
+      setSimulatedCosts(mergeCostSources(lastPurchases, updated))
       
       if (qtyVal <= 0 || priceVal <= 0) {
         toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} restablecido con éxito`)
@@ -2151,9 +2182,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
                 return (
                   <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-4">
-                    <p className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">
-                      Precio de Compra de Ingredientes
-                    </p>
+                    <div className="rounded-2xl border border-brand-blue/10 bg-brand-blue/5 px-4 py-3">
+                      <p className="text-[10px] font-black uppercase text-brand-blue tracking-widest">
+                        Costeo automático desde Entradas
+                      </p>
+                      <p className="text-xs font-bold text-ui-muted mt-1">
+                        La calculadora usa la última entrada registrada de cada ingrediente. El admin solo debe cambiar salsa, proteína, complemento, bases, cantidad de platos y precio de venta.
+                      </p>
+                    </div>
                     
                     {groups.map((group) => {
                       if (group.items.length === 0) return null
@@ -2168,21 +2204,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                               const product = INVENTORY_PRODUCT_MAP[name]
                               if (!product) return null
                               
-                              const sim = simulatedCosts[name] || { qty: '', unit: getAllowedInputUnits(product)[0]?.value || 'und', price: '' }
-                              
-                              const updateSim = (field, val) => {
-                                setSimulatedCosts(prev => ({
-                                  ...prev,
-                                  [name]: {
-                                    ...sim,
-                                    [field]: val
-                                  }
-                                }))
-                              }
-                              
+                              const sim = simulatedCosts[name] || {}
+                              const unitLabel = sim.unit || product.unit
+                              const purchaseQty = sim.qty !== undefined && sim.qty !== null && sim.qty !== ''
+                                ? `${formatInventoryAmount(sim.qty)} ${unitLabel}`
+                                : 'Sin entrada registrada'
+                              const purchasePrice = sim.price !== undefined && sim.price !== null && sim.price !== '' && Number(sim.price) > 0
+                                ? `Q${formatCurrency(sim.price)}`
+                                : 'Sin costo total'
+                              const costPerPlate = getIngredientCost(name, calcPlate)
+                              const hasCost = costPerPlate > 0
+
                               return (
-                                <div key={name} className="flex flex-col md:flex-row items-end md:items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full">
-                                  <div className="w-full md:w-1/4 text-left shrink-0">
+                                <div key={name} className="grid grid-cols-1 md:grid-cols-[1.2fr,1fr,1fr,0.8fr] gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full items-center">
+                                  <div className="min-w-0">
                                     <div className="text-xs font-black text-ui-text capitalize">
                                       {product.label}
                                     </div>
@@ -2190,56 +2225,23 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                       Usa {product.usedPerPlate} {product.unit} por plato
                                     </span>
                                   </div>
-                                  
-                                  <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
-                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Cant. Comprada</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                      placeholder="Ej. 10"
-                                      value={sim.qty}
-                                      onChange={(e) => updateSim('qty', e.target.value)}
-                                    />
+
+                                  <div className="rounded-xl bg-ui-bg/45 border border-ui-border px-3 py-2 min-w-0">
+                                    <p className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Última cantidad</p>
+                                    <p className="text-xs font-black text-ui-text truncate">{purchaseQty}</p>
                                   </div>
 
-                                  <div className="w-full md:w-[100px] flex flex-col gap-0.5 shrink-0">
-                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad</span>
-                                    <select
-                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                      value={sim.unit}
-                                      onChange={(e) => updateSim('unit', e.target.value)}
-                                    >
-                                      {getAllowedInputUnits(product).map((u) => (
-                                        <option key={u.value} value={u.value}>
-                                          {u.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                  <div className="rounded-xl bg-ui-bg/45 border border-ui-border px-3 py-2 min-w-0">
+                                    <p className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Último costo</p>
+                                    <p className="text-xs font-black text-ui-text truncate">{purchasePrice}</p>
                                   </div>
 
-                                  <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
-                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                      placeholder="Ej. 20"
-                                      value={sim.price}
-                                      onChange={(e) => updateSim('price', e.target.value)}
-                                    />
-                                  </div>
-
-                                  <div className="w-full md:w-auto shrink-0 pt-2 md:pt-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveCalculatorCost(name)}
-                                      className="w-full md:w-auto bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest px-3 py-2.5 hover:shadow-lg transition-all hover:bg-brand-blue/90"
-                                    >
-                                      Guardar
-                                    </button>
+                                  <div className={`rounded-xl px-3 py-2 text-right border ${hasCost ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
+                                    <p className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Costo/plato</p>
+                                    <p className={`text-sm font-black ${hasCost ? 'text-green-600' : 'text-orange-500'}`}>
+                                      {hasCost ? `Q${costPerPlate.toFixed(2)}` : 'Pendiente'}
+                                    </p>
+                                    <p className="text-[8px] font-bold text-ui-muted mt-0.5">{getCostSource(sim.source)}</p>
                                   </div>
                                 </div>
                               )
