@@ -22,7 +22,9 @@ import {
   getCalculatorCosts,
   updateCalculatorCosts,
   getFinancesSummary,
-  getAvailablePlates
+  getAvailablePlates,
+  getLastPurchases,
+  getInventoryLogs
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, getAllowedInputUnits, convertInventoryAmountToBaseUnit } from '../shared/constants/index.jsx'
@@ -415,6 +417,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [simulatedCosts, setSimulatedCosts] = useState({})
+  const [calcSelectedBases, setCalcSelectedBases] = useState(['totopos', 'queso', 'crema', 'cebolla', 'cilantro'])
+  const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
+  const [isOpenBases, setIsOpenBases] = useState(false)
+  const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
+  const [inventoryLogs, setInventoryLogs] = useState([])
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
 
@@ -463,17 +470,32 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       } else if (activeTab === 'staff') {
         await Promise.all([loadRoleUsers('CHEF'), loadRoleUsers('REPARTIDOR')])
       } else if (['entries', 'inventory'].includes(activeTab)) {
-        const inventoryResponse = await getInventory()
+        const [inventoryResponse, logsResponse] = await Promise.all([
+          getInventory(),
+          activeTab === 'entries' ? getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+        ])
         setInventory(inventoryResponse.data)
+        if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
-        const [promotionsResponse, inventoryResponse, calcCostsResponse] = await Promise.all([
+        const [promotionsResponse, inventoryResponse, calcCostsResponse, lastPurchasesResponse] = await Promise.all([
           getPromotions(),
           getInventory(),
-          getCalculatorCosts().catch(() => ({ data: {} }))
+          getCalculatorCosts().catch(() => ({ data: {} })),
+          getLastPurchases().catch(() => ({ data: {} }))
         ])
         setPromotions(promotionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
-        setSimulatedCosts(calcCostsResponse.data || {})
+        
+        // Merge last purchases and calculator costs overrides
+        const lastPurchases = lastPurchasesResponse.data || {}
+        const calcCosts = calcCostsResponse.data || {}
+        
+        const merged = { ...lastPurchases }
+        Object.keys(calcCosts).forEach((key) => {
+          merged[key] = calcCosts[key]
+        })
+        
+        setSimulatedCosts(merged)
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -770,28 +792,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const getIngredientCost = (name, plate) => {
-    // Check if it's one of the selected ingredients in the plate configuration
-    const activeIngredients = []
-    if (plate?.sauce === 'ROJA') activeIngredients.push('salsa roja')
-    else if (plate?.sauce === 'VERDE') activeIngredients.push('salsa verde')
-    else if (plate?.sauce === 'DIVORCIADOS') {
-      activeIngredients.push('salsa roja')
-      activeIngredients.push('salsa verde')
-    }
-    
-    if (plate?.protein === 'POLLO') activeIngredients.push('pollo')
-    else if (plate?.protein === 'STEAK') activeIngredients.push('steak')
-    else if (plate?.protein === 'CHORIZO') activeIngredients.push('chorizo')
-    
-    if (plate?.complement === 'AGUACATE') activeIngredients.push('aguacate')
-    else if (plate?.complement === 'CEBOLLA_CARAMELIZADA' || plate?.complement === 'CEBOLLA CARAMELIZADA') activeIngredients.push('cebolla caramelizada')
-    else if (plate?.complement === 'QUESO_EXTRA' || plate?.complement === 'QUESO EXTRA') activeIngredients.push('queso extra')
-
-    const isActive = activeIngredients.includes(name)
-
     const sim = simulatedCosts[name]
-    const qtyVal = Number(sim?.qty)
-    const priceVal = Number(sim?.price)
+    const qtyVal = sim?.qty !== undefined && sim?.qty !== '' ? Number(sim.qty) : 0
+    const priceVal = sim?.price !== undefined && sim?.price !== '' ? Number(sim.price) : 0
     
     if (qtyVal > 0 && priceVal > 0) {
       const product = INVENTORY_PRODUCT_MAP[name]
@@ -804,39 +807,38 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       }
     }
 
-    if (isActive) {
-      return 0
-    }
-
-    return getProductCost(name)
+    return 0
   }
 
   const calculatePlateRecipeCost = (plate) => {
     let cost = 0
-    cost += getIngredientCost('plato rectangular', plate)
-    cost += getIngredientCost('tenedor', plate)
-    cost += getIngredientCost('servilleta', plate)
-    cost += getIngredientCost('sticker', plate)
     
-    cost += getIngredientCost('totopos', plate)
-    cost += getIngredientCost('queso', plate)
-    if (plate.baseRecipe?.cream !== false) cost += getIngredientCost('crema', plate)
-    if (plate.baseRecipe?.onion !== false) cost += getIngredientCost('cebolla', plate)
-    if (plate.baseRecipe?.cilantro !== false) cost += getIngredientCost('cilantro', plate)
+    // Empaques
+    if (calcSelectedEmpaques.includes('plato rectangular')) cost += getIngredientCost('plato rectangular', plate)
+    if (calcSelectedEmpaques.includes('tenedor')) cost += getIngredientCost('tenedor', plate)
+    if (calcSelectedEmpaques.includes('servilleta')) cost += getIngredientCost('servilleta', plate)
+    if (calcSelectedEmpaques.includes('sticker')) cost += getIngredientCost('sticker', plate)
+    
+    // Base
+    if (calcSelectedBases.includes('totopos')) cost += getIngredientCost('totopos', plate)
+    if (calcSelectedBases.includes('queso')) cost += getIngredientCost('queso', plate)
+    if (calcSelectedBases.includes('crema')) cost += getIngredientCost('crema', plate)
+    if (calcSelectedBases.includes('cebolla')) cost += getIngredientCost('cebolla', plate)
+    if (calcSelectedBases.includes('cilantro')) cost += getIngredientCost('cilantro', plate)
 
     if (plate.sauce === 'ROJA') {
       cost += getIngredientCost('salsa roja', plate)
-      cost += getIngredientCost('plato de 8 onz', plate)
-      cost += getIngredientCost('tapadera de 8 onz', plate)
+      if (calcSelectedEmpaques.includes('plato de 8 onz')) cost += getIngredientCost('plato de 8 onz', plate)
+      if (calcSelectedEmpaques.includes('tapadera de 8 onz')) cost += getIngredientCost('tapadera de 8 onz', plate)
     } else if (plate.sauce === 'VERDE') {
       cost += getIngredientCost('salsa verde', plate)
-      cost += getIngredientCost('plato de 8 onz', plate)
-      cost += getIngredientCost('tapadera de 8 onz', plate)
+      if (calcSelectedEmpaques.includes('plato de 8 onz')) cost += getIngredientCost('plato de 8 onz', plate)
+      if (calcSelectedEmpaques.includes('tapadera de 8 onz')) cost += getIngredientCost('tapadera de 8 onz', plate)
     } else if (plate.sauce === 'DIVORCIADOS') {
       cost += getIngredientCost('salsa roja', plate) * 0.5
       cost += getIngredientCost('salsa verde', plate) * 0.5
-      cost += getIngredientCost('plato de 4 onz', plate) * 2
-      cost += getIngredientCost('tapadera de 4 onz', plate) * 2
+      if (calcSelectedEmpaques.includes('plato de 4 onz')) cost += getIngredientCost('plato de 4 onz', plate) * 2
+      if (calcSelectedEmpaques.includes('tapadera de 4 onz')) cost += getIngredientCost('tapadera de 4 onz', plate) * 2
     }
 
     if (plate.protein === 'STEAK') cost += getIngredientCost('steak', plate)
@@ -853,16 +855,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const handleSaveCalculatorCost = async (ingredientName) => {
     try {
       const item = simulatedCosts[ingredientName]
-      if (!item || !item.qty || !item.price) {
-        return toast.error('Ingresa cantidad y precio para guardar')
-      }
+      const qtyVal = item?.qty !== undefined && item?.qty !== '' ? Number(item.qty) : 0
+      const priceVal = item?.price !== undefined && item?.price !== '' ? Number(item.price) : 0
       
       const response = await getCalculatorCosts().catch(() => ({ data: {} }))
       const current = response.data || {}
       
-      const updated = {
-        ...current,
-        [ingredientName]: {
+      const updated = { ...current }
+      if (qtyVal <= 0 || priceVal <= 0) {
+        delete updated[ingredientName]
+      } else {
+        updated[ingredientName] = {
           qty: item.qty,
           unit: item.unit,
           price: item.price
@@ -870,8 +873,22 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       }
       
       await updateCalculatorCosts(updated)
-      setSimulatedCosts(updated)
-      toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} guardado con éxito`)
+      
+      const lastPurchasesResponse = await getLastPurchases().catch(() => ({ data: {} }))
+      const lastPurchases = lastPurchasesResponse.data || {}
+      
+      const merged = { ...lastPurchases }
+      Object.keys(updated).forEach((key) => {
+        merged[key] = updated[key]
+      })
+      
+      setSimulatedCosts(merged)
+      
+      if (qtyVal <= 0 || priceVal <= 0) {
+        toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} restablecido con éxito`)
+      } else {
+        toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} guardado con éxito`)
+      }
     } catch (err) {
       toast.error('No se pudo guardar el costo del ingrediente')
     }
@@ -1373,76 +1390,131 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </Button>
           </form>
 
-          <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
-            <div className="border-b border-ui-border pb-4">
-              <h3 className="text-xl font-black text-ui-text">Consumo por plato</h3>
+          <div className="space-y-4 min-w-0">
+            {/* ── Historial de Entradas ── */}
+            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
+              <div className="border-b border-ui-border pb-4">
+                <h3 className="text-xl font-black text-ui-text">Historial de Entradas</h3>
+                <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Últimas entradas registradas al inventario</p>
+              </div>
+
+              <div className="space-y-2 max-h-[22rem] overflow-y-auto pr-1">
+                {inventoryLogs.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <p className="text-ui-muted font-bold text-sm">No hay entradas registradas aún.</p>
+                    <p className="text-ui-muted text-xs mt-1">Las entradas que registres aparecerán aquí.</p>
+                  </div>
+                ) : (
+                  inventoryLogs.map((log) => {
+                    const hasPrice = log.reason?.includes('| Costo Total')
+                    const priceMatch = log.reason?.match(new RegExp('Costo Total Q([\\d.]+)'))
+                    const totalPrice = priceMatch ? Number(priceMatch[1]) : null
+                    const amtMatch = log.reason?.match(new RegExp('Entrada de inventario:\\s*([\\d.]+)\\s*(\\w+)'))
+                    const entryAmt = amtMatch ? `${amtMatch[1]} ${amtMatch[2]}` : ''
+                    const dateStr = log.createdAt
+                      ? new Date(log.createdAt).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : ''
+                    const product = INVENTORY_PRODUCT_MAP[log.ingredientName]
+                    return (
+                      <div key={log._id} className="rounded-2xl border border-ui-border bg-white/70 px-4 py-3 flex items-start justify-between gap-3 min-w-0">
+                        <div className="min-w-0">
+                          <p className="font-black text-ui-text text-sm leading-tight truncate">
+                            {product?.label || log.ingredientName}
+                          </p>
+                          <p className="text-[10px] font-bold text-ui-muted uppercase tracking-widest mt-0.5">
+                            {product?.category || ''} · {entryAmt}
+                          </p>
+                          <p className="text-[10px] text-ui-muted mt-0.5">{dateStr}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {hasPrice && totalPrice !== null ? (
+                            <p className="text-sm font-black text-green-600">Q{totalPrice.toFixed(2)}</p>
+                          ) : (
+                            <p className="text-[10px] font-bold text-ui-muted/60 italic">Sin precio</p>
+                          )}
+                          <p className="text-[10px] font-bold text-brand-blue mt-0.5">
+                            {log.amountChanged > 0 ? `+${log.amountChanged}` : log.amountChanged} {product?.unit || ''}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
 
-            <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
-              {INVENTORY_PRODUCT_OPTIONS.map((product) => {
-                const inventoryItem = inventory.find(i => i.name === product.value)
-                const fixedPrice = Number(inventoryItem?.lastPrice || 0)
-                const isEditingPrice = priceEditForm.name === product.value
-                return (
-                  <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
-                      <div className="min-w-0">
-                        <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
-                        <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
-                          {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="text-left sm:text-right shrink-0">
-                        <p className="text-sm font-black text-brand-blue break-words">
-                          {product.usedPerPlate} {product.unit}
-                        </p>
-                        <p className="text-[10px] font-black text-green-600 mt-0.5">
-                          Precio fijo Q{fixedPrice.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
+            {/* ── Consumo por Plato (referencia) ── */}
+            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
+              <div className="border-b border-ui-border pb-4">
+                <h3 className="text-xl font-black text-ui-text">Consumo por plato</h3>
+              </div>
 
-                    {isEditingPrice ? (
-                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
-                        <input
-                          className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={priceEditForm.price}
-                          onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
-                          placeholder="Precio fijo del producto"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleSaveProductPrice(product)}
-                          disabled={isSaving}
-                          className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelPriceEdit}
-                          className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
-                        >
-                          Cancelar
-                        </button>
+              <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
+                {INVENTORY_PRODUCT_OPTIONS.map((product) => {
+                  const inventoryItem = inventory.find(i => i.name === product.value)
+                  const fixedPrice = Number(inventoryItem?.lastPrice || 0)
+                  const isEditingPrice = priceEditForm.name === product.value
+                  return (
+                    <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+                        <div className="min-w-0">
+                          <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
+                          <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
+                            {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="text-left sm:text-right shrink-0">
+                          <p className="text-sm font-black text-brand-blue break-words">
+                            {product.usedPerPlate} {product.unit}
+                          </p>
+                          <p className="text-[10px] font-black text-green-600 mt-0.5">
+                            Precio fijo Q{fixedPrice.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleStartPriceEdit(product, fixedPrice)}
-                          className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
-                        >
-                          Editar precio
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+
+                      {isEditingPrice ? (
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
+                          <input
+                            className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={priceEditForm.price}
+                            onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
+                            placeholder="Precio fijo del producto"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveProductPrice(product)}
+                            disabled={isSaving}
+                            className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelPriceEdit}
+                            className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleStartPriceEdit(product, fixedPrice)}
+                            className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
+                          >
+                            Editar precio
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1763,13 +1835,36 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              { (isOpenBases || isOpenEmpaques) && (
+                <div 
+                  className="fixed inset-0 z-20 cursor-default" 
+                  onClick={() => {
+                    setIsOpenBases(false)
+                    setIsOpenEmpaques(false)
+                  }}
+                />
+              ) }
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 relative z-30">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Salsa</label>
                   <select
                     className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
                     value={calcPlate.sauce}
-                    onChange={(e) => setCalcPlate({ ...calcPlate, sauce: e.target.value })}
+                    onChange={(e) => {
+                      const nextSauce = e.target.value
+                      setCalcPlate(prev => ({ ...prev, sauce: nextSauce }))
+                      setCalcSelectedEmpaques(current => {
+                        let filtered = current.filter(item => 
+                          !['plato de 8 onz', 'tapadera de 8 onz', 'plato de 4 onz', 'tapadera de 4 onz'].includes(item)
+                        )
+                        if (nextSauce === 'DIVORCIADOS') {
+                          return [...filtered, 'plato de 4 onz', 'tapadera de 4 onz']
+                        } else {
+                          return [...filtered, 'plato de 8 onz', 'tapadera de 8 onz']
+                        }
+                      })
+                    }}
                   >
                     <option value="ROJA">Salsa Roja</option>
                     <option value="VERDE">Salsa Verde</option>
@@ -1802,6 +1897,120 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <option value="QUESO_EXTRA">Queso Extra</option>
                   </select>
                 </div>
+
+                {/* Ingredientes Base (Multi-select) */}
+                <div className="space-y-1 relative">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Ingredientes Base</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpenBases(!isOpenBases)
+                      setIsOpenEmpaques(false)
+                    }}
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs text-left flex justify-between items-center"
+                  >
+                    <span className="truncate">
+                      {calcSelectedBases.length === 0 
+                        ? 'Ninguno' 
+                        : calcSelectedBases.length === 5 
+                          ? 'Todos' 
+                          : calcSelectedBases.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
+                      }
+                    </span>
+                    <span className="text-[10px] ml-1 shrink-0 text-ui-muted">▼</span>
+                  </button>
+                  
+                  {isOpenBases && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
+                      {['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].map((name) => {
+                        const product = INVENTORY_PRODUCT_MAP[name]
+                        if (!product) return null
+                        const isChecked = calcSelectedBases.includes(name)
+                        
+                        return (
+                          <label key={name} className="flex items-center gap-2 p-2 hover:bg-ui-bg/30 rounded-lg cursor-pointer text-xs font-bold text-ui-text select-none">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              className="rounded text-brand-blue border-ui-border focus:ring-brand-blue"
+                              onChange={() => {
+                                if (isChecked) {
+                                  setCalcSelectedBases(calcSelectedBases.filter(b => b !== name))
+                                } else {
+                                  setCalcSelectedBases([...calcSelectedBases, name])
+                                }
+                              }}
+                            />
+                            <span className="capitalize">{product.label}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Empaques (Multi-select) */}
+                <div className="space-y-1 relative">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Empaques</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpenEmpaques(!isOpenEmpaques)
+                      setIsOpenBases(false)
+                    }}
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs text-left flex justify-between items-center"
+                  >
+                    <span className="truncate">
+                      {calcSelectedEmpaques.length === 0 
+                        ? 'Ninguno' 
+                        : `${calcSelectedEmpaques.length} seleccionados`
+                      }
+                    </span>
+                    <span className="text-[10px] ml-1 shrink-0 text-ui-muted">▼</span>
+                  </button>
+                  
+                  {isOpenEmpaques && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
+                      {(() => {
+                        const availableEmpaques = [
+                          'plato rectangular',
+                          'tenedor',
+                          'servilleta',
+                          'sticker'
+                        ]
+                        if (calcPlate.sauce === 'DIVORCIADOS') {
+                          availableEmpaques.push('plato de 4 onz', 'tapadera de 4 onz')
+                        } else {
+                          availableEmpaques.push('plato de 8 onz', 'tapadera de 8 onz')
+                        }
+                        
+                        return availableEmpaques.map((name) => {
+                          const product = INVENTORY_PRODUCT_MAP[name]
+                          if (!product) return null
+                          const isChecked = calcSelectedEmpaques.includes(name)
+                          
+                          return (
+                            <label key={name} className="flex items-center gap-2 p-2 hover:bg-ui-bg/30 rounded-lg cursor-pointer text-xs font-bold text-ui-text select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                className="rounded text-brand-blue border-ui-border focus:ring-brand-blue"
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setCalcSelectedEmpaques(calcSelectedEmpaques.filter(e => e !== name))
+                                  } else {
+                                    setCalcSelectedEmpaques([...calcSelectedEmpaques, name])
+                                  }
+                                }}
+                              />
+                              <span>{product.label}</span>
+                            </label>
+                          )
+                        })
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Dynamic purchase simulation inputs for selected options */}
@@ -1822,93 +2031,137 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 else if (calcPlate.complement === 'CEBOLLA_CARAMELIZADA' || calcPlate.complement === 'CEBOLLA CARAMELIZADA') activeIngredients.push('cebolla caramelizada')
                 else if (calcPlate.complement === 'QUESO_EXTRA' || calcPlate.complement === 'QUESO EXTRA') activeIngredients.push('queso extra')
 
+                // 4. Base
+                calcSelectedBases.forEach(b => activeIngredients.push(b))
+
+                // 5. Empaque
+                calcSelectedEmpaques.forEach(e => {
+                  if (['plato de 8 onz', 'tapadera de 8 onz'].includes(e) && calcPlate.sauce === 'DIVORCIADOS') return
+                  if (['plato de 4 onz', 'tapadera de 4 onz'].includes(e) && calcPlate.sauce !== 'DIVORCIADOS') return
+                  activeIngredients.push(e)
+                })
+
+                // Group them by category
+                const groups = [
+                  {
+                    title: 'Ingredientes de la Promo (Salsa, Proteína, Complemento)',
+                    items: activeIngredients.filter(name => 
+                      ['salsa roja', 'salsa verde', 'pollo', 'steak', 'chorizo', 'aguacate', 'cebolla caramelizada', 'queso extra'].includes(name)
+                    )
+                  },
+                  {
+                    title: 'Ingredientes Base',
+                    items: activeIngredients.filter(name => 
+                      ['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].includes(name)
+                    )
+                  },
+                  {
+                    title: 'Empaque e Insumos Fijos',
+                    items: activeIngredients.filter(name => 
+                      ['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz', 'plato de 4 onz', 'tapadera de 4 onz'].includes(name)
+                    )
+                  }
+                ]
+
                 return (
-                  <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-2">
-                    <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">
-                      Precio de Compra de Ingredientes Seleccionados (Opcional)
+                  <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-4">
+                    <p className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">
+                      Precio de Compra de Ingredientes
                     </p>
-                    <div className="flex flex-col gap-2">
-                      {activeIngredients.map((name) => {
-                        const product = INVENTORY_PRODUCT_MAP[name]
-                        if (!product) return null
-                        
-                        const sim = simulatedCosts[name] || { qty: '', unit: getAllowedInputUnits(product)[0]?.value || 'und', price: '' }
-                        
-                        const updateSim = (field, val) => {
-                          setSimulatedCosts(prev => ({
-                            ...prev,
-                            [name]: {
-                              ...sim,
-                              [field]: val
-                            }
-                          }))
-                        }
-                        
-                        return (
-                          <div key={name} className="flex flex-col md:flex-row items-end md:items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full">
-                            <div className="w-full md:w-1/4 text-left shrink-0">
-                              <div className="text-xs font-black text-ui-text capitalize">
-                                {product.label}
-                              </div>
-                              <span className="block text-[8px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
-                                Usa {product.usedPerPlate} {product.unit} por plato
-                              </span>
-                            </div>
-                            
-                            <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
-                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Cant. Comprada</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                placeholder="Ej. 10"
-                                value={sim.qty}
-                                onChange={(e) => updateSim('qty', e.target.value)}
-                              />
-                            </div>
+                    
+                    {groups.map((group) => {
+                      if (group.items.length === 0) return null
+                      
+                      return (
+                        <div key={group.title} className="space-y-2 bg-ui-bg/25 p-3 rounded-[1.5rem] border border-ui-border/40">
+                          <h4 className="text-[9px] font-black uppercase text-brand-blue tracking-widest ml-1">
+                            {group.title}
+                          </h4>
+                          <div className="flex flex-col gap-2">
+                            {group.items.map((name) => {
+                              const product = INVENTORY_PRODUCT_MAP[name]
+                              if (!product) return null
+                              
+                              const sim = simulatedCosts[name] || { qty: '', unit: getAllowedInputUnits(product)[0]?.value || 'und', price: '' }
+                              
+                              const updateSim = (field, val) => {
+                                setSimulatedCosts(prev => ({
+                                  ...prev,
+                                  [name]: {
+                                    ...sim,
+                                    [field]: val
+                                  }
+                                }))
+                              }
+                              
+                              return (
+                                <div key={name} className="flex flex-col md:flex-row items-end md:items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full">
+                                  <div className="w-full md:w-1/4 text-left shrink-0">
+                                    <div className="text-xs font-black text-ui-text capitalize">
+                                      {product.label}
+                                    </div>
+                                    <span className="block text-[8px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
+                                      Usa {product.usedPerPlate} {product.unit} por plato
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
+                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Cant. Comprada</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
+                                      placeholder="Ej. 10"
+                                      value={sim.qty}
+                                      onChange={(e) => updateSim('qty', e.target.value)}
+                                    />
+                                  </div>
 
-                            <div className="w-full md:w-[100px] flex flex-col gap-0.5 shrink-0">
-                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad</span>
-                              <select
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                value={sim.unit}
-                                onChange={(e) => updateSim('unit', e.target.value)}
-                              >
-                                {getAllowedInputUnits(product).map((u) => (
-                                  <option key={u.value} value={u.value}>
-                                    {u.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                                  <div className="w-full md:w-[100px] flex flex-col gap-0.5 shrink-0">
+                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad</span>
+                                    <select
+                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
+                                      value={sim.unit}
+                                      onChange={(e) => updateSim('unit', e.target.value)}
+                                    >
+                                      {getAllowedInputUnits(product).map((u) => (
+                                        <option key={u.value} value={u.value}>
+                                          {u.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
 
-                            <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
-                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
-                                placeholder="Ej. 20"
-                                value={sim.price}
-                                onChange={(e) => updateSim('price', e.target.value)}
-                              />
-                            </div>
+                                  <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
+                                    <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
+                                      placeholder="Ej. 20"
+                                      value={sim.price}
+                                      onChange={(e) => updateSim('price', e.target.value)}
+                                    />
+                                  </div>
 
-                            <div className="w-full md:w-auto shrink-0 pt-2 md:pt-4">
-                              <button
-                                type="button"
-                                onClick={() => handleSaveCalculatorCost(name)}
-                                className="w-full md:w-auto bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest px-3 py-2.5 hover:shadow-lg transition-all hover:bg-brand-blue/90"
-                              >
-                                Guardar
-                              </button>
-                            </div>
+                                  <div className="w-full md:w-auto shrink-0 pt-2 md:pt-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveCalculatorCost(name)}
+                                      className="w-full md:w-auto bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest px-3 py-2.5 hover:shadow-lg transition-all hover:bg-brand-blue/90"
+                                    >
+                                      Guardar
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
                           </div>
-                        )
-                      })}
-                    </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               })()}

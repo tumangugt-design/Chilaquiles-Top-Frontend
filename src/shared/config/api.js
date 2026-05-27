@@ -43,7 +43,12 @@ export const getUserOrderHistory = (type, userId) => api.get(`/orders/history?ty
 export const updateProfile = (payload) => api.patch('/users/profile', payload)
 export const getInventory = () => api.get(`/inventory?t=${Date.now()}`)
 export const getAvailablePlates = () => api.get('/inventory/available')
+export const getLastPurchases = () => api.get(`/inventory/last-purchases?t=${Date.now()}`)
 export const getPublicInventoryOptions = () => api.get('/inventory/public-options')
+export const getInventoryLogs = (params = {}) => {
+  const qs = new URLSearchParams({ t: Date.now(), ...params }).toString()
+  return api.get(`/inventory/logs?${qs}`)
+}
 export const saveInventoryItem = (payload) => api.post('/inventory', payload)
 export const deleteInventoryItem = (name) => api.delete(`/inventory/${name}`)
 export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount })
