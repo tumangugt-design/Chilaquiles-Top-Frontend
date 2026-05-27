@@ -44,30 +44,30 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
   return (
     <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-4 sm:px-6 lg:px-10 justify-between">
       {/* Logo Section */}
-      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-        <div className="hidden sm:flex w-10 h-10 bg-brand-blue rounded-xl items-center justify-center shadow-lg shadow-brand-blue/20">
+      <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+        <div className="hidden 2xl:flex w-10 h-10 bg-brand-blue rounded-xl items-center justify-center shadow-lg shadow-brand-blue/20">
           <LayoutDashboard className="text-white" size={24} />
         </div>
         <div>
-          <Logo className="w-24 h-10 sm:w-32 sm:h-14 drop-shadow-sm" />
+          <Logo className="w-24 h-10 sm:w-28 sm:h-12 2xl:w-32 2xl:h-14 drop-shadow-sm" />
         </div>
       </div>
 
       {/* Navigation Tabs (Desktop) */}
-      <div className="hidden xl:flex flex-1 items-center justify-center px-8 gap-1 max-w-4xl">
+      <div className="hidden xl:flex flex-1 items-center justify-center px-4 gap-1.5 max-w-5xl">
         {/* Sales */}
-        <div className="flex items-center gap-1 border-r border-ui-border pr-4 mr-4">
+        <div className="flex items-center gap-1 border-r border-ui-border pr-2 mr-2 xl:pr-3 xl:mr-3">
           {navigation.sales.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 py-2 2xl:px-4 2xl:py-2.5 rounded-xl transition-all font-black text-[10px] 2xl:text-[11px] uppercase tracking-wider whitespace-nowrap ${
                 activeTab === id 
                   ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20' 
                   : 'text-ui-muted hover:bg-ui-bg hover:text-ui-text'
               }`}
             >
-              <Icon size={16} />
+              <Icon size={14} className="2xl:w-4 2xl:h-4" />
               <span>{label}</span>
             </button>
           ))}
@@ -79,13 +79,13 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-2.5 py-2 2xl:px-4 2xl:py-2.5 rounded-xl transition-all font-black text-[10px] 2xl:text-[11px] uppercase tracking-wider whitespace-nowrap ${
                 activeTab === id 
                   ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
                   : 'text-ui-muted hover:bg-ui-bg hover:text-ui-text'
               }`}
             >
-              <Icon size={16} />
+              <Icon size={14} className="2xl:w-4 2xl:h-4" />
               <span>{label}</span>
             </button>
           ))}
@@ -95,7 +95,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
       {/* User Actions & Mobile Toggle */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         <div className="hidden xl:flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
-          <div className="text-right">
+          <div className="text-right hidden 2xl:block">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
               Online
