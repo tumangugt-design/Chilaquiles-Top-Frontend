@@ -236,18 +236,29 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
     const normalizedPhone = normalizeGtPhone(cleanDigits)
 
     try {
-      await verifyOtp(normalizedPhone, code)
+      const response = await verifyOtp(normalizedPhone, code)
+      const savedCustomer = response.data?.customer || null
 
       sessionStorage.setItem(VERIFIED_PHONE_KEY, normalizedPhone)
       sessionStorage.setItem(VERIFIED_PHONE_LOCAL_KEY, cleanDigits)
 
-      toast.success('Número verificado correctamente.')
+      toast.success(savedCustomer?.name || savedCustomer?.address
+        ? 'Número verificado. Se llenarán tus datos guardados.'
+        : 'Número verificado correctamente.'
+      )
 
       if (typeof onConfirm === 'function') {
         onConfirm({
           phone: normalizedPhone,
           phoneLocal: cleanDigits,
           phoneVerified: true,
+          customer: savedCustomer
+            ? {
+                name: savedCustomer.name || '',
+                address: savedCustomer.address || '',
+                accessCode: savedCustomer.accessCode || '',
+              }
+            : null,
         })
       }
     } catch (error) {

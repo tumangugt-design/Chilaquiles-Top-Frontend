@@ -4,7 +4,8 @@ import { STEPS_ORDER } from '../../shared/constants/index.jsx'
 const Stepper = ({ currentStep }) => {
   if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION') return null
 
-  const currentIndex = STEPS_ORDER.indexOf(currentStep)
+  const currentStepForProgress = currentStep === 'COPY_PLATE' ? 'SUMMARY' : currentStep
+  const currentIndex = STEPS_ORDER.indexOf(currentStepForProgress)
 
   const milestones = [
     { label: 'Tamaño', step: 'SIZE' },

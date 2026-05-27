@@ -15,6 +15,7 @@ import BaseRecipePage from './pages/BaseRecipe.jsx'
 import SummaryPage from './pages/Summary.jsx'
 import TemperaturePage from './pages/Temperature.jsx'
 import CustomerPage from './pages/Customer.jsx'
+import PlateCopyChoice from './pages/PlateCopyChoice.jsx'
 import ConfirmationPage from './pages/Confirmation.jsx'
 import AdminPage from './pages/Admin.jsx'
 import ChefPage from './pages/Chef.jsx'
@@ -35,6 +36,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     updateOrder,
     updateCurrentPlate,
     addCurrentPlateToCart,
+    restoreLastCartPlate,
     setLastOrder,
     resetOrder,
   } = useOrder()
@@ -99,20 +101,54 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     if (Object.keys(forcedPlate).length > 0) updateCurrentPlate(forcedPlate)
   }
 
+  const buildPromoDefaults = () => {
+    if (!order.appliedPromo) return {}
+    const nextPlate = {}
+    const forcedSauce = getPromoConstraint(order.appliedPromo, 'sauce')
+    const forcedProtein = getPromoConstraint(order.appliedPromo, 'protein')
+    const forcedComplement = getPromoConstraint(order.appliedPromo, 'complement')
+    if (forcedSauce !== 'ALL') nextPlate.sauce = forcedSauce
+    if (forcedProtein !== 'ALL') nextPlate.protein = forcedProtein
+    if (forcedComplement !== 'ALL') nextPlate.complement = forcedComplement
+    if (order.appliedPromo.recipe?.baseRecipe) {
+      nextPlate.baseRecipe = { ...order.appliedPromo.recipe.baseRecipe }
+    }
+    return nextPlate
+  }
+
+  const clonePlate = (plate = {}) => ({
+    sauce: plate.sauce,
+    protein: plate.protein,
+    complement: plate.complement,
+    baseRecipe: {
+      onion: plate.baseRecipe?.onion !== false,
+      cilantro: plate.baseRecipe?.cilantro !== false,
+      cream: plate.baseRecipe?.cream !== false,
+    },
+  })
+
   const handleAddCurrentPlateToCart = () => {
     addCurrentPlateToCart()
-    if (order.appliedPromo) {
-      const nextPlate = {}
-      const forcedSauce = getPromoConstraint(order.appliedPromo, 'sauce')
-      const forcedProtein = getPromoConstraint(order.appliedPromo, 'protein')
-      const forcedComplement = getPromoConstraint(order.appliedPromo, 'complement')
-      if (forcedSauce !== 'ALL') nextPlate.sauce = forcedSauce
-      if (forcedProtein !== 'ALL') nextPlate.protein = forcedProtein
-      if (forcedComplement !== 'ALL') nextPlate.complement = forcedComplement
-      if (order.appliedPromo.recipe?.baseRecipe) nextPlate.baseRecipe = order.appliedPromo.recipe.baseRecipe
-      if (Object.keys(nextPlate).length > 0) updateCurrentPlate(nextPlate)
-    }
+    const promoDefaults = buildPromoDefaults()
+    if (Object.keys(promoDefaults).length > 0) updateCurrentPlate(promoDefaults)
+    setCurrentStep('COPY_PLATE')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCopyPlate = (sourcePlate) => {
+    updateCurrentPlate(clonePlate(sourcePlate))
+    setCurrentStep('SUMMARY')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCustomizePlate = () => {
     setCurrentStep('SAUCE')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBackFromCopyChoice = () => {
+    restoreLastCartPlate()
+    setCurrentStep('SUMMARY')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -128,9 +164,14 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
           <LocationPage
             onConfirm={(data) => {
               if (data?.phone) {
+                const savedCustomer = data.customer || {}
                 updateOrder({
                   customer: {
                     ...order.customer,
+                    name: savedCustomer.name || order.customer.name || '',
+                    address: savedCustomer.address || order.customer.address || '',
+                    accessCode: savedCustomer.accessCode || order.customer.accessCode || '',
+                    location: null,
                     phone: data.phone,
                     phoneLocal: data.phoneLocal,
                     phoneVerified: true,
@@ -160,6 +201,16 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+      case 'COPY_PLATE':
+        return (
+          <PlateCopyChoice
+            sourcePlates={order.cart}
+            nextPlateNumber={order.cart.length + 1}
+            onCopyPlate={handleCopyPlate}
+            onCustomize={handleCustomizePlate}
+            onBack={handleBackFromCopyChoice}
+          />
+        )
       case 'TEMPERATURE':
         return <TemperaturePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'CUSTOMER':

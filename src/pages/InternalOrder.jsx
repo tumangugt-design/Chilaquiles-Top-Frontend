@@ -5,7 +5,7 @@ import Stepper from '../components/ui/Stepper.jsx'
 import Button from '../components/ui/Button.jsx'
 import { useOrder } from '../shared/hooks/useOrder.jsx'
 import { STEPS_ORDER } from '../shared/constants/index.jsx'
-import { getAvailablePlates } from '../shared/config/api.js'
+import { getAvailablePlates, getCustomerByPhone } from '../shared/config/api.js'
 import SizePage from './Size.jsx'
 import SaucePage from './Sauce.jsx'
 import ProteinPage from './Protein.jsx'
@@ -15,6 +15,7 @@ import SummaryPage from './Summary.jsx'
 import TemperaturePage from './Temperature.jsx'
 import CustomerPage from './Customer.jsx'
 import ConfirmationPage from './Confirmation.jsx'
+import PlateCopyChoice from './PlateCopyChoice.jsx'
 import toast from 'react-hot-toast'
 
 const normalizeGtPhone = (raw = '') => {
@@ -33,7 +34,7 @@ const InternalPhoneStart = ({ order, updateOrder, availablePlates, onNext }) => 
 
   const canContinue = phone.length === 8 && Number(availablePlates || 0) > 0
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (Number(availablePlates || 0) <= 0) {
       toast.error('No hay platos disponibles por el momento. Vuelve en otro momento.')
       return
@@ -44,10 +45,27 @@ const InternalPhoneStart = ({ order, updateOrder, availablePlates, onNext }) => 
       return
     }
 
+    const fullPhone = toFullGtPhone(phone)
+    let savedCustomer = null
+
+    try {
+      const response = await getCustomerByPhone(fullPhone)
+      savedCustomer = response.data?.customer || null
+      if (savedCustomer?.name || savedCustomer?.address) {
+        toast.success('Cliente encontrado. Se llenarán sus datos guardados.')
+      }
+    } catch {
+      savedCustomer = null
+    }
+
     updateOrder({
       customer: {
         ...order.customer,
-        phone: toFullGtPhone(phone),
+        name: savedCustomer?.name || order.customer.name || '',
+        address: savedCustomer?.address || order.customer.address || '',
+        accessCode: savedCustomer?.accessCode || order.customer.accessCode || '',
+        location: null,
+        phone: fullPhone,
         phoneLocal: phone,
         phoneVerified: true,
       },
@@ -107,6 +125,7 @@ const InternalOrder = ({ onSuccess }) => {
     updateOrder,
     updateCurrentPlate,
     addCurrentPlateToCart,
+    restoreLastCartPlate,
     setLastOrder,
     resetOrder,
   } = useOrder()
@@ -150,12 +169,37 @@ const InternalOrder = ({ onSuccess }) => {
     window.scrollTo(0, 0)
   }
 
+  const clonePlate = (plate = {}) => ({
+    sauce: plate.sauce,
+    protein: plate.protein,
+    complement: plate.complement,
+    baseRecipe: {
+      onion: plate.baseRecipe?.onion !== false,
+      cilantro: plate.baseRecipe?.cilantro !== false,
+      cream: plate.baseRecipe?.cream !== false,
+    },
+  })
+
   const handleAddCurrentPlateToCart = () => {
     addCurrentPlateToCart()
-    if (order.appliedPromo && order.appliedPromo.protein !== 'ALL') {
-      updateCurrentPlate({ protein: order.appliedPromo.protein })
-    }
+    setCurrentStep('COPY_PLATE')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCopyPlate = (sourcePlate) => {
+    updateCurrentPlate(clonePlate(sourcePlate))
+    setCurrentStep('SUMMARY')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCustomizePlate = () => {
     setCurrentStep('SAUCE')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBackFromCopyChoice = () => {
+    restoreLastCartPlate()
+    setCurrentStep('SUMMARY')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -182,6 +226,16 @@ const InternalOrder = ({ onSuccess }) => {
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
       case 'SUMMARY':
         return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+      case 'COPY_PLATE':
+        return (
+          <PlateCopyChoice
+            sourcePlates={order.cart}
+            nextPlateNumber={order.cart.length + 1}
+            onCopyPlate={handleCopyPlate}
+            onCustomize={handleCustomizePlate}
+            onBack={handleBackFromCopyChoice}
+          />
+        )
       case 'TEMPERATURE':
         return <TemperaturePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'CUSTOMER':

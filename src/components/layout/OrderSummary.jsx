@@ -5,7 +5,7 @@ import Button from '../ui/Button.jsx'
 const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   const [isOpen, setIsOpen] = useState(false)
 
-  if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION') return null
+  if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION' || currentStep === 'COPY_PLATE') return null
 
   const currentPlate = order.currentPlate
   const totalItems = order.cart.length + 1

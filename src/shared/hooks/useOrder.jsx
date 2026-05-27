@@ -52,6 +52,19 @@ export const useOrder = () => {
     }))
   }
 
+  const restoreLastCartPlate = () => {
+    setOrder((prev) => {
+      if (!prev.cart.length) return prev
+      const nextCart = [...prev.cart]
+      const lastPlate = nextCart.pop()
+      return {
+        ...prev,
+        cart: nextCart,
+        currentPlate: lastPlate || createInitialPlate(),
+      }
+    })
+  }
+
   const setLastOrder = (backendOrder) => {
     setOrder((prev) => ({ ...prev, lastOrder: backendOrder }))
   }
@@ -67,6 +80,7 @@ export const useOrder = () => {
     updateOrder,
     updateCurrentPlate,
     addCurrentPlateToCart,
+    restoreLastCartPlate,
     setLastOrder,
     resetOrder,
   }
