@@ -152,6 +152,9 @@ const InternalOrder = ({ onSuccess }) => {
 
   const handleAddCurrentPlateToCart = () => {
     addCurrentPlateToCart()
+    if (order.appliedPromo && order.appliedPromo.protein !== 'ALL') {
+      updateCurrentPlate({ protein: order.appliedPromo.protein })
+    }
     setCurrentStep('SAUCE')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -172,7 +175,7 @@ const InternalOrder = ({ onSuccess }) => {
       case 'SAUCE':
         return <SaucePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
       case 'PROTEIN':
-        return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
+        return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable appliedPromo={order.appliedPromo} />
       case 'COMPLEMENT':
         return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
       case 'BASE_RECIPE':

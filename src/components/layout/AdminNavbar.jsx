@@ -16,7 +16,8 @@ import {
   Clock,
   ChevronDown,
   Menu,
-  TrendingUp
+  TrendingUp,
+  Gift
 } from 'lucide-react'
 
 const navigation = {
@@ -27,6 +28,7 @@ const navigation = {
   management: [
     { id: 'staff', label: 'Personal', icon: Users },
     { id: 'clients', label: 'Clientes', icon: UserCircle },
+    { id: 'promotions', label: 'Promociones', icon: Gift },
     { id: 'finances', label: 'Finanzas', icon: TrendingUp },
   ],
   inventory: [

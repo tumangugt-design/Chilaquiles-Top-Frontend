@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 import toast from 'react-hot-toast'
-import { getAvailablePlates, getOperatingHours, sendOtp, verifyOtp } from '../shared/config/api.js'
+import { getAvailablePlates, getOperatingHours, sendOtp, verifyOtp, getPromotions } from '../shared/config/api.js'
 import menuImage from '../assets/menu_chilaquiles_top.png'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
@@ -84,6 +84,10 @@ const LocationPage = ({ onConfirm }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [hours, setHours] = useState({ isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [promotions, setPromotions] = useState([])
+  const [isPromosOpen, setIsPromosOpen] = useState(false)
+  const [selectedPromo, setSelectedPromo] = useState(null)
+  const [activeMenuTab, setActiveMenuTab] = useState('menu')
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
@@ -165,10 +169,16 @@ const LocationPage = ({ onConfirm }) => {
     let mounted = true
     const loadAvailable = async () => {
       try {
-        const [platesResponse, hoursResponse] = await Promise.all([getAvailablePlates(), getOperatingHours()])
+        const [platesResponse, hoursResponse, promosResponse] = await Promise.all([
+          getAvailablePlates(),
+          getOperatingHours(),
+          getPromotions()
+        ])
         if (mounted) {
           setAvailableCount(Number(platesResponse.data?.count || 0))
           setHours(hoursResponse.data || { isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
+          const activePromos = (promosResponse.data || []).filter(p => p.isActive)
+          setPromotions(activePromos)
         }
       } catch {
         if (mounted) setAvailableCount(0)
@@ -231,6 +241,7 @@ const LocationPage = ({ onConfirm }) => {
           phone: normalizedPhone,
           phoneLocal: cleanDigits,
           phoneVerified: true,
+          appliedPromo: selectedPromo
         })
       }
     } catch (error) {
@@ -238,6 +249,12 @@ const LocationPage = ({ onConfirm }) => {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSelectPromo = (promo) => {
+    setSelectedPromo(promo)
+    setIsPromosOpen(false)
+    setStep('auth')
   }
 
   return (
@@ -290,6 +307,13 @@ const LocationPage = ({ onConfirm }) => {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2 sm:mb-3 tracking-tight">
               Verifica tu número
             </h2>
+            {selectedPromo && (
+              <div className="mb-4 bg-brand-orange/5 border border-brand-orange/20 rounded-2xl p-3 text-left animate-slide-up">
+                <span className="text-[9px] font-black uppercase tracking-widest text-brand-orange block">Promoción seleccionada 🎁</span>
+                <span className="text-sm font-black text-ui-text">{selectedPromo.name}</span>
+                <span className="text-xs text-ui-muted block mt-0.5">{selectedPromo.description}</span>
+              </div>
+            )}
             <p className="text-ui-muted leading-relaxed text-sm sm:text-base px-2">
               Ingresa tu número y te enviaremos un código para continuar con tu pedido.
             </p>
@@ -304,11 +328,23 @@ const LocationPage = ({ onConfirm }) => {
 
       {step === 'welcome' && !error && (
         <div className="space-y-4">
-          <Button fullWidth type="button" onClick={() => setIsMenuOpen(true)} variant="secondary" className="text-lg !border-brand-blue/30 !text-brand-blue !bg-brand-blue/5">
+          <Button fullWidth type="button" onClick={() => { setActiveMenuTab('menu'); setIsMenuOpen(true); }} variant="secondary" className="text-lg !border-brand-blue/30 !text-brand-blue !bg-brand-blue/5">
             Ver menú
           </Button>
 
-          <Button fullWidth onClick={() => setStep('auth')} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
+          {promotions.length > 0 && (
+            <Button
+              fullWidth
+              type="button"
+              onClick={() => setIsPromosOpen(true)}
+              variant="secondary"
+              className="text-lg !border-brand-orange/30 !text-brand-orange !bg-brand-orange/5"
+            >
+              🎁 Ver Promociones
+            </Button>
+          )}
+
+          <Button fullWidth onClick={() => { setSelectedPromo(null); setStep('auth'); }} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
             {hours.isCurrentlyOpen ? 'Sí, estoy aquí' : 'Cerrado'}
           </Button>
 
@@ -372,6 +408,7 @@ const LocationPage = ({ onConfirm }) => {
             onClick={() => {
               setStep('welcome')
               setPhone('')
+              setSelectedPromo(null)
             }}
             className="block w-full py-2 text-ui-muted text-sm font-semibold hover:text-ui-text transition-colors"
           >
@@ -391,8 +428,6 @@ const LocationPage = ({ onConfirm }) => {
         />
       )}
 
-
-
       <div className="mt-6 pt-4 sm:mt-8 sm:pt-6 border-t border-ui-border/50">
         <div className="flex items-center justify-center space-x-2">
           <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-green-500" />
@@ -407,22 +442,165 @@ const LocationPage = ({ onConfirm }) => {
         onClick={() => setIsMenuOpen(false)}
       >
         <div
-          className="relative w-full max-h-[92vh] overflow-auto rounded-3xl bg-white p-2 shadow-2xl sm:p-4 md:flex md:h-[92vh] md:max-w-[96vw] md:items-center md:justify-center md:overflow-hidden md:p-6"
+          className="relative w-full max-h-[92vh] overflow-auto rounded-3xl bg-white p-4 shadow-2xl flex flex-col items-center justify-start md:max-w-4xl md:p-6"
           onClick={(event) => event.stopPropagation()}
         >
           <button
             type="button"
             onClick={() => setIsMenuOpen(false)}
-            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-2xl font-black text-ui-text shadow-lg transition hover:scale-105 md:right-6 md:top-6"
+            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ui-bg text-2xl font-black text-ui-text shadow-lg transition hover:scale-105"
             aria-label="Cerrar menú"
           >
             ×
           </button>
-          <img
-            src={menuImage}
-            alt="Menú Chilaquiles TOP"
-            className="h-auto w-full rounded-2xl object-contain md:max-h-[86vh] md:w-auto md:max-w-full"
-          />
+
+          {promotions.length > 0 && (
+            <div className="flex justify-center gap-2 mb-4 w-full border-b border-ui-border pb-4 mt-2">
+              <button
+                type="button"
+                onClick={() => setActiveMenuTab('menu')}
+                className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
+                  activeMenuTab === 'menu'
+                    ? 'bg-brand-blue text-white shadow-md'
+                    : 'bg-ui-bg text-ui-muted hover:text-ui-text'
+                }`}
+              >
+                📖 Menú Completo
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMenuTab('promos')}
+                className={`px-4 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 ${
+                  activeMenuTab === 'promos'
+                    ? 'bg-brand-orange text-white shadow-md'
+                    : 'bg-ui-bg text-ui-muted hover:text-ui-text'
+                }`}
+              >
+                🎁 Promociones de Hoy
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+              </button>
+            </div>
+          )}
+
+          <div className="w-full overflow-y-auto flex-1 flex items-center justify-center">
+            {activeMenuTab === 'menu' || promotions.length === 0 ? (
+              <img
+                src={menuImage}
+                alt="Menú Chilaquiles TOP"
+                className="h-auto w-full rounded-2xl object-contain max-h-[70vh]"
+              />
+            ) : (
+              <div className="w-full max-w-xl mx-auto space-y-4 py-4 text-left">
+                {promotions.map((promo) => (
+                  <div
+                    key={promo.id}
+                    className="bg-ui-bg border border-ui-border rounded-2xl p-4 flex flex-col justify-between gap-4 hover:border-brand-orange/40 transition-all shadow-sm"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <h4 className="font-extrabold text-lg text-ui-text">{promo.name}</h4>
+                        <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-orange/20">
+                          {promo.requestedCount} Platos
+                        </span>
+                        {promo.protein !== 'ALL' && (
+                          <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-blue/20">
+                            {promo.protein === 'POLLO' ? 'Pollo Cocido' : promo.protein === 'STEAK' ? 'Steak' : 'Chorizo'}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-ui-muted text-sm font-medium leading-normal">{promo.description}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-ui-border/50 mt-1">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-ui-muted tracking-widest block">Precio Promo</span>
+                        <span className="text-2xl font-black text-brand-blue">Q{Number(promo.promoPrice).toFixed(2)}</span>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          handleSelectPromo(promo)
+                          setIsMenuOpen(false)
+                        }}
+                        variant="primary"
+                        className="!py-2 !px-4 text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                      >
+                        Pedir Promo →
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {isPromosOpen && (
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
+        onClick={() => setIsPromosOpen(false)}
+      >
+        <div
+          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-ui-card p-6 shadow-2xl border border-ui-border text-left"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => setIsPromosOpen(false)}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ui-bg text-2xl font-black text-ui-text shadow-md transition hover:scale-105"
+            aria-label="Cerrar promociones"
+          >
+            ×
+          </button>
+          
+          <h3 className="text-2xl font-extrabold text-ui-text mb-2 flex items-center gap-2">
+            🎁 Promociones Especiales
+          </h3>
+          <p className="text-ui-muted text-sm mb-6 leading-relaxed">
+            Aprovecha nuestras ofertas exclusivas para hoy. Selecciona una promoción para configurar tu pedido automáticamente:
+          </p>
+
+          <div className="space-y-4">
+            {promotions.map((promo) => (
+              <div
+                key={promo.id}
+                className="bg-ui-bg border border-ui-border rounded-2xl p-4 flex flex-col justify-between gap-4 hover:border-brand-orange/40 transition-all shadow-sm"
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <h4 className="font-extrabold text-lg text-ui-text">{promo.name}</h4>
+                    <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-orange/20">
+                      {promo.requestedCount} Platos
+                    </span>
+                    {promo.protein !== 'ALL' && (
+                      <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-blue/20">
+                        {promo.protein === 'POLLO' ? 'Pollo Cocido' : promo.protein === 'STEAK' ? 'Steak' : 'Chorizo'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-ui-muted text-sm font-medium leading-normal">{promo.description}</p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-ui-border/50 mt-1">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-ui-muted tracking-widest block">Precio Promo</span>
+                    <span className="text-2xl font-black text-brand-blue">Q{Number(promo.promoPrice).toFixed(2)}</span>
+                  </div>
+                  <Button
+                    onClick={() => handleSelectPromo(promo)}
+                    variant="primary"
+                    className="!py-2 !px-4 text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                  >
+                    Pedir Promo →
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )}

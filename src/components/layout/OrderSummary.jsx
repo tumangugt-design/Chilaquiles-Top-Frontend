@@ -9,7 +9,9 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
   const currentPlate = order.currentPlate
   const totalItems = order.cart.length + 1
-  const grandTotal = calculateTotal(Math.max(order.requestedCount || 0, totalItems))
+  const grandTotal = order.appliedPromo && totalItems === order.appliedPromo.requestedCount
+    ? order.appliedPromo.promoPrice
+    : calculateTotal(Math.max(order.requestedCount || 0, totalItems))
   const MAX_PLATES = 4
 
   const canContinue = () => {
@@ -108,7 +110,14 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
       </div>
 
       <div className="pt-2 border-t border-gray-100 flex justify-between items-end">
-        <span className="text-gray-500 font-bold">Total Final</span>
+        <div>
+          <span className="text-gray-500 font-bold block">Total Final</span>
+          {order.appliedPromo && totalItems === order.appliedPromo.requestedCount && (
+            <span className="inline-block bg-green-500/10 text-green-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-green-500/20 mt-1">
+              Promo: {order.appliedPromo.name}
+            </span>
+          )}
+        </div>
         <span className="text-3xl font-black text-brand-blue">Q{grandTotal}</span>
       </div>
 

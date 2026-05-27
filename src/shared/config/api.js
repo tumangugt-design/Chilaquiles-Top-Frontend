@@ -53,6 +53,8 @@ export const updateInventoryStock = (name, stock, inputUnit) => api.patch(`/inve
 export const syncInventory = () => api.post('/inventory/sync')
 export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Date.now()}`)
 export const updateOperatingHours = (payload) => api.patch('/settings/operating-hours', payload)
+export const getPromotions = () => api.get(`/settings/promotions?t=${Date.now()}`)
+export const updatePromotions = (payload) => api.patch('/settings/promotions', payload)
 
 export const getFinancesSummary = () => api.get(`/finances/summary?t=${Date.now()}`)
 // Customer OTP

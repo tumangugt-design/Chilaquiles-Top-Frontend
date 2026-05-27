@@ -72,7 +72,11 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   const prevStep = () => {
     const currentIndex = STEPS_ORDER.indexOf(currentStep)
     if (currentIndex > 0) {
-      setCurrentStep(STEPS_ORDER[currentIndex - 1])
+      if (currentStep === 'SAUCE' && order.appliedPromo) {
+        setCurrentStep('LOCATION')
+      } else {
+        setCurrentStep(STEPS_ORDER[currentIndex - 1])
+      }
       window.scrollTo(0, 0)
     }
   }
@@ -85,6 +89,9 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
 
   const handleAddCurrentPlateToCart = () => {
     addCurrentPlateToCart()
+    if (order.appliedPromo && order.appliedPromo.protein !== 'ALL') {
+      updateCurrentPlate({ protein: order.appliedPromo.protein })
+    }
     setCurrentStep('SAUCE')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -108,9 +115,21 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                     phoneLocal: data.phoneLocal,
                     phoneVerified: true,
                   },
+                  ...(data.appliedPromo ? {
+                    appliedPromo: data.appliedPromo,
+                    requestedCount: data.appliedPromo.requestedCount,
+                    currentPlate: {
+                      ...order.currentPlate,
+                      protein: data.appliedPromo.protein === 'ALL' ? order.currentPlate.protein : data.appliedPromo.protein
+                    }
+                  } : {})
                 })
               }
-              nextStep()
+              if (data?.appliedPromo) {
+                goToStep('SAUCE')
+              } else {
+                nextStep()
+              }
             }}
           />
         )
@@ -120,7 +139,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'SAUCE':
         return <SaucePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'PROTEIN':
-        return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} appliedPromo={order.appliedPromo} />
       case 'COMPLEMENT':
         return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'BASE_RECIPE':

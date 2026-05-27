@@ -5,7 +5,7 @@ import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 
-const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false, appliedPromo }) => {
   const [inventoryItems, setInventoryItems] = useState([])
   const [optionsLoaded, setOptionsLoaded] = useState(false)
 
@@ -31,15 +31,27 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnav
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
     return OPTIONS_PROTEIN
-      .map((option) => ({ ...option, availability: getProductAvailability(statusMap, option.value.toLowerCase()) }))
-      .filter((option) => showUnavailable || option.availability.available)
-  }, [inventoryItems, optionsLoaded, showUnavailable])
+      .map((option) => {
+        const availability = getProductAvailability(statusMap, option.value.toLowerCase())
+        const isPromoMismatch = appliedPromo && appliedPromo.protein !== 'ALL' && option.value !== appliedPromo.protein
+        return {
+          ...option,
+          availability: isPromoMismatch
+            ? { available: false, availabilityStatus: 'inactive', availabilityLabel: 'No aplica a promo' }
+            : availability,
+          promoBadge: appliedPromo && appliedPromo.protein === option.value ? 'Requerido por Promo 🎁' : null
+        }
+      })
+      .filter((option) => showUnavailable || option.availability.available || (appliedPromo && appliedPromo.protein !== 'ALL'))
+  }, [inventoryItems, optionsLoaded, showUnavailable, appliedPromo])
 
   useEffect(() => {
-    if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein && option.availability.available)) {
+    if (optionsLoaded && appliedPromo && appliedPromo.protein !== 'ALL') {
+      updatePlate({ protein: appliedPromo.protein })
+    } else if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein && option.availability.available)) {
       updatePlate({ protein: null })
     }
-  }, [optionsLoaded, availableOptions, plate.protein, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.protein, updatePlate, appliedPromo])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -66,7 +78,7 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnav
             spicyLevel={opt.spicyLevel}
             disabled={!opt.availability.available}
             availabilityStatus={opt.availability.availabilityStatus}
-            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityLabel={opt.promoBadge || opt.availability.availabilityLabel}
             availabilityDetail={opt.availability.availabilityDetail}
             onClick={() => updatePlate({ protein: opt.value })}
           />

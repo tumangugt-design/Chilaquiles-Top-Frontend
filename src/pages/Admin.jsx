@@ -17,6 +17,8 @@ import {
   updateInventoryStock,
   getOperatingHours,
   updateOperatingHours,
+  getPromotions,
+  updatePromotions,
   getFinancesSummary,
   getAvailablePlates
 } from '../shared/config/api.js'
@@ -391,6 +393,22 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     orders: []
   })
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
+  const [promotions, setPromotions] = useState([])
+  const [promoForm, setPromoForm] = useState({
+    id: null,
+    name: '',
+    description: '',
+    promoPrice: '',
+    isActive: false,
+    protein: 'POLLO',
+    requestedCount: 2,
+  })
+  const [calcPlate, setCalcPlate] = useState({
+    sauce: 'ROJA',
+    protein: 'POLLO',
+    complement: 'CEBOLLA_CARAMELIZADA',
+    baseRecipe: { cream: true, onion: true, cilantro: true }
+  })
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
 
@@ -441,6 +459,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       } else if (['entries', 'inventory'].includes(activeTab)) {
         const inventoryResponse = await getInventory()
         setInventory(inventoryResponse.data)
+      } else if (activeTab === 'promotions') {
+        const [promotionsResponse, inventoryResponse] = await Promise.all([getPromotions(), getInventory()])
+        setPromotions(promotionsResponse.data || [])
+        setInventory(inventoryResponse.data || [])
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -728,6 +750,116 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       toast.error(err.response?.data?.message || 'No se pudo guardar el horario')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const getProductCost = (name) => {
+    const item = inventory.find(i => i.name === name)
+    return Number(item?.lastPrice || 0)
+  }
+
+  const calculatePlateRecipeCost = (plate) => {
+    let cost = 0
+    cost += getProductCost('plato rectangular')
+    cost += getProductCost('tenedor')
+    cost += getProductCost('servilleta')
+    cost += getProductCost('sticker')
+    
+    cost += getProductCost('totopos')
+    cost += getProductCost('queso')
+    if (plate.baseRecipe?.cream !== false) cost += getProductCost('crema')
+    if (plate.baseRecipe?.onion !== false) cost += getProductCost('cebolla')
+    if (plate.baseRecipe?.cilantro !== false) cost += getProductCost('cilantro')
+
+    if (plate.sauce === 'ROJA') {
+      cost += getProductCost('salsa roja')
+      cost += getProductCost('plato de 8 onz')
+      cost += getProductCost('tapadera de 8 onz')
+    } else if (plate.sauce === 'VERDE') {
+      cost += getProductCost('salsa verde')
+      cost += getProductCost('plato de 8 onz')
+      cost += getProductCost('tapadera de 8 onz')
+    } else if (plate.sauce === 'DIVORCIADOS') {
+      cost += getProductCost('salsa roja') * 0.5
+      cost += getProductCost('salsa verde') * 0.5
+      cost += getProductCost('plato de 4 onz') * 2
+      cost += getProductCost('tapadera de 4 onz') * 2
+    }
+
+    if (plate.protein === 'STEAK') cost += getProductCost('steak')
+    if (plate.protein === 'POLLO') cost += getProductCost('pollo')
+    if (plate.protein === 'CHORIZO') cost += getProductCost('chorizo')
+
+    if (plate.complement === 'AGUACATE') cost += getProductCost('aguacate')
+    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') cost += getProductCost('cebolla caramelizada')
+    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') cost += getProductCost('queso extra')
+
+    return cost
+  }
+
+  const handleSavePromotion = async (e) => {
+    if (e) e.preventDefault()
+    if (!promoForm.name || !promoForm.promoPrice) {
+      return toast.error('Ingresa el nombre y el precio de la promoción')
+    }
+
+    const priceNum = Number(promoForm.promoPrice)
+    if (Number.isNaN(priceNum) || priceNum <= 0) {
+      return toast.error('Ingresa un precio de promoción válido')
+    }
+
+    setIsSaving(true)
+    try {
+      let updatedPromos = []
+      if (promoForm.id) {
+        updatedPromos = promotions.map(p => p.id === promoForm.id ? { ...p, ...promoForm, promoPrice: priceNum } : p)
+      } else {
+        const newPromo = {
+          ...promoForm,
+          id: Math.random().toString(36).slice(2, 11),
+          promoPrice: priceNum
+        }
+        updatedPromos = [...promotions, newPromo]
+      }
+
+      await updatePromotions(updatedPromos)
+      setPromotions(updatedPromos)
+      toast.success(promoForm.id ? 'Promoción actualizada con éxito' : 'Promoción creada con éxito')
+      setPromoForm({
+        id: null,
+        name: '',
+        description: '',
+        promoPrice: '',
+        isActive: false,
+        protein: 'POLLO',
+        requestedCount: 2,
+      })
+    } catch (err) {
+      toast.error('No se pudo guardar la promoción')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleTogglePromoStatus = async (id, currentStatus) => {
+    const updatedPromos = promotions.map(p => p.id === id ? { ...p, isActive: !currentStatus } : p)
+    try {
+      await updatePromotions(updatedPromos)
+      setPromotions(updatedPromos)
+      toast.success(`Promoción ${!currentStatus ? 'activada' : 'desactivada'}`)
+    } catch (err) {
+      toast.error('No se pudo cambiar el estado de la promoción')
+    }
+  }
+
+  const handleDeletePromotion = async (id) => {
+    const updatedPromos = promotions.filter(p => p.id !== id)
+    try {
+      await updatePromotions(updatedPromos)
+      setPromotions(updatedPromos)
+      toast.success('Promoción eliminada')
+    } catch (err) {
+      toast.error('No se pudo eliminar la promoción')
     }
   }
 
@@ -1518,6 +1650,321 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <Button onClick={saveSchedule} className="w-full !py-6 !text-lg" disabled={isSaving}>
                 {isSaving ? 'Guardando...' : 'Aplicar Todos los Cambios'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'promotions' && (
+        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 animate-fade-in min-w-0">
+          
+          {/* Left Column: Calculator & Form */}
+          <div className="space-y-6 sm:space-y-8 min-w-0">
+            
+            {/* Interactive Cost & Profit Calculator */}
+            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4">
+              <div className="border-b border-ui-border pb-3 flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-black text-ui-text">Simulador de Costo de Plato</h3>
+                  <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Calcula el costo real de preparación según ingredientes</p>
+                </div>
+                <div className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider shrink-0">
+                  Calculadora 📊
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Salsa</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={calcPlate.sauce}
+                    onChange={(e) => setCalcPlate({ ...calcPlate, sauce: e.target.value })}
+                  >
+                    <option value="ROJA">Salsa Roja</option>
+                    <option value="VERDE">Salsa Verde</option>
+                    <option value="DIVORCIADOS">Divorciados</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Proteína</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={calcPlate.protein}
+                    onChange={(e) => setCalcPlate({ ...calcPlate, protein: e.target.value })}
+                  >
+                    <option value="POLLO">Pollo Cocido</option>
+                    <option value="STEAK">Steak</option>
+                    <option value="CHORIZO">Chorizo Argentino</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Complemento</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={calcPlate.complement}
+                    onChange={(e) => setCalcPlate({ ...calcPlate, complement: e.target.value })}
+                  >
+                    <option value="CEBOLLA_CARAMELIZADA">Cebolla Caramelizada</option>
+                    <option value="AGUACATE">Aguacate</option>
+                    <option value="QUESO_EXTRA">Queso Extra</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Recipe Cost Result Summary */}
+              <div className="p-4 rounded-2xl bg-white border border-ui-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Costo de Insumos (Por Plato)</p>
+                  <p className="text-3xl font-black text-brand-blue mt-1">Q{calculatePlateRecipeCost(calcPlate).toFixed(2)}</p>
+                  <p className="text-[10px] text-ui-muted font-bold mt-1">Suma del precio fijo de empaques, base, salsa, proteína y complementos.</p>
+                </div>
+                <div className="text-center sm:text-right">
+                  <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Rentabilidad Estimada (Venta Q50)</p>
+                  <p className="text-xl font-black text-green-600 mt-1">Q{(50 - calculatePlateRecipeCost(calcPlate)).toFixed(2)}</p>
+                  <p className="text-[10px] text-green-600 font-bold mt-0.5">
+                    {((50 - calculatePlateRecipeCost(calcPlate)) / 50 * 100).toFixed(0)}% Utilidad
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Promotion Creator/Editor Form */}
+            <form onSubmit={handleSavePromotion} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4">
+              <div className="border-b border-ui-border pb-3">
+                <h3 className="text-lg font-black text-ui-text">
+                  {promoForm.id ? 'Editar Promoción' : 'Crear Nueva Promoción'}
+                </h3>
+                <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Configura la regla y precio de la promoción</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Nombre de la Promoción</label>
+                  <input
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    type="text"
+                    required
+                    value={promoForm.name}
+                    onChange={(e) => setPromoForm({ ...promoForm, name: e.target.value })}
+                    placeholder="Ej. 2x1 Pollo Cocido"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio Promocional (Q)</label>
+                  <input
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={promoForm.promoPrice}
+                    onChange={(e) => setPromoForm({ ...promoForm, promoPrice: e.target.value })}
+                    placeholder="Ej. 55"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Descripción</label>
+                <textarea
+                  className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
+                  rows={2}
+                  value={promoForm.description}
+                  onChange={(e) => setPromoForm({ ...promoForm, description: e.target.value })}
+                  placeholder="Ej. 2x1 SOLO HOY en ordenes de pechuga de pollo cocido"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proteína Requerida</label>
+                  <select
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    value={promoForm.protein}
+                    onChange={(e) => setPromoForm({ ...promoForm, protein: e.target.value })}
+                  >
+                    <option value="POLLO">Pollo Cocido</option>
+                    <option value="STEAK">Steak</option>
+                    <option value="CHORIZO">Chorizo Argentino</option>
+                    <option value="ALL">Cualquier Proteína</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Cantidad de Platos Requerida</label>
+                  <select
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    value={promoForm.requestedCount}
+                    onChange={(e) => setPromoForm({ ...promoForm, requestedCount: Number(e.target.value) })}
+                  >
+                    <option value={1}>1 Plato</option>
+                    <option value={2}>2 Platos (Ej. 2x1)</option>
+                    <option value={3}>3 Platos</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Promo Margin Cost calculations preview */}
+              {promoForm.promoPrice && (
+                (() => {
+                  const qty = Number(promoForm.requestedCount || 1)
+                  const unitCost = calculatePlateRecipeCost({
+                    sauce: 'ROJA',
+                    protein: promoForm.protein === 'ALL' ? 'POLLO' : promoForm.protein,
+                    complement: 'CEBOLLA_CARAMELIZADA',
+                    baseRecipe: { cream: true, onion: true, cilantro: true }
+                  })
+                  const totalCost = unitCost * qty
+                  const profit = Number(promoForm.promoPrice) - totalCost
+                  const marginPct = (profit / Number(promoForm.promoPrice)) * 100
+                  const isLoss = profit < 0
+                  const isHealthy = marginPct >= 30
+
+                  return (
+                    <div className={`p-4 rounded-2xl border flex items-start gap-3 transition-colors ${
+                      isLoss
+                        ? 'bg-red-500/10 border-red-500/20 text-red-700'
+                        : isHealthy
+                        ? 'bg-green-500/10 border-green-500/20 text-green-700'
+                        : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700'
+                    }`}>
+                      <div className="text-2xl">
+                        {isLoss ? '⚠️' : isHealthy ? '🔥' : '📈'}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-sm uppercase">Análisis Financiero de Promo</h4>
+                        <p className="text-xs font-bold mt-1 text-ui-text">
+                          Costo Total de Insumos: <strong>Q{totalCost.toFixed(2)}</strong> (Q{unitCost.toFixed(2)} c/u).
+                        </p>
+                        <p className="text-xs font-bold mt-0.5 text-ui-text">
+                          Ganancia Estimada: <strong className={isLoss ? 'text-red-600' : isHealthy ? 'text-green-600' : 'text-yellow-600'}>
+                            Q{profit.toFixed(2)}
+                          </strong> ({marginPct.toFixed(0)}% margen).
+                        </p>
+                        <p className="text-[10px] opacity-75 mt-1 font-semibold leading-tight">
+                          {isLoss 
+                            ? 'Esta promoción genera pérdidas. Considera subir el precio promocional.' 
+                            : isHealthy 
+                            ? 'El margen es saludable (mayor al 30%). ¡Buena promoción!' 
+                            : 'El margen es reducido. Revisa los costos fijos.'}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()
+              )}
+
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1 !py-4" disabled={isSaving}>
+                  {isSaving ? 'Guardando...' : promoForm.id ? 'Actualizar Promoción' : 'Crear Promoción'}
+                </Button>
+                {promoForm.id && (
+                  <button
+                    type="button"
+                    onClick={() => setPromoForm({
+                      id: null,
+                      name: '',
+                      description: '',
+                      promoPrice: '',
+                      isActive: false,
+                      protein: 'POLLO',
+                      requestedCount: 2,
+                    })}
+                    className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column: List of Promotions */}
+          <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
+            <div className="border-b border-ui-border pb-3">
+              <h3 className="text-lg font-black text-ui-text">Promociones Creadas</h3>
+              <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Activa o desactiva las promos para los clientes</p>
+            </div>
+
+            <div className="space-y-4 max-h-[48rem] overflow-y-auto pr-2">
+              {promotions.map((promo) => {
+                const singleCost = calculatePlateRecipeCost({
+                  sauce: 'ROJA',
+                  protein: promo.protein === 'ALL' ? 'POLLO' : promo.protein,
+                  complement: 'CEBOLLA_CARAMELIZADA',
+                  baseRecipe: { cream: true, onion: true, cilantro: true }
+                })
+                const totalCost = singleCost * (promo.requestedCount || 1)
+                const margin = promo.promoPrice - totalCost
+                const marginPct = (margin / promo.promoPrice) * 105; // safe calculation check
+
+                return (
+                  <div key={promo.id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-4 shadow-sm min-w-0">
+                    <div className="flex justify-between items-start gap-4">
+                      <div>
+                        <h4 className="font-black text-base text-ui-text leading-tight">{promo.name}</h4>
+                        <p className="text-xs text-ui-muted font-bold leading-normal mt-1">{promo.description}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePromoStatus(promo.id, promo.isActive)}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
+                          promo.isActive
+                            ? 'bg-green-500/10 text-green-700 border-green-500/30'
+                            : 'bg-ui-bg text-ui-muted border-ui-border'
+                        }`}
+                      >
+                        {promo.isActive ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 border-t border-b border-ui-border py-3 text-xs">
+                      <div>
+                        <p className="text-[10px] text-ui-muted uppercase tracking-wider font-bold">Precio de Venta</p>
+                        <p className="text-lg font-black text-brand-blue mt-0.5">Q{Number(promo.promoPrice).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-ui-muted uppercase tracking-wider font-bold">Rentabilidad</p>
+                        <p className={`text-lg font-black mt-0.5 ${margin >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                          Q{margin.toFixed(2)} <span className="text-[10px] font-bold">({isNaN(marginPct) ? 0 : marginPct.toFixed(0)}%)</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
+                      <div className="text-ui-muted font-bold">
+                        Condición: {promo.requestedCount} plato(s) · {promo.protein === 'ALL' ? 'Cualquier proteína' : promo.protein}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPromoForm(promo)}
+                          className="text-brand-orange hover:underline font-black"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePromotion(promo.id)}
+                          className="text-brand-red hover:underline font-black"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {promotions.length === 0 && (
+                <div className="py-12 text-center border border-dashed border-ui-border rounded-2xl bg-white/40">
+                  <p className="text-xs font-black uppercase tracking-widest text-ui-muted">No hay promociones registradas</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
