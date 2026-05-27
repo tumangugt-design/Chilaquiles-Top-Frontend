@@ -12,6 +12,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   const promoRequestedCount = Number(order.appliedPromo?.requestedCount || 0)
   const promoPrice = Number(order.appliedPromo?.promoPrice || 0)
   const promoIsApplied = Boolean(order.appliedPromo && promoRequestedCount > 0 && promoPrice > 0)
+  const targetPlateCount = promoIsApplied ? promoRequestedCount : Number(order.requestedCount || 1)
   const grandTotal = promoIsApplied
     ? promoPrice
     : calculateTotal(Math.max(order.requestedCount || 0, totalItems))
@@ -42,7 +43,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
   const getButtonLabel = () => {
     if (currentStep === 'SUMMARY') {
-      if (totalItems < (order.requestedCount || 1)) return 'Personalizar Siguiente'
+      if (totalItems < targetPlateCount) return 'Personalizar Siguiente'
       return 'Finalizar Pedido'
     }
     if (currentStep === 'TEMPERATURE') return 'Continuar'
@@ -51,7 +52,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   }
 
   const handleMainAction = () => {
-    if (currentStep === 'SUMMARY' && totalItems < (order.requestedCount || 1)) {
+    if (currentStep === 'SUMMARY' && totalItems < targetPlateCount) {
       onAddAnother?.()
     } else {
       onNext?.()
@@ -91,7 +92,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
         <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
           <div className="flex justify-between items-center mb-2 border-b border-blue-100 pb-1">
             <span className="text-xs font-bold text-brand-blue uppercase">
-              {`Plato ${totalItems} ${order.requestedCount > 1 ? `(${totalItems} de ${order.requestedCount})` : '(Editando)'}`}
+              {`Plato ${totalItems} ${targetPlateCount > 1 ? `(${totalItems} de ${targetPlateCount})` : '(Editando)'}`}
             </span>
           </div>
           {currentPlate.sauce || currentPlate.protein ? (

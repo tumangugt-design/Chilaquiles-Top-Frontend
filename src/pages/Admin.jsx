@@ -239,6 +239,17 @@ const formatUserSubtitle = (user) => {
   return 'Sin contacto'
 }
 
+
+const getPromoInfo = (order) => {
+  const promo = order?.appliedPromo
+  if (!promo) return null
+  const name = promo.name || 'PROMO'
+  const plates = promo.plates || promo.requestedCount || order?.items?.length || 0
+  const price = promo.price ?? promo.promoPrice ?? order?.total
+  const priceLabel = Number(price) > 0 ? `Q${Number(price).toFixed(0)}` : ''
+  return { name, plates, priceLabel, manualCorrection: Boolean(promo.manualCorrection) }
+}
+
 const getHistoryMeta = (type) => {
   if (type === 'client') {
     return {
@@ -273,11 +284,22 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
           <p className="text-[10px] font-black text-black/55 uppercase tracking-widest">Número de orden</p>
           <p className="font-black text-xl text-black/80">{order.orderNumber || order._id?.slice(-6)}</p>
           <p className="text-xs font-bold text-black/60 mt-1">{formatDate(order.createdAt)}</p>
-          {order.sauceTemperature && (
-            <div className={`mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${order.sauceTemperature === 'FRIO' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-              <span className="text-xs">{order.sauceTemperature === 'FRIO' ? '🧊' : '♨️'}</span> Salsa {order.sauceTemperature}
-            </div>
-          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {order.sauceTemperature && (
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${order.sauceTemperature === 'FRIO' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
+                <span className="text-xs">{order.sauceTemperature === 'FRIO' ? '🧊' : '♨️'}</span> Salsa {order.sauceTemperature}
+              </div>
+            )}
+            {getPromoInfo(order) && (
+              <div className="inline-flex flex-wrap items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 text-[10px] font-black uppercase tracking-wider">
+                <span>🎁 PROMO</span>
+                <span>{getPromoInfo(order).name}</span>
+                {getPromoInfo(order).priceLabel && <span>· {getPromoInfo(order).priceLabel}</span>}
+                {getPromoInfo(order).plates ? <span>· {getPromoInfo(order).plates} platos</span> : null}
+                {getPromoInfo(order).manualCorrection && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-yellow-800">Corrección manual</span>}
+              </div>
+            )}
+          </div>
         </div>
         <StatusBadge value={order.status} />
       </div>

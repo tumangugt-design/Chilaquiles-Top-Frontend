@@ -278,16 +278,33 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         accessCode: localData.accessCode.trim(),
       }
 
-      const allItems = [...order.cart, order.currentPlate]
+      const sanitizePlate = (item) => ({
+        sauce: item.sauce,
+        protein: item.protein,
+        complement: item.complement,
+        baseRecipe: item.baseRecipe,
+      })
+
+      const targetPromoCount = Number(order.appliedPromo?.requestedCount || 0)
+      const allItems = [...order.cart, order.currentPlate].map(sanitizePlate)
+      const itemsToSend = [...allItems]
+
+      // Respaldo de seguridad: si una promo 2x1 llega con un solo plato por un flujo viejo,
+      // se duplica el último plato para que backend cobre la promo y descuente inventario completo.
+      if (order.appliedPromo && targetPromoCount > itemsToSend.length && itemsToSend.length > 0) {
+        const lastPlate = itemsToSend[itemsToSend.length - 1]
+        while (itemsToSend.length < targetPromoCount) {
+          itemsToSend.push({
+            ...lastPlate,
+            baseRecipe: { ...(lastPlate.baseRecipe || {}) },
+          })
+        }
+      }
+
       const response = await createOrder({
         customer: payloadCustomer,
         sauceTemperature: order.sauceTemperature,
-        items: allItems.map((item) => ({
-          sauce: item.sauce,
-          protein: item.protein,
-          complement: item.complement,
-          baseRecipe: item.baseRecipe,
-        })),
+        items: itemsToSend,
         appliedPromo: order.appliedPromo ? { id: order.appliedPromo.id } : null,
         ...(isInternal ? { isInternal: true } : {}),
       })

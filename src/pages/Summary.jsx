@@ -79,7 +79,7 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
 
   const allPlates = [...order.cart, order.currentPlate]
   const platesCount = allPlates.length
-  const requestedCount = order.appliedPromo?.requestedCount || order.requestedCount || 1
+  const requestedCount = Number(order.appliedPromo?.requestedCount || order.requestedCount || 1)
   const isComplete = platesCount >= requestedCount
 
   const getAddAnotherLabel = () => {

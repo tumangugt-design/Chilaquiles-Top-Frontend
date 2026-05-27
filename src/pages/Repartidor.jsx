@@ -21,6 +21,30 @@ const getCardTextTone = (status) => {
   return 'text-[#14532D]'
 }
 
+
+const getPromoInfo = (order) => {
+  const promo = order?.appliedPromo
+  if (!promo) return null
+  const name = promo.name || 'PROMO'
+  const plates = promo.plates || promo.requestedCount || order?.items?.length || 0
+  const price = promo.price ?? promo.promoPrice ?? order?.total
+  const priceLabel = Number(price) > 0 ? `Q${Number(price).toFixed(0)}` : ''
+  return { name, plates, priceLabel }
+}
+
+const PromoBadge = ({ order }) => {
+  const promo = getPromoInfo(order)
+  if (!promo) return null
+  return (
+    <div className="mt-2 inline-flex flex-wrap items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-green-800">
+      <span>🎁 PROMO</span>
+      <span>{promo.name}</span>
+      {promo.priceLabel && <span>· {promo.priceLabel}</span>}
+      {promo.plates ? <span>· {promo.plates} platos</span> : null}
+    </div>
+  )
+}
+
 const getActionButtonTone = (status) => {
   if (status === 'listo_para_despacho') {
     return '!bg-[#FBC02D] !text-[#3D2F00] hover:!bg-[#E0AA00] border border-[#D39E00]'
@@ -145,6 +169,7 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
           <div>
             <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de orden</p>
             <h3 className="text-2xl font-black text-black/80">{order.orderNumber || order._id.slice(-6)}</h3>
+            <PromoBadge order={order} />
           </div>
           <StatusBadge value={order.status} />
         </div>

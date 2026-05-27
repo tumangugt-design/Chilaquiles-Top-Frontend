@@ -458,36 +458,19 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
             </div>
 
             {promotions.filter(p => p.imageUrl).map((promo) => (
-              <div key={promo.id} className="space-y-2 border-t border-ui-border pt-4">
-                <span className="text-xs font-black uppercase text-brand-orange tracking-widest block text-center">✨ ¡Promoción: {promo.name}!</span>
+              <button
+                key={promo.id}
+                type="button"
+                onClick={() => applyPromotion(promo)}
+                className="block w-full border-t border-ui-border pt-4 text-left transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-ui-card rounded-2xl"
+                aria-label={`Pedir promoción ${promo.name || ''}`.trim()}
+              >
                 <img
                   src={promo.imageUrl}
-                  alt={promo.name}
+                  alt={promo.name || 'Promoción Chilaquiles TOP'}
                   className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
                 />
-                {(promo.description || promo.promoPrice) && (
-                  <div className="rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-center">
-                    {promo.description && <p className="text-xs font-bold text-ui-text">{promo.description}</p>}
-                    {promo.promoPrice && (
-                      <p className="mt-1 text-sm font-black text-green-700">
-                        {promo.requestedCount || 2} platos por Q{Number(promo.promoPrice).toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {promo.promoPrice && onApplyPromo && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      applyPromotion(promo)
-                    }}
-                    className="w-full rounded-2xl bg-brand-blue px-4 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-brand-blue/20 transition hover:scale-[1.01]"
-                  >
-                    Aplicar promoción
-                  </button>
-                )}
-              </div>
+              </button>
             ))}
           </div>
         </div>
