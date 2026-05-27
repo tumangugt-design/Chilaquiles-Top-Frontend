@@ -3,7 +3,7 @@ import { useAuthSession } from './shared/hooks/useAuthSession.jsx'
 import Header from './components/layout/Header.jsx'
 import OrderSummary from './components/layout/OrderSummary.jsx'
 import Stepper from './components/ui/Stepper.jsx'
-import { STEPS_ORDER } from './shared/constants/index.jsx'
+import { STEPS_ORDER, normalizePromotionForOrder, getPromoConstraint } from './shared/constants/index.jsx'
 import { useOrder } from './shared/hooks/useOrder.jsx'
 import { getAvailablePlates } from './shared/config/api.js'
 import LocationPage from './pages/Location.jsx'
@@ -83,10 +83,34 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     window.scrollTo(0, 0)
   }
 
+  const handleApplyPromotion = (promo) => {
+    const appliedPromo = normalizePromotionForOrder(promo)
+    const forcedPlate = {}
+    const forcedSauce = getPromoConstraint(appliedPromo, 'sauce')
+    const forcedProtein = getPromoConstraint(appliedPromo, 'protein')
+    const forcedComplement = getPromoConstraint(appliedPromo, 'complement')
+
+    if (forcedSauce !== 'ALL') forcedPlate.sauce = forcedSauce
+    if (forcedProtein !== 'ALL') forcedPlate.protein = forcedProtein
+    if (forcedComplement !== 'ALL') forcedPlate.complement = forcedComplement
+    if (appliedPromo.recipe?.baseRecipe) forcedPlate.baseRecipe = appliedPromo.recipe.baseRecipe
+
+    updateOrder({ appliedPromo, requestedCount: appliedPromo.requestedCount })
+    if (Object.keys(forcedPlate).length > 0) updateCurrentPlate(forcedPlate)
+  }
+
   const handleAddCurrentPlateToCart = () => {
     addCurrentPlateToCart()
-    if (order.appliedPromo && order.appliedPromo.protein !== 'ALL') {
-      updateCurrentPlate({ protein: order.appliedPromo.protein })
+    if (order.appliedPromo) {
+      const nextPlate = {}
+      const forcedSauce = getPromoConstraint(order.appliedPromo, 'sauce')
+      const forcedProtein = getPromoConstraint(order.appliedPromo, 'protein')
+      const forcedComplement = getPromoConstraint(order.appliedPromo, 'complement')
+      if (forcedSauce !== 'ALL') nextPlate.sauce = forcedSauce
+      if (forcedProtein !== 'ALL') nextPlate.protein = forcedProtein
+      if (forcedComplement !== 'ALL') nextPlate.complement = forcedComplement
+      if (order.appliedPromo.recipe?.baseRecipe) nextPlate.baseRecipe = order.appliedPromo.recipe.baseRecipe
+      if (Object.keys(nextPlate).length > 0) updateCurrentPlate(nextPlate)
     }
     setCurrentStep('SAUCE')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -113,19 +137,25 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                   },
                 })
               }
-              nextStep()
+              if (order.appliedPromo?.requestedCount) {
+                setCurrentStep('SAUCE')
+                window.scrollTo(0, 0)
+              } else {
+                nextStep()
+              }
             }}
+            onApplyPromo={handleApplyPromotion}
           />
         )
 
       case 'SIZE':
         return <SizePage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} />
       case 'SAUCE':
-        return <SaucePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <SaucePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} appliedPromo={order.appliedPromo} />
       case 'PROTEIN':
         return <ProteinPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} appliedPromo={order.appliedPromo} />
       case 'COMPLEMENT':
-        return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} appliedPromo={order.appliedPromo} />
       case 'BASE_RECIPE':
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
       case 'SUMMARY':

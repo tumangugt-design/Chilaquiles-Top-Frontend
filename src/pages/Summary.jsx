@@ -1,9 +1,12 @@
 
 
-import { formatBaseRecipe } from '../shared/constants/index.jsx'
+import { OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe, getOptionLabel } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
 
 const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
+  const sauceLabel = getOptionLabel(plate.sauce, OPTIONS_SAUCE)
+  const proteinLabel = getOptionLabel(plate.protein, OPTIONS_PROTEIN)
+  const complementLabel = getOptionLabel(plate.complement, OPTIONS_COMPLEMENT)
 
   return (
     <div className="bg-ui-card border border-ui-border shadow-sm rounded-xl p-5 mb-4 relative overflow-hidden">
@@ -19,9 +22,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
         <div className="flex justify-between items-center text-sm text-ui-muted">
           <span className="text-ui-text">
-            {plate.sauce === 'ROJA' && 'Salsa Roja'}
-            {plate.sauce === 'VERDE' && 'Salsa Verde'}
-            {plate.sauce === 'DIVORCIADOS' && 'Divorciados'}
+            {sauceLabel || 'Sin salsa'}
           </span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('SAUCE')}
@@ -34,9 +35,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
         <div className="flex justify-between items-center text-sm text-ui-muted">
           <span className="text-ui-text">
-            {plate.protein === 'STEAK' && 'Steak'}
-            {plate.protein === 'POLLO' && 'Pollo Cocido'}
-            {plate.protein === 'CHORIZO' && 'Chorizo Argentino'}
+            {proteinLabel || 'Sin proteína'}
           </span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('PROTEIN')}
@@ -49,9 +48,7 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
 
         <div className="flex justify-between items-center text-sm text-ui-muted">
           <span className="text-ui-text">
-            {plate.complement === 'AGUACATE' && 'Aguacate'}
-            {(plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') && 'Cebolla Caramelizada'}
-            {(plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') && 'Queso Extra'}
+            {complementLabel || 'Sin complemento'}
           </span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('COMPLEMENT')}
@@ -82,7 +79,7 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
 
   const allPlates = [...order.cart, order.currentPlate]
   const platesCount = allPlates.length
-  const requestedCount = order.requestedCount || 1
+  const requestedCount = order.appliedPromo?.requestedCount || order.requestedCount || 1
   const isComplete = platesCount >= requestedCount
 
   const getAddAnotherLabel = () => {
@@ -96,6 +93,11 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
       <div className="mb-4">
         <h2 className="text-2xl font-extrabold mb-2 text-ui-text">Resumen del Pedido</h2>
         <p className="text-ui-muted text-sm">Revisa que todo esté delicioso antes de confirmar.</p>
+        {order.appliedPromo && (
+          <p className="mt-2 inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-green-700">
+            Promo aplicada: {order.appliedPromo.name} · {order.appliedPromo.requestedCount} platos por Q{Number(order.appliedPromo.promoPrice || 0).toFixed(2)}
+          </p>
+        )}
       </div>
 
       {}

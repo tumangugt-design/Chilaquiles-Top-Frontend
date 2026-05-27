@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_PROTEIN } from '../shared/constants/index.jsx'
+import { OPTIONS_PROTEIN, getPromoConstraint } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -27,31 +27,33 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnav
     return () => { mounted = false }
   }, [])
 
+  const promoProtein = getPromoConstraint(appliedPromo, 'protein')
+
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
     return OPTIONS_PROTEIN
       .map((option) => {
         const availability = getProductAvailability(statusMap, option.value.toLowerCase())
-        const isPromoMismatch = appliedPromo && appliedPromo.protein !== 'ALL' && option.value !== appliedPromo.protein
+        const isPromoMismatch = appliedPromo && promoProtein !== 'ALL' && option.value !== promoProtein
         return {
           ...option,
           availability: isPromoMismatch
             ? { available: false, availabilityStatus: 'inactive', availabilityLabel: 'No aplica a promo' }
             : availability,
-          promoBadge: appliedPromo && appliedPromo.protein === option.value ? 'Requerido por Promo 🎁' : null
+          promoBadge: appliedPromo && promoProtein === option.value ? 'Requerido por Promo 🎁' : null
         }
       })
-      .filter((option) => showUnavailable || option.availability.available || (appliedPromo && appliedPromo.protein !== 'ALL'))
-  }, [inventoryItems, optionsLoaded, showUnavailable, appliedPromo])
+      .filter((option) => showUnavailable || option.availability.available || (appliedPromo && promoProtein !== 'ALL'))
+  }, [inventoryItems, optionsLoaded, showUnavailable, appliedPromo, promoProtein])
 
   useEffect(() => {
-    if (optionsLoaded && appliedPromo && appliedPromo.protein !== 'ALL') {
-      updatePlate({ protein: appliedPromo.protein })
+    if (optionsLoaded && appliedPromo && promoProtein !== 'ALL') {
+      updatePlate({ protein: promoProtein })
     } else if (optionsLoaded && plate.protein && !availableOptions.some((option) => option.value === plate.protein && option.availability.available)) {
       updatePlate({ protein: null })
     }
-  }, [optionsLoaded, availableOptions, plate.protein, updatePlate, appliedPromo])
+  }, [optionsLoaded, availableOptions, plate.protein, updatePlate, appliedPromo, promoProtein])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">

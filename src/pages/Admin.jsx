@@ -27,7 +27,7 @@ import {
   getInventoryLogs
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, getAllowedInputUnits, convertInventoryAmountToBaseUnit } from '../shared/constants/index.jsx'
+import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import InternalOrder from './InternalOrder.jsx'
@@ -111,6 +111,39 @@ const getStockAlertItems = (items = []) => {
       }
     })
     .filter(Boolean)
+}
+
+
+const resetPromoFormState = () => ({
+  id: null,
+  name: '',
+  description: '',
+  promoPrice: '',
+  requestedCount: '2',
+  isActive: false,
+  startDate: '',
+  endDate: '',
+  imageUrl: '',
+  constraints: {
+    sauce: 'ALL',
+    protein: 'ALL',
+    complement: 'ALL',
+  },
+})
+
+const getPromoConstraintValue = (promo, field) => {
+  const raw = promo?.constraints?.[field] ?? promo?.[field] ?? 'ALL'
+  if (field === 'complement') return normalizeComplementValue(raw) || 'ALL'
+  return String(raw || 'ALL').trim().toUpperCase().replace(/\s+/g, '_') || 'ALL'
+}
+
+const getPromoConstraintLabel = (promo, field) => {
+  const value = getPromoConstraintValue(promo, field)
+  if (value === 'ALL') return 'Cualquiera'
+  if (field === 'sauce') return getOptionLabel(value, OPTIONS_SAUCE)
+  if (field === 'protein') return getOptionLabel(value, OPTIONS_PROTEIN)
+  if (field === 'complement') return getOptionLabel(value, OPTIONS_COMPLEMENT)
+  return value
 }
 
 const getCardTone = (status) => {
@@ -398,16 +431,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   })
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
   const [promotions, setPromotions] = useState([])
-  const [promoForm, setPromoForm] = useState({
-    id: null,
-    name: '',
-    description: '',
-    promoPrice: '',
-    isActive: false,
-    startDate: '',
-    endDate: '',
-    imageUrl: '',
-  })
+  const [promoForm, setPromoForm] = useState(resetPromoFormState())
   const [calcPlate, setCalcPlate] = useState({
     sauce: 'ROJA',
     protein: 'POLLO',
@@ -417,7 +441,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [simulatedCosts, setSimulatedCosts] = useState({})
-  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cebolla', 'cilantro'])
+  const [calcSelectedBases, setCalcSelectedBases] = useState(['totopos', 'queso', 'crema', 'cebolla', 'cilantro'])
   const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
   const [isOpenBases, setIsOpenBases] = useState(false)
   const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
@@ -822,7 +846,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (calcSelectedEmpaques.includes('servilleta')) cost += getIngredientCost('servilleta', plate)
     if (calcSelectedEmpaques.includes('sticker')) cost += getIngredientCost('sticker', plate)
     
-    // Base (solo Crema, Cebolla, Cilantro — Totopos y Queso no aplican aquí)
+    // Base de cada plato
+    if (calcSelectedBases.includes('totopos')) cost += getIngredientCost('totopos', plate)
+    if (calcSelectedBases.includes('queso')) cost += getIngredientCost('queso', plate)
     if (calcSelectedBases.includes('crema')) cost += getIngredientCost('crema', plate)
     if (calcSelectedBases.includes('cebolla')) cost += getIngredientCost('cebolla', plate)
     if (calcSelectedBases.includes('cilantro')) cost += getIngredientCost('cilantro', plate)
@@ -901,24 +927,57 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       return toast.error('Ingresa el nombre de la promoción')
     }
 
+    const requestedCount = Number(promoForm.requestedCount || calcPromoPlates || 2)
+    if (Number.isNaN(requestedCount) || requestedCount < 1) {
+      return toast.error('Ingresa una cantidad válida de platos para la promoción')
+    }
+
     let priceNum = null
-    if (promoForm.promoPrice) {
-      priceNum = Number(promoForm.promoPrice)
+    const rawPrice = promoForm.promoPrice || calcPromoPrice
+    if (rawPrice) {
+      priceNum = Number(rawPrice)
       if (Number.isNaN(priceNum) || priceNum <= 0) {
         return toast.error('Ingresa un precio de promoción válido')
       }
+    }
+
+    const singlePlateCost = calculatePlateRecipeCost(calcPlate)
+    const totalPromoCost = singlePlateCost * requestedCount
+    const profit = priceNum ? priceNum - totalPromoCost : null
+    const profitMargin = priceNum ? (profit / priceNum) * 100 : null
+
+    const normalizedPromo = {
+      ...promoForm,
+      requestedCount,
+      promoPrice: priceNum,
+      constraints: {
+        sauce: getPromoConstraintValue(promoForm, 'sauce'),
+        protein: getPromoConstraintValue(promoForm, 'protein'),
+        complement: getPromoConstraintValue(promoForm, 'complement'),
+      },
+      recipe: {
+        sauce: calcPlate.sauce,
+        protein: calcPlate.protein,
+        complement: normalizeComplementValue(calcPlate.complement) || calcPlate.complement,
+        baseRecipe: calcPlate.baseRecipe,
+      },
+      selectedBases: calcSelectedBases,
+      selectedEmpaques: calcSelectedEmpaques,
+      estimatedUnitCost: Number(singlePlateCost.toFixed(2)),
+      estimatedTotalCost: Number(totalPromoCost.toFixed(2)),
+      estimatedProfit: profit === null ? null : Number(profit.toFixed(2)),
+      estimatedMargin: profitMargin === null ? null : Number(profitMargin.toFixed(2)),
     }
 
     setIsSaving(true)
     try {
       let updatedPromos = []
       if (promoForm.id) {
-        updatedPromos = promotions.map(p => p.id === promoForm.id ? { ...p, ...promoForm, promoPrice: priceNum } : p)
+        updatedPromos = promotions.map(p => p.id === promoForm.id ? { ...p, ...normalizedPromo } : p)
       } else {
         const newPromo = {
-          ...promoForm,
+          ...normalizedPromo,
           id: Math.random().toString(36).slice(2, 11),
-          promoPrice: priceNum
         }
         updatedPromos = [...promotions, newPromo]
       }
@@ -926,21 +985,40 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       await updatePromotions(updatedPromos)
       setPromotions(updatedPromos)
       toast.success(promoForm.id ? 'Promoción actualizada con éxito' : 'Promoción creada con éxito')
-      setPromoForm({
-        id: null,
-        name: '',
-        description: '',
-        promoPrice: '',
-        isActive: false,
-        startDate: '',
-        endDate: '',
-        imageUrl: '',
-      })
+      setPromoForm(resetPromoFormState())
     } catch (err) {
       toast.error('No se pudo guardar la promoción')
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleEditPromotion = (promo) => {
+    setPromoForm({
+      ...resetPromoFormState(),
+      ...promo,
+      requestedCount: String(promo.requestedCount || promo.platesCount || 2),
+      promoPrice: promo.promoPrice === null || promo.promoPrice === undefined ? '' : String(promo.promoPrice),
+      constraints: {
+        sauce: getPromoConstraintValue(promo, 'sauce'),
+        protein: getPromoConstraintValue(promo, 'protein'),
+        complement: getPromoConstraintValue(promo, 'complement'),
+      }
+    })
+
+    if (promo.recipe) {
+      setCalcPlate({
+        sauce: promo.recipe.sauce || 'ROJA',
+        protein: promo.recipe.protein || 'POLLO',
+        complement: normalizeComplementValue(promo.recipe.complement) || 'CEBOLLA_CARAMELIZADA',
+        baseRecipe: promo.recipe.baseRecipe || { cream: true, onion: true, cilantro: true }
+      })
+    }
+    setCalcPromoPlates(String(promo.requestedCount || promo.platesCount || 2))
+    if (promo.promoPrice) setCalcPromoPrice(String(promo.promoPrice))
+    if (Array.isArray(promo.selectedBases)) setCalcSelectedBases(promo.selectedBases)
+    if (Array.isArray(promo.selectedEmpaques)) setCalcSelectedEmpaques(promo.selectedEmpaques)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleTogglePromoStatus = async (id, currentStatus) => {
@@ -1915,7 +1993,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <span className="truncate">
                       {calcSelectedBases.length === 0 
                         ? 'Ninguno' 
-                        : calcSelectedBases.length === 3 
+                        : calcSelectedBases.length === 5 
                           ? 'Todos' 
                           : calcSelectedBases.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
                       }
@@ -1925,7 +2003,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   
                   {isOpenBases && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
-                      {['crema', 'cebolla', 'cilantro'].map((name) => {
+                      {['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].map((name) => {
                         const product = INVENTORY_PRODUCT_MAP[name]
                         if (!product) return null
                         const isChecked = calcSelectedBases.includes(name)
@@ -2055,7 +2133,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   {
                     title: 'Ingredientes Base',
                     items: activeIngredients.filter(name => 
-                      ['crema', 'cebolla', 'cilantro'].includes(name)
+                      ['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].includes(name)
                     )
                   },
                   {
@@ -2244,7 +2322,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Ingresa los detalles y sube el banner de la promoción</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Nombre de la Promoción</label>
                   <input
@@ -2265,8 +2343,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     min="1"
                     step="0.01"
                     value={promoForm.promoPrice || ''}
-                    onChange={(e) => setPromoForm({ ...promoForm, promoPrice: e.target.value })}
+                    onChange={(e) => {
+                      setPromoForm({ ...promoForm, promoPrice: e.target.value })
+                      setCalcPromoPrice(e.target.value)
+                    }}
                     placeholder="Ej. 55"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Platos que incluye</label>
+                  <input
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={promoForm.requestedCount || ''}
+                    onChange={(e) => {
+                      setPromoForm({ ...promoForm, requestedCount: e.target.value })
+                      setCalcPromoPlates(e.target.value)
+                    }}
+                    placeholder="Ej. 2"
                   />
                 </div>
               </div>
@@ -2280,6 +2377,45 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   onChange={(e) => setPromoForm({ ...promoForm, description: e.target.value })}
                   placeholder="Ej. Válido únicamente para consumo en restaurante."
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-2xl border border-ui-border bg-white/60 p-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Salsa permitida</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={promoForm.constraints?.sauce || 'ALL'}
+                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), sauce: e.target.value } })}
+                  >
+                    <option value="ALL">Cualquiera</option>
+                    {OPTIONS_SAUCE.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proteína permitida</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={promoForm.constraints?.protein || 'ALL'}
+                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), protein: e.target.value } })}
+                  >
+                    <option value="ALL">Cualquiera</option>
+                    {OPTIONS_PROTEIN.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Complemento permitido</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={promoForm.constraints?.complement || 'ALL'}
+                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), complement: e.target.value } })}
+                  >
+                    <option value="ALL">Cualquiera</option>
+                    {OPTIONS_COMPLEMENT.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </div>
+                <p className="sm:col-span-3 text-[10px] font-bold text-ui-muted leading-relaxed">
+                  Estos campos son los que se bloquean en el pedido del cliente. Déjalos en "Cualquiera" cuando la promo solo afecte precio/cantidad.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2355,16 +2491,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 {promoForm.id && (
                   <button
                     type="button"
-                    onClick={() => setPromoForm({
-                      id: null,
-                      name: '',
-                      description: '',
-                      promoPrice: '',
-                      isActive: false,
-                      startDate: '',
-                      endDate: '',
-                      imageUrl: '',
-                    })}
+                    onClick={() => setPromoForm(resetPromoFormState())}
                     className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
                   >
                     Cancelar
@@ -2403,6 +2530,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                               <span>📅</span> {promo.startDate || 'Inicio'} al {promo.endDate || 'Fin'}
                             </p>
                           )}
+
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-wider text-ui-muted">
+                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Platos: {promo.requestedCount || promo.platesCount || 2}</span>
+                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Salsa: {getPromoConstraintLabel(promo, 'sauce')}</span>
+                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Proteína: {getPromoConstraintLabel(promo, 'protein')}</span>
+                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Complemento: {getPromoConstraintLabel(promo, 'complement')}</span>
+                          </div>
+
+                          {promo.estimatedTotalCost !== undefined && promo.estimatedTotalCost !== null && (
+                            <div className="mt-3 rounded-xl border border-ui-border bg-ui-bg/60 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-wider">
+                              <span className="text-ui-muted">Costo: <b className="text-ui-text">Q{Number(promo.estimatedTotalCost || 0).toFixed(2)}</b></span>
+                              {promo.estimatedProfit !== null && promo.estimatedProfit !== undefined && (
+                                <span className={Number(promo.estimatedProfit) >= 0 ? 'text-green-700' : 'text-brand-red'}>
+                                  Ganancia: Q{Number(promo.estimatedProfit || 0).toFixed(2)}
+                                </span>
+                              )}
+                              {promo.estimatedMargin !== null && promo.estimatedMargin !== undefined && (
+                                <span className="text-ui-muted">Margen: <b className="text-ui-text">{Number(promo.estimatedMargin || 0).toFixed(1)}%</b></span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
                         <button
@@ -2434,7 +2582,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <div className="flex gap-3 text-[10px] font-black uppercase tracking-wider">
                         <button
                           type="button"
-                          onClick={() => setPromoForm(promo)}
+                          onClick={() => handleEditPromotion(promo)}
                           className="text-brand-orange hover:underline font-black"
                         >
                           Editar

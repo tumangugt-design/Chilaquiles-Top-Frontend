@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { calculateTotal, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe } from '../../shared/constants/index.jsx'
+import { calculateTotal, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe, getOptionLabel } from '../../shared/constants/index.jsx'
 import Button from '../ui/Button.jsx'
 
 const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
@@ -9,8 +9,11 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
   const currentPlate = order.currentPlate
   const totalItems = order.cart.length + 1
-  const grandTotal = order.appliedPromo && totalItems === order.appliedPromo.requestedCount
-    ? order.appliedPromo.promoPrice
+  const promoRequestedCount = Number(order.appliedPromo?.requestedCount || 0)
+  const promoPrice = Number(order.appliedPromo?.promoPrice || 0)
+  const promoIsApplied = Boolean(order.appliedPromo && promoRequestedCount > 0 && promoPrice > 0)
+  const grandTotal = promoIsApplied
+    ? promoPrice
     : calculateTotal(Math.max(order.requestedCount || 0, totalItems))
   const MAX_PLATES = 4
 
@@ -58,8 +61,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
   const getLabel = (value, options) => {
     if (!value) return null
-    const option = options.find((o) => o.value === value)
-    return option ? option.label : value
+    return getOptionLabel(value, options)
   }
 
   const showBaseInSummary = ['BASE_RECIPE', 'SUMMARY', 'TEMPERATURE', 'CUSTOMER'].includes(currentStep)
@@ -112,7 +114,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
       <div className="pt-2 border-t border-gray-100 flex justify-between items-end">
         <div>
           <span className="text-gray-500 font-bold block">Total Final</span>
-          {order.appliedPromo && totalItems === order.appliedPromo.requestedCount && (
+          {promoIsApplied && (
             <span className="inline-block bg-green-500/10 text-green-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-green-500/20 mt-1">
               Promo: {order.appliedPromo.name}
             </span>

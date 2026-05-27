@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
+import { OPTIONS_COMPLEMENT, getPromoConstraint, normalizeComplementValue } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -11,7 +11,7 @@ const complementNameById = {
   QUESO_EXTRA: 'queso extra',
 }
 
-const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false, appliedPromo }) => {
   const [inventoryItems, setInventoryItems] = useState([])
   const [optionsLoaded, setOptionsLoaded] = useState(false)
 
@@ -33,19 +33,34 @@ const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
     return () => { mounted = false }
   }, [])
 
+  const promoComplement = normalizeComplementValue(getPromoConstraint(appliedPromo, 'complement')) || 'ALL'
+
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
     return OPTIONS_COMPLEMENT
-      .map((option) => ({ ...option, availability: getProductAvailability(statusMap, complementNameById[option.id]) }))
-      .filter((option) => showUnavailable || option.availability.available)
-  }, [inventoryItems, optionsLoaded, showUnavailable])
+      .map((option) => {
+        const availability = getProductAvailability(statusMap, complementNameById[option.id])
+        const optionValue = normalizeComplementValue(option.value)
+        const isPromoMismatch = appliedPromo && promoComplement !== 'ALL' && optionValue !== promoComplement
+        return {
+          ...option,
+          availability: isPromoMismatch
+            ? { available: false, availabilityStatus: 'inactive', availabilityLabel: 'No aplica a promo' }
+            : availability,
+          promoBadge: appliedPromo && optionValue === promoComplement ? 'Requerido por Promo 🎁' : null
+        }
+      })
+      .filter((option) => showUnavailable || option.availability.available || (appliedPromo && promoComplement !== 'ALL'))
+  }, [inventoryItems, optionsLoaded, showUnavailable, appliedPromo, promoComplement])
 
   useEffect(() => {
-    if (optionsLoaded && plate.complement && !availableOptions.some((option) => option.value === plate.complement && option.availability.available)) {
+    if (optionsLoaded && appliedPromo && promoComplement !== 'ALL') {
+      updatePlate({ complement: promoComplement })
+    } else if (optionsLoaded && plate.complement && !availableOptions.some((option) => normalizeComplementValue(option.value) === normalizeComplementValue(plate.complement) && option.availability.available)) {
       updatePlate({ complement: null })
     }
-  }, [optionsLoaded, availableOptions, plate.complement, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.complement, updatePlate, appliedPromo, promoComplement])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -67,11 +82,11 @@ const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
             key={opt.id}
             title={opt.label}
             description={opt.description}
-            selected={plate.complement === opt.value}
+            selected={normalizeComplementValue(plate.complement) === normalizeComplementValue(opt.value)}
             illustration={opt.illustration}
             disabled={!opt.availability.available}
             availabilityStatus={opt.availability.availabilityStatus}
-            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityLabel={opt.promoBadge || opt.availability.availabilityLabel}
             availabilityDetail={opt.availability.availabilityDetail}
             onClick={() => updatePlate({ complement: opt.value })}
           />

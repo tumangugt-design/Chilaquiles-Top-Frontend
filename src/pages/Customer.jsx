@@ -288,6 +288,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
           complement: item.complement,
           baseRecipe: item.baseRecipe,
         })),
+        appliedPromo: order.appliedPromo ? { id: order.appliedPromo.id } : null,
         ...(isInternal ? { isInternal: true } : {}),
       })
 

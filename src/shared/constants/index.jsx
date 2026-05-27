@@ -234,18 +234,62 @@ export const OPTIONS_COMPLEMENT = [
   {
     id: 'CEBOLLA_CARAMELIZADA',
     label: 'Cebolla Caramelizada',
-    value: 'CEBOLLA CARAMELIZADA',
+    value: 'CEBOLLA_CARAMELIZADA',
     description: 'Cocinada por un siglo, sabor único.',
     illustration: React.createElement(IllustrationCebollaCaramel),
   },
   {
     id: 'QUESO_EXTRA',
     label: 'Queso Extra',
-    value: 'QUESO EXTRA',
+    value: 'QUESO_EXTRA',
     description: 'Queso mozzarella adicional. Tu plato ya incluye queso en la base.',
     illustration: React.createElement(IllustrationQuesoExtra),
   },
 ]
+
+
+
+export const normalizeComplementValue = (value = '') => {
+  const normalized = String(value || '').trim().toUpperCase().replace(/\s+/g, '_')
+  if (normalized === 'CEBOLLA_CARAMELIZADA') return 'CEBOLLA_CARAMELIZADA'
+  if (normalized === 'QUESO_EXTRA') return 'QUESO_EXTRA'
+  if (normalized === 'AGUACATE') return 'AGUACATE'
+  return normalized || null
+}
+
+export const getOptionLabel = (value, options = []) => {
+  if (!value) return null
+  const normalizedValue = String(value || '').trim().toUpperCase().replace(/\s+/g, '_')
+  const option = options.find((item) => {
+    const itemValue = String(item.value || item.id || '').trim().toUpperCase().replace(/\s+/g, '_')
+    return itemValue === normalizedValue
+  })
+  return option ? option.label : value
+}
+
+export const getPromoConstraint = (promo, field) => {
+  const raw = promo?.constraints?.[field] ?? promo?.[field] ?? 'ALL'
+  const normalized = String(raw || 'ALL').trim().toUpperCase().replace(/\s+/g, '_')
+  return normalized || 'ALL'
+}
+
+export const normalizePromotionForOrder = (promo = {}) => {
+  const requestedCount = Number(promo.requestedCount || promo.platesCount || promo.quantity || promo.itemsCount || 2)
+  const promoPrice = Number(promo.promoPrice ?? promo.price ?? 0)
+  return {
+    id: promo.id,
+    name: promo.name || 'Promoción',
+    description: promo.description || '',
+    requestedCount: Number.isNaN(requestedCount) || requestedCount < 1 ? 2 : requestedCount,
+    promoPrice: Number.isNaN(promoPrice) || promoPrice <= 0 ? null : promoPrice,
+    constraints: {
+      sauce: getPromoConstraint(promo, 'sauce'),
+      protein: getPromoConstraint(promo, 'protein'),
+      complement: getPromoConstraint(promo, 'complement'),
+    },
+    recipe: promo.recipe || null,
+  }
+}
 
 export const OPTIONS_BASE_RECIPE = [
   {

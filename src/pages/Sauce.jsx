@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_SAUCE, SAUCE_PORTIONS } from '../shared/constants/index.jsx'
+import { OPTIONS_SAUCE, SAUCE_PORTIONS, getPromoConstraint } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, combineAvailabilities, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -20,7 +20,7 @@ const getSauceAvailability = (statusMap, option) => {
   return { available: true, availabilityStatus: 'available' }
 }
 
-const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false }) => {
+const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false, appliedPromo }) => {
   const [inventoryItems, setInventoryItems] = useState([])
   const [optionsLoaded, setOptionsLoaded] = useState(false)
 
@@ -42,19 +42,33 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavai
     return () => { mounted = false }
   }, [])
 
+  const promoSauce = getPromoConstraint(appliedPromo, 'sauce')
+
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
     return OPTIONS_SAUCE
-      .map((option) => ({ ...option, availability: getSauceAvailability(statusMap, option) }))
-      .filter((option) => showUnavailable || option.availability.available)
-  }, [inventoryItems, optionsLoaded, showUnavailable])
+      .map((option) => {
+        const availability = getSauceAvailability(statusMap, option)
+        const isPromoMismatch = appliedPromo && promoSauce !== 'ALL' && option.value !== promoSauce
+        return {
+          ...option,
+          availability: isPromoMismatch
+            ? { available: false, availabilityStatus: 'inactive', availabilityLabel: 'No aplica a promo' }
+            : availability,
+          promoBadge: appliedPromo && promoSauce === option.value ? 'Requerido por Promo 🎁' : null
+        }
+      })
+      .filter((option) => showUnavailable || option.availability.available || (appliedPromo && promoSauce !== 'ALL'))
+  }, [inventoryItems, optionsLoaded, showUnavailable, appliedPromo, promoSauce])
 
   useEffect(() => {
-    if (optionsLoaded && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce && option.availability.available)) {
+    if (optionsLoaded && appliedPromo && promoSauce !== 'ALL') {
+      updatePlate({ sauce: promoSauce })
+    } else if (optionsLoaded && plate.sauce && !availableOptions.some((option) => option.value === plate.sauce && option.availability.available)) {
       updatePlate({ sauce: null })
     }
-  }, [optionsLoaded, availableOptions, plate.sauce, updatePlate])
+  }, [optionsLoaded, availableOptions, plate.sauce, updatePlate, appliedPromo, promoSauce])
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
@@ -83,7 +97,7 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavai
             badge={opt.badge}
             disabled={!opt.availability.available}
             availabilityStatus={opt.availability.availabilityStatus}
-            availabilityLabel={opt.availability.availabilityLabel}
+            availabilityLabel={opt.promoBadge || opt.availability.availabilityLabel}
             availabilityDetail={opt.availability.availabilityDetail}
             onClick={() => updatePlate({ sauce: opt.value })}
           />

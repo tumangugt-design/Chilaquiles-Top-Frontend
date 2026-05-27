@@ -75,7 +75,7 @@ const OTPView = ({ code, setCode, onVerify, onBack, phone, isLoading }) => {
   )
 }
 
-const LocationPage = ({ onConfirm }) => {
+const LocationPage = ({ onConfirm, onApplyPromo }) => {
   const [error, setError] = useState(false)
   const [availableCount, setAvailableCount] = useState(null)
   const [step, setStep] = useState('welcome')
@@ -255,6 +255,15 @@ const LocationPage = ({ onConfirm }) => {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const applyPromotion = (promo) => {
+    if (typeof onApplyPromo === 'function') {
+      onApplyPromo(promo)
+      toast.success(`Promoción aplicada: ${promo.name}`)
+    }
+    setIsMenuOpen(false)
+    setStep('auth')
   }
 
   return (
@@ -456,6 +465,28 @@ const LocationPage = ({ onConfirm }) => {
                   alt={promo.name}
                   className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
                 />
+                {(promo.description || promo.promoPrice) && (
+                  <div className="rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-center">
+                    {promo.description && <p className="text-xs font-bold text-ui-text">{promo.description}</p>}
+                    {promo.promoPrice && (
+                      <p className="mt-1 text-sm font-black text-green-700">
+                        {promo.requestedCount || 2} platos por Q{Number(promo.promoPrice).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {promo.promoPrice && onApplyPromo && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      applyPromotion(promo)
+                    }}
+                    className="w-full rounded-2xl bg-brand-blue px-4 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-brand-blue/20 transition hover:scale-[1.01]"
+                  >
+                    Aplicar promoción
+                  </button>
+                )}
               </div>
             ))}
           </div>
