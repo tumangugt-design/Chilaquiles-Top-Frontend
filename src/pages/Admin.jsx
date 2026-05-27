@@ -1184,7 +1184,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
 
       {stockAlert.isOpen && (
-        <div className="fixed inset-x-3 top-24 z-[70] mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[2rem] border border-orange-300 bg-white p-4 shadow-2xl shadow-orange-900/10 sm:p-5">
+        <div className="fixed inset-x-3 top-20 md:top-[88px] z-[70] mx-auto w-[calc(100%-1.5rem)] max-w-xl rounded-[2rem] border border-orange-300 bg-white p-4 shadow-2xl shadow-orange-900/10 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Alerta de inventario</p>
@@ -1225,7 +1225,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         </div>
       )}
 
-      <div className="pt-20 flex flex-col min-h-screen">
+      <div className="pt-16 md:pt-[72px] flex flex-col min-h-screen">
         <main className="flex-1 w-full max-w-full overflow-x-hidden p-2 sm:p-6 lg:p-10">
           <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full overflow-hidden">
             {activeTab === 'internal_order' ? (

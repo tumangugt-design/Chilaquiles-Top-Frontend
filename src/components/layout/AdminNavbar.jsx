@@ -1,207 +1,229 @@
 import React from 'react'
 import Logo from '../Logo.jsx'
-import { 
-  Users, 
-  UserCircle, 
-  ChefHat, 
-  Truck, 
-  PackagePlus, 
-  Box, 
-  ClipboardList, 
-  PlusCircle, 
+import {
+  Users,
+  UserCircle,
+  PackagePlus,
+  Box,
+  ClipboardList,
+  PlusCircle,
   LogOut,
-  Bell,
   LayoutDashboard,
-  Settings,
   Clock,
-  ChevronDown,
   Menu,
+  X,
   TrendingUp,
   Gift
 } from 'lucide-react'
 
-const navigation = {
-  sales: [
-    { id: 'orders', label: 'Pedidos', icon: ClipboardList },
-    { id: 'internal_order', label: 'Nuevo Pedido', icon: PlusCircle },
-  ],
-  management: [
-    { id: 'staff', label: 'Personal', icon: Users },
-    { id: 'clients', label: 'Clientes', icon: UserCircle },
-    { id: 'promotions', label: 'Promociones', icon: Gift },
-    { id: 'finances', label: 'Finanzas', icon: TrendingUp },
-  ],
-  inventory: [
-    { id: 'entries', label: 'Entradas', icon: PackagePlus },
-    { id: 'inventory', label: 'Stock', icon: Box },
-    { id: 'schedule', label: 'Horario', icon: Clock },
-  ]
+const navigationSections = [
+  {
+    title: 'Ventas',
+    items: [
+      { id: 'orders', label: 'Pedidos', icon: ClipboardList },
+      { id: 'internal_order', label: 'Nuevo Pedido', icon: PlusCircle },
+    ],
+  },
+  {
+    title: 'Gestión',
+    items: [
+      { id: 'staff', label: 'Personal', icon: Users },
+      { id: 'clients', label: 'Clientes', icon: UserCircle },
+      { id: 'promotions', label: 'Promociones', icon: Gift },
+      { id: 'finances', label: 'Finanzas', icon: TrendingUp },
+    ],
+  },
+  {
+    title: 'Inventario',
+    items: [
+      { id: 'entries', label: 'Entradas', icon: PackagePlus },
+      { id: 'inventory', label: 'Stock', icon: Box },
+      { id: 'schedule', label: 'Horario', icon: Clock },
+    ],
+  },
+]
+
+const DesktopNavButton = ({ item, activeTab, setActiveTab }) => {
+  const Icon = item.icon
+  const isActive = activeTab === item.id
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveTab(item.id)}
+      className={`group flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-2xl px-2.5 text-[10px] font-black uppercase tracking-[0.12em] transition-all xl:px-3 2xl:h-11 2xl:px-4 ${
+        isActive
+          ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20'
+          : 'text-ui-muted hover:bg-white hover:text-brand-blue hover:shadow-sm'
+      }`}
+      title={item.label}
+    >
+      <Icon size={16} strokeWidth={2.5} />
+      <span className="hidden xl:inline">{item.label}</span>
+    </button>
+  )
+}
+
+const MobileNavButton = ({ item, activeTab, onSelect }) => {
+  const Icon = item.icon
+  const isActive = activeTab === item.id
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(item.id)}
+      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-black transition-all ${
+        isActive
+          ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20'
+          : 'text-ui-text hover:bg-ui-bg'
+      }`}
+    >
+      <Icon size={19} strokeWidth={2.5} />
+      <span>{item.label}</span>
+    </button>
+  )
 }
 
 const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+  const adminName = session?.name || 'Admin'
+
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId)
+    setIsMobileMenuOpen(false)
+  }
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setIsMobileMenuOpen(false)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-ui-border z-[70] shadow-sm flex items-center px-4 sm:px-6 lg:px-10 justify-between">
-      {/* Logo Section */}
-      <div className="flex items-center gap-2 xl:gap-3 shrink-0">
-        <div className="hidden 2xl:flex w-10 h-10 bg-brand-blue rounded-xl items-center justify-center shadow-lg shadow-brand-blue/20">
-          <LayoutDashboard className="text-white" size={24} />
-        </div>
-        <div>
-          <Logo className="w-24 h-10 sm:w-28 sm:h-12 2xl:w-32 2xl:h-14 drop-shadow-sm" />
-        </div>
-      </div>
-
-      {/* Navigation Tabs (Desktop) */}
-      <div className="hidden xl:flex flex-1 items-center justify-center px-4 gap-1.5 max-w-5xl">
-        {/* Sales */}
-        <div className="flex items-center gap-1 border-r border-ui-border pr-2 mr-2 xl:pr-3 xl:mr-3">
-          {navigation.sales.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-1.5 px-2.5 py-2 2xl:px-4 2xl:py-2.5 rounded-xl transition-all font-black text-[10px] 2xl:text-[11px] uppercase tracking-wider whitespace-nowrap ${
-                activeTab === id 
-                  ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20' 
-                  : 'text-ui-muted hover:bg-ui-bg hover:text-ui-text'
-              }`}
-            >
-              <Icon size={14} className="2xl:w-4 2xl:h-4" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Management & Inventory */}
-        <div className="flex items-center gap-1">
-          {[...navigation.management, ...navigation.inventory].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-1.5 px-2.5 py-2 2xl:px-4 2xl:py-2.5 rounded-xl transition-all font-black text-[10px] 2xl:text-[11px] uppercase tracking-wider whitespace-nowrap ${
-                activeTab === id 
-                  ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
-                  : 'text-ui-muted hover:bg-ui-bg hover:text-ui-text'
-              }`}
-            >
-              <Icon size={14} className="2xl:w-4 2xl:h-4" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* User Actions & Mobile Toggle */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <div className="hidden xl:flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
-          <div className="text-right hidden 2xl:block">
-            <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
-            <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
-              Online
-              <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
-            </p>
+    <nav className="fixed left-0 right-0 top-0 z-[70] h-16 border-b border-ui-border bg-white/95 px-3 shadow-sm backdrop-blur-xl md:h-[72px] sm:px-5 lg:px-6">
+      <div className="mx-auto flex h-full w-full max-w-[1920px] items-center gap-2 lg:gap-3">
+        <div className="flex min-w-0 shrink-0 items-center gap-2 lg:gap-3">
+          <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue shadow-lg shadow-brand-blue/20 sm:flex lg:h-11 lg:w-11">
+            <LayoutDashboard className="text-white" size={22} strokeWidth={2.5} />
           </div>
-          <button onClick={onProfileClick} className="w-9 h-9 rounded-xl bg-ui-bg border border-ui-border flex items-center justify-center overflow-hidden shadow-sm hover:border-brand-blue transition-all" title="Editar perfil">
-            <UserCircle className="text-ui-muted" size={20} />
+          <Logo className="h-auto w-24 shrink-0 drop-shadow-sm sm:w-28 lg:w-[118px] 2xl:w-[132px]" />
+        </div>
+
+        <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+          <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-[1.35rem] border border-ui-border/70 bg-ui-bg/70 px-1.5 py-1">
+            {navigationSections.map((section, sectionIndex) => (
+              <React.Fragment key={section.title}>
+                {sectionIndex > 0 && <div className="mx-1 hidden h-7 w-px shrink-0 bg-ui-border 2xl:block" />}
+                {section.items.map((item) => (
+                  <DesktopNavButton
+                    key={item.id}
+                    item={item}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                  />
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
+          <div className="hidden items-center gap-2 border-l border-ui-border pl-3 lg:flex">
+            <button
+              type="button"
+              onClick={onProfileClick}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-ui-border bg-ui-bg text-ui-muted shadow-sm transition-all hover:border-brand-blue hover:text-brand-blue lg:h-11 lg:w-11"
+              title="Editar perfil"
+            >
+              <UserCircle size={22} strokeWidth={2.3} />
+            </button>
+
+            <div className="hidden max-w-[150px] text-right xl:block 2xl:max-w-[190px]">
+              <p className="truncate text-[10px] font-black uppercase leading-none tracking-[0.08em] text-ui-text 2xl:text-[11px]">
+                {adminName}
+              </p>
+              <p className="mt-1 flex items-center justify-end gap-1 text-[8px] font-black uppercase tracking-wider text-green-600">
+                Online
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-brand-red transition-all hover:bg-red-50 lg:h-11 lg:w-11"
+              title="Cerrar sesión"
+            >
+              <LogOut size={21} strokeWidth={2.3} />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onProfileClick}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-ui-border bg-ui-bg text-ui-muted shadow-sm lg:hidden"
+            title="Editar perfil"
+          >
+            <UserCircle size={21} strokeWidth={2.3} />
+          </button>
+
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-blue text-white shadow-lg shadow-brand-blue/20 transition-all lg:hidden"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+            aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? <X size={22} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={2.5} />}
           </button>
         </div>
-
-        <button 
-          onClick={logout}
-          className="hidden xl:block p-2.5 rounded-xl text-brand-red hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
-          title="Cerrar Sesión"
-        >
-          <LogOut size={20} />
-        </button>
-
-        {/* Mobile Menu Toggle */}
-        <button 
-          className="xl:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <Menu size={24} />
-        </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="absolute top-20 left-0 right-0 bg-white border-b border-ui-border shadow-xl xl:hidden flex flex-col p-4 max-h-[calc(100vh-5rem)] overflow-y-auto z-[80]">
-          <div className="mb-4 pb-2 border-b border-ui-border">
-            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Ventas</p>
-            <div className="flex flex-col gap-1">
-              {navigation.sales.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
-                    activeTab === id 
-                      ? 'bg-brand-blue text-white shadow-md' 
-                      : 'text-ui-text hover:bg-ui-bg'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
+        <div className="fixed inset-x-3 top-[72px] z-[80] max-h-[calc(100vh-5.5rem)] overflow-y-auto rounded-[2rem] border border-ui-border bg-white p-4 shadow-2xl shadow-slate-900/15 lg:hidden">
+          <div className="mb-4 rounded-3xl bg-ui-bg p-4">
+            <p className="truncate text-sm font-black uppercase text-ui-text">{adminName}</p>
+            <p className="mt-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-green-600">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              Online
+            </p>
           </div>
-          <div className="mb-4 pb-2 border-b border-ui-border">
-            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Gestión</p>
-            <div className="flex flex-col gap-1">
-              {navigation.management.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
-                    activeTab === id 
-                      ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
-                      : 'text-ui-text hover:bg-ui-bg'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
+
+          <div className="space-y-4">
+            {navigationSections.map((section) => (
+              <div key={section.title}>
+                <p className="mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] text-ui-muted">
+                  {section.title}
+                </p>
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <MobileNavButton
+                      key={item.id}
+                      item={item}
+                      activeTab={activeTab}
+                      onSelect={handleSelectTab}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="mb-4 pb-2 border-b border-ui-border">
-            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Inventario</p>
-            <div className="flex flex-col gap-1">
-              {navigation.inventory.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => { setActiveTab(id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm ${
-                    activeTab === id 
-                      ? 'bg-ui-bg text-brand-blue border border-brand-blue/20' 
-                      : 'text-ui-text hover:bg-ui-bg'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Cuenta</p>
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={() => { onProfileClick(); setIsMobileMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm text-ui-text hover:bg-ui-bg"
-              >
-                <UserCircle size={18} />
-                <span>Mi Perfil</span>
-              </button>
-              <button
-                onClick={() => { logout(); setIsMobileMenuOpen(false); }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-black text-sm text-brand-red hover:bg-red-50"
-              >
-                <LogOut size={18} />
-                <span>Cerrar Sesión</span>
-              </button>
-            </div>
+
+          <div className="mt-4 border-t border-ui-border pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                logout()
+                setIsMobileMenuOpen(false)
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-black text-brand-red transition-all hover:bg-red-50"
+            >
+              <LogOut size={19} strokeWidth={2.5} />
+              <span>Cerrar sesión</span>
+            </button>
           </div>
         </div>
       )}
