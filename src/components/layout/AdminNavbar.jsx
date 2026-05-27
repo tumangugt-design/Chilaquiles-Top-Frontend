@@ -54,7 +54,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
       </div>
 
       {/* Navigation Tabs (Desktop) */}
-      <div className="hidden lg:flex flex-1 items-center justify-center px-8 gap-1 max-w-4xl">
+      <div className="hidden xl:flex flex-1 items-center justify-center px-8 gap-1 max-w-4xl">
         {/* Sales */}
         <div className="flex items-center gap-1 border-r border-ui-border pr-4 mr-4">
           {navigation.sales.map(({ id, label, icon: Icon }) => (
@@ -94,7 +94,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
       {/* User Actions & Mobile Toggle */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <div className="hidden lg:flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
+        <div className="hidden xl:flex items-center gap-2 sm:gap-3 pr-3 sm:pr-4 border-r border-ui-border">
           <div className="text-right">
             <p className="text-[10px] font-black text-ui-text uppercase leading-none">{session?.name || 'Admin'}</p>
             <p className="text-[8px] font-bold text-green-600 uppercase mt-1 flex items-center justify-end gap-1">
@@ -109,7 +109,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
         <button 
           onClick={logout}
-          className="hidden lg:block p-2.5 rounded-xl text-brand-red hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+          className="hidden xl:block p-2.5 rounded-xl text-brand-red hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
           title="Cerrar Sesión"
         >
           <LogOut size={20} />
@@ -117,7 +117,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
         {/* Mobile Menu Toggle */}
         <button 
-          className="lg:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all"
+          className="xl:hidden p-2 text-ui-muted hover:text-ui-text hover:bg-ui-bg rounded-xl transition-all"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           <Menu size={24} />
@@ -126,7 +126,7 @@ const AdminNavbar = ({ activeTab, setActiveTab, session, logout, onProfileClick 
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="absolute top-20 left-0 right-0 bg-white border-b border-ui-border shadow-xl lg:hidden flex flex-col p-4 max-h-[calc(100vh-5rem)] overflow-y-auto z-[80]">
+        <div className="absolute top-20 left-0 right-0 bg-white border-b border-ui-border shadow-xl xl:hidden flex flex-col p-4 max-h-[calc(100vh-5rem)] overflow-y-auto z-[80]">
           <div className="mb-4 pb-2 border-b border-ui-border">
             <p className="text-xs font-black text-ui-muted uppercase tracking-wider mb-2">Ventas</p>
             <div className="flex flex-col gap-1">

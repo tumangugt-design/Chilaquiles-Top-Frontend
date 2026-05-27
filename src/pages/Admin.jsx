@@ -410,6 +410,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     complement: 'CEBOLLA_CARAMELIZADA',
     baseRecipe: { cream: true, onion: true, cilantro: true }
   })
+  const [sandboxCalc, setSandboxCalc] = useState({
+    ingredientName: 'pollo',
+    qty: '',
+    unit: 'lb',
+    price: '',
+  })
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
 
@@ -1740,6 +1746,138 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Quick Portion Cost Calculator (Sandbox) */}
+            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4">
+              <div className="border-b border-ui-border pb-3 flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-black text-ui-text">Calculadora de Costo por Ingrediente</h3>
+                  <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">
+                    Simula el costo de una porción en plato según tu precio de compra
+                  </p>
+                </div>
+                <div className="bg-brand-orange/10 text-brand-orange text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider shrink-0">
+                  Simulador de Compra 🛒
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Ingrediente</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={sandboxCalc.ingredientName}
+                    onChange={(e) => {
+                      const name = e.target.value
+                      const product = INVENTORY_PRODUCT_MAP[name]
+                      const allowedUnits = getAllowedInputUnits(product)
+                      setSandboxCalc({
+                        ...sandboxCalc,
+                        ingredientName: name,
+                        unit: allowedUnits[0]?.value || 'und'
+                      })
+                    }}
+                  >
+                    {INVENTORY_PRODUCT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Cantidad Comprada</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    placeholder="Ej. 10"
+                    value={sandboxCalc.qty}
+                    onChange={(e) => setSandboxCalc({ ...sandboxCalc, qty: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad de Compra</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    value={sandboxCalc.unit}
+                    onChange={(e) => setSandboxCalc({ ...sandboxCalc, unit: e.target.value })}
+                  >
+                    {getAllowedInputUnits(INVENTORY_PRODUCT_MAP[sandboxCalc.ingredientName]).map((u) => (
+                      <option key={u.value} value={u.value}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                    placeholder="Ej. 20"
+                    value={sandboxCalc.price}
+                    onChange={(e) => setSandboxCalc({ ...sandboxCalc, price: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const product = INVENTORY_PRODUCT_MAP[sandboxCalc.ingredientName]
+                const qtyVal = Number(sandboxCalc.qty)
+                const priceVal = Number(sandboxCalc.price)
+
+                if (!product || Number.isNaN(qtyVal) || qtyVal <= 0 || Number.isNaN(priceVal) || priceVal <= 0) {
+                  return (
+                    <div className="p-4 rounded-2xl bg-white border border-ui-border text-center text-xs font-bold text-ui-muted">
+                      Ingresa cantidad y precio para calcular el costo por porción.
+                    </div>
+                  )
+                }
+
+                const baseQty = convertInventoryAmountToBaseUnit(qtyVal, sandboxCalc.unit, product)
+                if (baseQty <= 0) {
+                  return (
+                    <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-center text-xs font-bold text-brand-red">
+                      Conversión no válida.
+                    </div>
+                  )
+                }
+
+                const costPerBaseUnit = priceVal / baseQty
+                const portionUsed = product.usedPerPlate || 0
+                const costPerPlate = costPerBaseUnit * portionUsed
+
+                return (
+                  <div className="p-4 rounded-2xl bg-white border border-ui-border space-y-2">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Costo por Plato</p>
+                        <p className="text-3xl font-black text-brand-orange mt-1">Q{costPerPlate.toFixed(2)}</p>
+                        <p className="text-[10px] text-ui-muted font-bold mt-1">
+                          Calculado para una porción de <span className="font-black text-ui-text">{portionUsed} {product.unit}</span> en el plato.
+                        </p>
+                      </div>
+                      <div className="text-center sm:text-right">
+                        <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest font-bold">Equivalencia</p>
+                        <p className="text-xs font-black text-ui-text mt-1">
+                          {qtyVal} {sandboxCalc.unit} = {baseQty.toFixed(2)} {product.unit}
+                        </p>
+                        <p className="text-[10px] text-ui-muted font-bold mt-0.5">
+                          Q{costPerBaseUnit.toFixed(4)} por {product.unit}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Promotion Creator/Editor Form */}
