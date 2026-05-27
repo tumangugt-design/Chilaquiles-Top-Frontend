@@ -19,8 +19,6 @@ import {
   updateOperatingHours,
   getPromotions,
   updatePromotions,
-  getCalculatorCosts,
-  updateCalculatorCosts,
   getFinancesSummary,
   getAvailablePlates,
   getLastPurchases,
@@ -566,20 +564,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setInventory(inventoryResponse.data)
         if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
-        const [promotionsResponse, inventoryResponse, calcCostsResponse, lastPurchasesResponse] = await Promise.all([
+        const [promotionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
           getPromotions(),
           getInventory(),
-          getCalculatorCosts().catch(() => ({ data: {} })),
           getLastPurchases().catch(() => ({ data: {} }))
         ])
         setPromotions(promotionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
-        
-        // Merge last purchases and calculator costs overrides
-        const lastPurchases = lastPurchasesResponse.data || {}
-        const calcCosts = calcCostsResponse.data || {}
-        
-        setSimulatedCosts(mergeCostSources(lastPurchases, calcCosts))
+
+        // La calculadora de promociones es solo lectura: usa únicamente la última entrada real de inventario.
+        // No mezcla precios manuales guardados en promociones para evitar costos inflados o duplicados.
+        setSimulatedCosts(lastPurchasesResponse.data || {})
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -990,54 +985,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return recipeCost + calculatePackagingCost(plate)
   }
 
-  const updateSimulatedCostField = (ingredientName, field, value) => {
-    setSimulatedCosts((prev) => ({
-      ...prev,
-      [ingredientName]: {
-        ...(prev[ingredientName] || {}),
-        [field]: value,
-        source: 'manual'
-      }
-    }))
-  }
-
-  const handleSaveCalculatorCost = async (ingredientName) => {
-    try {
-      const item = simulatedCosts[ingredientName]
-      const qtyVal = item?.qty !== undefined && item?.qty !== '' ? Number(item.qty) : 0
-      const priceVal = item?.price !== undefined && item?.price !== '' ? Number(item.price) : 0
-      
-      const response = await getCalculatorCosts().catch(() => ({ data: {} }))
-      const current = response.data || {}
-      
-      const updated = { ...current }
-      if (qtyVal <= 0 || priceVal <= 0) {
-        delete updated[ingredientName]
-      } else {
-        updated[ingredientName] = {
-          qty: item.qty,
-          unit: item.unit,
-          price: item.price
-        }
-      }
-      
-      await updateCalculatorCosts(updated)
-      
-      const lastPurchasesResponse = await getLastPurchases().catch(() => ({ data: {} }))
-      const lastPurchases = lastPurchasesResponse.data || {}
-      
-      setSimulatedCosts(mergeCostSources(lastPurchases, updated))
-      
-      if (qtyVal <= 0 || priceVal <= 0) {
-        toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} restablecido con éxito`)
-      } else {
-        toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} guardado con éxito`)
-      }
-    } catch (err) {
-      toast.error('No se pudo guardar el costo del ingrediente')
-    }
-  }
-
   const handleSavePromotion = async (e) => {
     if (e) e.preventDefault()
     if (!promoForm.name) {
@@ -1136,7 +1083,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (Array.isArray(promo.selectedBases)) {
       setCalcSelectedBases(promo.selectedBases.filter(name => BASE_INGREDIENT_NAMES.includes(name)))
     }
-    setCalcSelectedEmpaques(getAutomaticPackagingRows(promo.recipe?.sauce || 'ROJA').map((item) => item.name))
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -2055,7 +2001,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     onChange={(e) => {
                       const nextSauce = e.target.value
                       setCalcPlate(prev => ({ ...prev, sauce: nextSauce }))
-                      setIsOpenEmpaques(false)
                     }}
                   >
                     <option value="ROJA">Salsa Roja</option>
@@ -2097,7 +2042,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     type="button"
                     onClick={() => {
                       setIsOpenBases(!isOpenBases)
-                      setIsOpenEmpaques(false)
                     }}
                     className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs text-left flex justify-between items-center"
                   >
@@ -2149,146 +2093,92 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
-              {/* Dynamic purchase simulation inputs for selected options */}
+              {/* Read-only cost breakdown for selected recipe */}
               {(() => {
                 const selectedRows = getSelectedRecipeRows(calcPlate)
-                const groups = [
-                  {
-                    title: 'Ingredientes que sí elige la promo',
-                    items: selectedRows.filter((item) =>
-                      ['salsa roja', 'salsa verde', 'pollo', 'steak', 'chorizo', 'aguacate', 'cebolla caramelizada', 'queso extra'].includes(item.name)
-                    )
-                  },
-                  {
-                    title: 'Bases visibles de la promo',
-                    items: selectedRows.filter((item) => BASE_INGREDIENT_NAMES.includes(item.name))
-                  },
-                  {
-                    title: 'Ingredientes fijos del plato',
-                    items: selectedRows.filter((item) => FIXED_RECIPE_INGREDIENT_NAMES.includes(item.name))
-                  }
-                ]
-                const packagingCost = calculatePackagingCost(calcPlate)
+                const packagingRows = getAutomaticPackagingRows(calcPlate)
+                const platesCountForDetails = Number(calcPromoPlates) || 1
+
+                const renderCostRow = (item, typeLabel = 'Ingrediente') => {
+                  const name = item.name
+                  const product = INVENTORY_PRODUCT_MAP[name]
+                  if (!product) return null
+
+                  const detail = getIngredientCostDetail(name, item.usedAmount ?? item.qty)
+                  const hasCost = detail.cost > 0
+                  const usedLabel = `${formatInventoryAmount(detail.usedAmount)} ${detail.unit || product.unit}`
+                  const entryLabel = detail.purchaseQty && detail.purchasePrice
+                    ? `${formatInventoryAmount(detail.purchaseQty)} ${detail.purchaseUnit || product.unit} · Q${formatCurrency(detail.purchasePrice)}`
+                    : 'Sin entrada con costo'
+                  const unitCost = detail.baseQty > 0 && detail.purchasePrice > 0
+                    ? detail.purchasePrice / detail.baseQty
+                    : null
+                  const unitCostLabel = unitCost !== null
+                    ? `Q${formatCurrency(unitCost)} por ${product.unit}`
+                    : (detail.cost > 0 ? 'Precio por porción guardado' : 'Pendiente')
+                  const promoLineCost = detail.cost * platesCountForDetails
+
+                  return (
+                    <div key={`${typeLabel}-${name}-${item.usedAmount ?? item.qty ?? product.usedPerPlate}`} className="grid grid-cols-1 md:grid-cols-[1.2fr,0.7fr,1fr,0.85fr,0.85fr] gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full items-center">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-ui-text capitalize truncate">{product.label}</p>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted mt-0.5">{typeLabel}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Usa/plato</p>
+                        <p className="text-xs font-black text-ui-text">{usedLabel}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Última entrada</p>
+                        <p className="text-xs font-bold text-ui-text break-words">{entryLabel}</p>
+                        <p className="text-[8px] font-bold text-ui-muted mt-0.5">{getCostSource(detail.source)}</p>
+                      </div>
+                      <div className="rounded-xl px-3 py-2 bg-ui-bg/60 border border-ui-border text-right">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Costo unitario</p>
+                        <p className="text-xs font-black text-ui-text">{unitCostLabel}</p>
+                      </div>
+                      <div className={`rounded-xl px-3 py-2 text-right border ${hasCost ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Costo promo</p>
+                        <p className={`text-sm font-black ${hasCost ? 'text-green-600' : 'text-orange-500'}`}>
+                          {hasCost ? `Q${promoLineCost.toFixed(2)}` : 'Pendiente'}
+                        </p>
+                        <p className="text-[8px] font-bold text-ui-muted mt-0.5">Q{detail.cost.toFixed(2)} por plato</p>
+                      </div>
+                    </div>
+                  )
+                }
 
                 return (
                   <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-4">
                     <div className="rounded-2xl border border-brand-blue/10 bg-brand-blue/5 px-4 py-3">
                       <p className="text-[10px] font-black uppercase text-brand-blue tracking-widest">
-                        Costeo de promoción por receta
+                        Cálculos automáticos de la promoción
                       </p>
                       <p className="text-xs font-bold text-ui-muted mt-1">
-                        Ingresá la cantidad comprada y el costo total de compra. La receta ya sabe cuánto usa por plato; por ejemplo, pollo usa 60 g, entonces 10 lb a Q100 calcula solo el costo de esos 60 g.
+                        Aquí no se ingresa precio ni cantidad. Solo selecciona salsa, proteína, complemento y bases; el sistema toma la última entrada real del inventario y calcula cuánto cuesta la porción usada por plato.
                       </p>
                     </div>
 
-                    {groups.map((group) => {
-                      if (group.items.length === 0) return null
-
-                      return (
-                        <div key={group.title} className="space-y-2 bg-ui-bg/25 p-3 rounded-[1.5rem] border border-ui-border/40">
-                          <h4 className="text-[9px] font-black uppercase text-brand-blue tracking-widest ml-1">
-                            {group.title}
-                          </h4>
-                          <div className="flex flex-col gap-2">
-                            {group.items.map((item) => {
-                              const name = item.name
-                              const product = INVENTORY_PRODUCT_MAP[name]
-                              if (!product) return null
-
-                              const sim = simulatedCosts[name] || {}
-                              const detail = getIngredientCostDetail(name, item.usedAmount)
-                              const allowedUnits = getAllowedInputUnits(product)
-                              const hasCost = detail.cost > 0
-                              const usedLabel = `${formatInventoryAmount(detail.usedAmount)} ${detail.unit || product.unit}`
-                              const purchaseQtyLabel = detail.purchaseQty ? `${formatInventoryAmount(detail.purchaseQty)} ${detail.purchaseUnit || sim.unit || product.unit}` : 'Sin entrada'
-                              const purchasePriceLabel = detail.purchasePrice ? `Q${formatCurrency(detail.purchasePrice)}` : 'Sin costo'
-
-                              return (
-                                <div key={`${name}-${item.usedAmount || product.usedPerPlate}`} className="grid grid-cols-1 lg:grid-cols-[1.15fr,0.85fr,0.75fr,0.9fr,0.75fr] gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full items-end">
-                                  <div className="min-w-0">
-                                    <div className="text-xs font-black text-ui-text capitalize">
-                                      {product.label}
-                                    </div>
-                                    <span className="block text-[8px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
-                                      Usa {usedLabel} por plato
-                                    </span>
-                                    <span className="block text-[8px] font-bold text-ui-muted mt-1">
-                                      Base actual: {purchaseQtyLabel} · {purchasePriceLabel}
-                                    </span>
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <label className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Cantidad comprada</label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.001"
-                                      className="w-full p-2.5 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                                      placeholder="Ej. 10"
-                                      value={sim.qty ?? ''}
-                                      onChange={(e) => updateSimulatedCostField(name, 'qty', e.target.value)}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <label className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Unidad</label>
-                                    <select
-                                      className="w-full p-2.5 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                                      value={sim.unit || product.unit}
-                                      onChange={(e) => updateSimulatedCostField(name, 'unit', e.target.value)}
-                                    >
-                                      {allowedUnits.map((unit) => (
-                                        <option key={unit.value} value={unit.value}>{unit.label}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <label className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Costo total compra</label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      className="w-full p-2.5 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                                      placeholder="Ej. 100"
-                                      value={sim.price ?? ''}
-                                      onChange={(e) => updateSimulatedCostField(name, 'price', e.target.value)}
-                                    />
-                                  </div>
-
-                                  <div className="grid grid-cols-1 gap-2">
-                                    <div className={`rounded-xl px-3 py-2 text-right border ${hasCost ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                                      <p className="text-[8px] font-black uppercase text-ui-muted tracking-widest">Costo/plato</p>
-                                      <p className={`text-sm font-black ${hasCost ? 'text-green-600' : 'text-orange-500'}`}>
-                                        {hasCost ? `Q${detail.cost.toFixed(2)}` : 'Pendiente'}
-                                      </p>
-                                      <p className="text-[8px] font-bold text-ui-muted mt-0.5">{getCostSource(detail.source)}</p>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveCalculatorCost(name)}
-                                      className="rounded-xl bg-brand-blue text-white px-3 py-2 text-[8px] font-black uppercase tracking-widest hover:bg-brand-blue/90 transition"
-                                    >
-                                      Guardar precio
-                                    </button>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                    <div className="rounded-2xl border border-ui-border bg-white px-4 py-3 flex flex-col sm:flex-row justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-black uppercase text-ui-muted tracking-widest">Empaque incluido automático</p>
-                        <p className="text-xs font-bold text-ui-text mt-1">{getAutomaticPackagingLabel(calcPlate.sauce)}</p>
-                        <p className="text-[10px] font-bold text-ui-muted mt-1">No se selecciona manualmente; se suma al costo total según la salsa.</p>
+                    <div className="space-y-2 bg-ui-bg/25 p-3 rounded-[1.5rem] border border-ui-border/40">
+                      <h4 className="text-[9px] font-black uppercase text-brand-blue tracking-widest ml-1">
+                        Ingredientes del plato seleccionado
+                      </h4>
+                      <div className="flex flex-col gap-2">
+                        {selectedRows.map((item) => renderCostRow(item, 'Ingrediente'))}
                       </div>
-                      <div className="text-left sm:text-right">
-                        <p className="text-[10px] font-black uppercase text-ui-muted tracking-widest">Costo empaque/plato</p>
-                        <p className="text-xl font-black text-brand-blue">Q{packagingCost.toFixed(2)}</p>
+                    </div>
+
+                    <div className="space-y-2 bg-ui-bg/25 p-3 rounded-[1.5rem] border border-ui-border/40">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 ml-1">
+                        <h4 className="text-[9px] font-black uppercase text-brand-blue tracking-widest">
+                          Empaque automático incluido
+                        </h4>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-ui-muted">
+                          {getAutomaticPackagingLabel(calcPlate.sauce)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {packagingRows.map((item) => renderCostRow(item, 'Empaque'))}
                       </div>
                     </div>
                   </div>
