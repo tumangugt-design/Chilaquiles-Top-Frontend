@@ -1551,16 +1551,26 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </div>
                 ) : (
                   inventoryLogs.map((log) => {
-                    const priceFromReason = log.reason?.match(new RegExp('Costo Total Q([\\d.]+)'))
-                    const totalPrice = priceFromReason
-                      ? Number(priceFromReason[1])
-                      : (log.price && log.price > 0 ? log.price : null)
-                    const amtMatch = log.reason?.match(new RegExp('Entrada de inventario:\\s*([\\d.]+)\\s*(\\w+)'))
-                    const entryAmt = amtMatch ? `${amtMatch[1]} ${amtMatch[2]}` : ''
+                    const product = INVENTORY_PRODUCT_MAP[log.ingredientName]
+                    const priceFromReason = log.reason?.match(new RegExp('Costo Total\\s*Q\\s*([\\d.]+)', 'i'))
+                    const totalPrice = log.totalPrice !== undefined && log.totalPrice !== null
+                      ? Number(log.totalPrice)
+                      : priceFromReason
+                        ? Number(priceFromReason[1])
+                        : (log.price && log.price > 0 ? Number(log.price) : null)
+                    const amtMatch = log.reason?.match(new RegExp('Entrada de inventario:\\s*([\\d.]+)\\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ]+)', 'i'))
+                    const displayAmount = log.inputAmount !== undefined && log.inputAmount !== null
+                      ? formatInventoryAmount(log.inputAmount)
+                      : amtMatch
+                        ? amtMatch[1]
+                        : formatInventoryAmount(log.amount || log.storedAmount || 0)
+                    const displayUnit = log.inputUnit || amtMatch?.[2] || product?.unit || log.storedUnit || ''
+                    const entryAmt = displayAmount && displayAmount !== '0' ? `${displayAmount} ${displayUnit}`.trim() : ''
+                    const stockAmount = log.storedAmount || log.amount || 0
+                    const stockUnit = log.storedUnit || product?.unit || ''
                     const dateStr = log.createdAt
                       ? new Date(log.createdAt).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                       : ''
-                    const product = INVENTORY_PRODUCT_MAP[log.ingredientName]
                     return (
                       <div key={log._id} className="rounded-2xl border border-ui-border bg-white/70 px-4 py-3 flex items-start justify-between gap-3 min-w-0">
                         <div className="min-w-0">
@@ -1579,7 +1589,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                             <p className="text-[10px] font-bold text-orange-400 italic">Sin costo registrado</p>
                           )}
                           <p className="text-[10px] font-bold text-brand-blue mt-0.5">
-                            {log.amountChanged > 0 ? `+${log.amountChanged}` : log.amountChanged} {product?.unit || ''}
+                            Stock: +{formatInventoryAmount(stockAmount)} {stockUnit}
                           </p>
                         </div>
                       </div>
