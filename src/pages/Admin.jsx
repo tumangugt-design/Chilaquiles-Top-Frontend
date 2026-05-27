@@ -400,8 +400,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     description: '',
     promoPrice: '',
     isActive: false,
-    protein: 'POLLO',
-    requestedCount: 2,
+    startDate: '',
+    endDate: '',
+    imageUrl: '',
   })
   const [calcPlate, setCalcPlate] = useState({
     sauce: 'ROJA',
@@ -799,13 +800,16 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const handleSavePromotion = async (e) => {
     if (e) e.preventDefault()
-    if (!promoForm.name || !promoForm.promoPrice) {
-      return toast.error('Ingresa el nombre y el precio de la promoción')
+    if (!promoForm.name) {
+      return toast.error('Ingresa el nombre de la promoción')
     }
 
-    const priceNum = Number(promoForm.promoPrice)
-    if (Number.isNaN(priceNum) || priceNum <= 0) {
-      return toast.error('Ingresa un precio de promoción válido')
+    let priceNum = null
+    if (promoForm.promoPrice) {
+      priceNum = Number(promoForm.promoPrice)
+      if (Number.isNaN(priceNum) || priceNum <= 0) {
+        return toast.error('Ingresa un precio de promoción válido')
+      }
     }
 
     setIsSaving(true)
@@ -831,8 +835,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         description: '',
         promoPrice: '',
         isActive: false,
-        protein: 'POLLO',
-        requestedCount: 2,
+        startDate: '',
+        endDate: '',
+        imageUrl: '',
       })
     } catch (err) {
       toast.error('No se pudo guardar la promoción')
@@ -1737,7 +1742,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <h3 className="text-lg font-black text-ui-text">
                   {promoForm.id ? 'Editar Promoción' : 'Crear Nueva Promoción'}
                 </h3>
-                <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Configura la regla y precio de la promoción</p>
+                <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Ingresa los detalles y sube el banner de la promoción</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1749,19 +1754,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     required
                     value={promoForm.name}
                     onChange={(e) => setPromoForm({ ...promoForm, name: e.target.value })}
-                    placeholder="Ej. 2x1 Pollo Cocido"
+                    placeholder="Ej. Súper Combo de Chilaquiles"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio Promocional (Q)</label>
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Precio Promocional (Q, Opcional)</label>
                   <input
                     className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
                     type="number"
                     min="1"
                     step="0.01"
-                    required
-                    value={promoForm.promoPrice}
+                    value={promoForm.promoPrice || ''}
                     onChange={(e) => setPromoForm({ ...promoForm, promoPrice: e.target.value })}
                     placeholder="Ej. 55"
                   />
@@ -1773,93 +1777,80 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <textarea
                   className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
                   rows={2}
-                  value={promoForm.description}
+                  value={promoForm.description || ''}
                   onChange={(e) => setPromoForm({ ...promoForm, description: e.target.value })}
-                  placeholder="Ej. 2x1 SOLO HOY en ordenes de pechuga de pollo cocido"
+                  placeholder="Ej. Válido únicamente para consumo en restaurante."
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proteína Requerida</label>
-                  <select
-                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
-                    value={promoForm.protein}
-                    onChange={(e) => setPromoForm({ ...promoForm, protein: e.target.value })}
-                  >
-                    <option value="POLLO">Pollo Cocido</option>
-                    <option value="STEAK">Steak</option>
-                    <option value="CHORIZO">Chorizo Argentino</option>
-                    <option value="ALL">Cualquier Proteína</option>
-                  </select>
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Fecha Inicio</label>
+                  <input
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold text-ui-text"
+                    type="date"
+                    value={promoForm.startDate || ''}
+                    onChange={(e) => setPromoForm({ ...promoForm, startDate: e.target.value })}
+                  />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Cantidad de Platos Requerida</label>
-                  <select
-                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
-                    value={promoForm.requestedCount}
-                    onChange={(e) => setPromoForm({ ...promoForm, requestedCount: Number(e.target.value) })}
-                  >
-                    <option value={1}>1 Plato</option>
-                    <option value={2}>2 Platos (Ej. 2x1)</option>
-                    <option value={3}>3 Platos</option>
-                  </select>
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Fecha Fin</label>
+                  <input
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold text-ui-text"
+                    type="date"
+                    value={promoForm.endDate || ''}
+                    onChange={(e) => setPromoForm({ ...promoForm, endDate: e.target.value })}
+                  />
                 </div>
               </div>
 
-              {/* Promo Margin Cost calculations preview */}
-              {promoForm.promoPrice && (
-                (() => {
-                  const qty = Number(promoForm.requestedCount || 1)
-                  const unitCost = calculatePlateRecipeCost({
-                    sauce: 'ROJA',
-                    protein: promoForm.protein === 'ALL' ? 'POLLO' : promoForm.protein,
-                    complement: 'CEBOLLA_CARAMELIZADA',
-                    baseRecipe: { cream: true, onion: true, cilantro: true }
-                  })
-                  const totalCost = unitCost * qty
-                  const profit = Number(promoForm.promoPrice) - totalCost
-                  const marginPct = (profit / Number(promoForm.promoPrice)) * 100
-                  const isLoss = profit < 0
-                  const isHealthy = marginPct >= 30
-
-                  return (
-                    <div className={`p-4 rounded-2xl border flex items-start gap-3 transition-colors ${
-                      isLoss
-                        ? 'bg-red-500/10 border-red-500/20 text-red-700'
-                        : isHealthy
-                        ? 'bg-green-500/10 border-green-500/20 text-green-700'
-                        : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700'
-                    }`}>
-                      <div className="text-2xl">
-                        {isLoss ? '⚠️' : isHealthy ? '🔥' : '📈'}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Imagen/Banner de la Promoción</label>
+                {promoForm.imageUrl ? (
+                  <div className="relative w-full h-48 border border-ui-border rounded-2xl overflow-hidden group">
+                    <img src={promoForm.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPromoForm({ ...promoForm, imageUrl: '' })}
+                      className="absolute top-2 right-2 bg-brand-red text-white rounded-xl px-3 py-1.5 hover:bg-brand-red/90 transition shadow-lg text-[10px] font-black uppercase tracking-wider"
+                    >
+                      Quitar Imagen
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-ui-border rounded-2xl cursor-pointer bg-white hover:bg-ui-bg/50 transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <span className="text-3xl mb-1">🖼️</span>
+                        <p className="text-xs font-bold text-ui-muted">Sube el banner de la promoción aquí</p>
+                        <p className="text-[9px] text-ui-muted mt-0.5">Formatos: PNG, JPG, WEBP (Máx. 2MB)</p>
                       </div>
-                      <div>
-                        <h4 className="font-black text-sm uppercase">Análisis Financiero de Promo</h4>
-                        <p className="text-xs font-bold mt-1 text-ui-text">
-                          Costo Total de Insumos: <strong>Q{totalCost.toFixed(2)}</strong> (Q{unitCost.toFixed(2)} c/u).
-                        </p>
-                        <p className="text-xs font-bold mt-0.5 text-ui-text">
-                          Ganancia Estimada: <strong className={isLoss ? 'text-red-600' : isHealthy ? 'text-green-600' : 'text-yellow-600'}>
-                            Q{profit.toFixed(2)}
-                          </strong> ({marginPct.toFixed(0)}% margen).
-                        </p>
-                        <p className="text-[10px] opacity-75 mt-1 font-semibold leading-tight">
-                          {isLoss 
-                            ? 'Esta promoción genera pérdidas. Considera subir el precio promocional.' 
-                            : isHealthy 
-                            ? 'El margen es saludable (mayor al 30%). ¡Buena promoción!' 
-                            : 'El margen es reducido. Revisa los costos fijos.'}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })()
-              )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (file) {
+                            if (file.size > 2 * 1024 * 1024) {
+                              return toast.error('La imagen debe ser menor a 2MB')
+                            }
+                            const reader = new FileReader()
+                            reader.onloadend = () => {
+                              setPromoForm(prev => ({ ...prev, imageUrl: reader.result }))
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
 
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1 !py-4" disabled={isSaving}>
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="flex-1 !py-4 animate-slide-up" disabled={isSaving}>
                   {isSaving ? 'Guardando...' : promoForm.id ? 'Actualizar Promoción' : 'Crear Promoción'}
                 </Button>
                 {promoForm.id && (
@@ -1871,8 +1862,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       description: '',
                       promoPrice: '',
                       isActive: false,
-                      protein: 'POLLO',
-                      requestedCount: 2,
+                      startDate: '',
+                      endDate: '',
+                      imageUrl: '',
                     })}
                     className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
                   >
@@ -1892,54 +1884,55 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
             <div className="space-y-4 max-h-[48rem] overflow-y-auto pr-2">
               {promotions.map((promo) => {
-                const singleCost = calculatePlateRecipeCost({
-                  sauce: 'ROJA',
-                  protein: promo.protein === 'ALL' ? 'POLLO' : promo.protein,
-                  complement: 'CEBOLLA_CARAMELIZADA',
-                  baseRecipe: { cream: true, onion: true, cilantro: true }
-                })
-                const totalCost = singleCost * (promo.requestedCount || 1)
-                const margin = promo.promoPrice - totalCost
-                const marginPct = (margin / promo.promoPrice) * 105; // safe calculation check
-
                 return (
-                  <div key={promo.id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-4 shadow-sm min-w-0">
-                    <div className="flex justify-between items-start gap-4">
-                      <div>
-                        <h4 className="font-black text-base text-ui-text leading-tight">{promo.name}</h4>
-                        <p className="text-xs text-ui-muted font-bold leading-normal mt-1">{promo.description}</p>
+                  <div key={promo.id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-4 shadow-sm min-w-0 flex flex-col justify-between">
+                    <div>
+                      {promo.imageUrl && (
+                        <div className="w-full h-36 rounded-xl overflow-hidden border border-ui-border mb-3">
+                          <img src={promo.imageUrl} alt={promo.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-black text-base text-ui-text leading-tight break-words">{promo.name}</h4>
+                          {promo.description && (
+                            <p className="text-xs text-ui-muted font-medium leading-normal mt-1 break-words">{promo.description}</p>
+                          )}
+                          {(promo.startDate || promo.endDate) && (
+                            <p className="text-[10px] text-ui-muted font-black uppercase tracking-wider mt-2 flex items-center gap-1.5">
+                              <span>📅</span> {promo.startDate || 'Inicio'} al {promo.endDate || 'Fin'}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePromoStatus(promo.id, promo.isActive)}
+                          className={`shrink-0 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
+                            promo.isActive
+                              ? 'bg-green-500/10 text-green-700 border-green-500/30'
+                              : 'bg-ui-bg text-ui-muted border-ui-border'
+                          }`}
+                        >
+                          {promo.isActive ? 'Activo' : 'Inactivo'}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleTogglePromoStatus(promo.id, promo.isActive)}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
-                          promo.isActive
-                            ? 'bg-green-500/10 text-green-700 border-green-500/30'
-                            : 'bg-ui-bg text-ui-muted border-ui-border'
-                        }`}
-                      >
-                        {promo.isActive ? 'Activo' : 'Inactivo'}
-                      </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 border-t border-b border-ui-border py-3 text-xs">
+                    <div className="flex justify-between items-end border-t border-ui-border pt-3 mt-1">
                       <div>
-                        <p className="text-[10px] text-ui-muted uppercase tracking-wider font-bold">Precio de Venta</p>
-                        <p className="text-lg font-black text-brand-blue mt-0.5">Q{Number(promo.promoPrice).toFixed(2)}</p>
+                        {promo.promoPrice ? (
+                          <>
+                            <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Precio de Venta</span>
+                            <span className="text-base font-black text-brand-blue">Q{Number(promo.promoPrice).toFixed(2)}</span>
+                          </>
+                        ) : (
+                          <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block italic">Sin precio fijo</span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-[10px] text-ui-muted uppercase tracking-wider font-bold">Rentabilidad</p>
-                        <p className={`text-lg font-black mt-0.5 ${margin >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
-                          Q{margin.toFixed(2)} <span className="text-[10px] font-bold">({isNaN(marginPct) ? 0 : marginPct.toFixed(0)}%)</span>
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
-                      <div className="text-ui-muted font-bold">
-                        Condición: {promo.requestedCount} plato(s) · {promo.protein === 'ALL' ? 'Cualquier proteína' : promo.protein}
-                      </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-3 text-[10px] font-black uppercase tracking-wider">
                         <button
                           type="button"
                           onClick={() => setPromoForm(promo)}

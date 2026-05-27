@@ -72,11 +72,7 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
   const prevStep = () => {
     const currentIndex = STEPS_ORDER.indexOf(currentStep)
     if (currentIndex > 0) {
-      if (currentStep === 'SAUCE' && order.appliedPromo) {
-        setCurrentStep('LOCATION')
-      } else {
-        setCurrentStep(STEPS_ORDER[currentIndex - 1])
-      }
+      setCurrentStep(STEPS_ORDER[currentIndex - 1])
       window.scrollTo(0, 0)
     }
   }
@@ -115,21 +111,9 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
                     phoneLocal: data.phoneLocal,
                     phoneVerified: true,
                   },
-                  ...(data.appliedPromo ? {
-                    appliedPromo: data.appliedPromo,
-                    requestedCount: data.appliedPromo.requestedCount,
-                    currentPlate: {
-                      ...order.currentPlate,
-                      protein: data.appliedPromo.protein === 'ALL' ? order.currentPlate.protein : data.appliedPromo.protein
-                    }
-                  } : {})
                 })
               }
-              if (data?.appliedPromo) {
-                goToStep('SAUCE')
-              } else {
-                nextStep()
-              }
+              nextStep()
             }}
           />
         )

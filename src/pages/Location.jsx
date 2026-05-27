@@ -85,9 +85,6 @@ const LocationPage = ({ onConfirm }) => {
   const [hours, setHours] = useState({ isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [promotions, setPromotions] = useState([])
-  const [isPromosOpen, setIsPromosOpen] = useState(false)
-  const [selectedPromo, setSelectedPromo] = useState(null)
-  const [activeMenuTab, setActiveMenuTab] = useState('menu')
 
   const cleanDigits = useMemo(() => toGtLocalDigits(phone), [phone])
 
@@ -177,7 +174,17 @@ const LocationPage = ({ onConfirm }) => {
         if (mounted) {
           setAvailableCount(Number(platesResponse.data?.count || 0))
           setHours(hoursResponse.data || { isOpen: true, isCurrentlyOpen: true, openTime: '08:00', closeTime: '17:00' })
-          const activePromos = (promosResponse.data || []).filter(p => p.isActive)
+          
+          const now = new Date()
+          const gtTime = new Date(now.getTime() - 6 * 60 * 60 * 1000)
+          const currentDateStr = `${gtTime.getUTCFullYear()}-${String(gtTime.getUTCMonth() + 1).padStart(2, '0')}-${String(gtTime.getUTCDate()).padStart(2, '0')}`
+
+          const activePromos = (promosResponse.data || []).filter(p => {
+            if (!p.isActive) return false
+            if (p.startDate && currentDateStr < p.startDate) return false
+            if (p.endDate && currentDateStr > p.endDate) return false
+            return true
+          })
           setPromotions(activePromos)
         }
       } catch {
@@ -241,7 +248,6 @@ const LocationPage = ({ onConfirm }) => {
           phone: normalizedPhone,
           phoneLocal: cleanDigits,
           phoneVerified: true,
-          appliedPromo: selectedPromo
         })
       }
     } catch (error) {
@@ -249,12 +255,6 @@ const LocationPage = ({ onConfirm }) => {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleSelectPromo = (promo) => {
-    setSelectedPromo(promo)
-    setIsPromosOpen(false)
-    setStep('auth')
   }
 
   return (
@@ -307,13 +307,6 @@ const LocationPage = ({ onConfirm }) => {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-ui-text mb-2 sm:mb-3 tracking-tight">
               Verifica tu número
             </h2>
-            {selectedPromo && (
-              <div className="mb-4 bg-brand-orange/5 border border-brand-orange/20 rounded-2xl p-3 text-left animate-slide-up">
-                <span className="text-[9px] font-black uppercase tracking-widest text-brand-orange block">Promoción seleccionada 🎁</span>
-                <span className="text-sm font-black text-ui-text">{selectedPromo.name}</span>
-                <span className="text-xs text-ui-muted block mt-0.5">{selectedPromo.description}</span>
-              </div>
-            )}
             <p className="text-ui-muted leading-relaxed text-sm sm:text-base px-2">
               Ingresa tu número y te enviaremos un código para continuar con tu pedido.
             </p>
@@ -328,23 +321,11 @@ const LocationPage = ({ onConfirm }) => {
 
       {step === 'welcome' && !error && (
         <div className="space-y-4">
-          <Button fullWidth type="button" onClick={() => { setActiveMenuTab('menu'); setIsMenuOpen(true); }} variant="secondary" className="text-lg !border-brand-blue/30 !text-brand-blue !bg-brand-blue/5">
+          <Button fullWidth type="button" onClick={() => { setIsMenuOpen(true); }} variant="secondary" className="text-lg !border-brand-blue/30 !text-brand-blue !bg-brand-blue/5">
             Ver menú
           </Button>
 
-          {promotions.length > 0 && (
-            <Button
-              fullWidth
-              type="button"
-              onClick={() => setIsPromosOpen(true)}
-              variant="secondary"
-              className="text-lg !border-brand-orange/30 !text-brand-orange !bg-brand-orange/5"
-            >
-              🎁 Ver Promociones
-            </Button>
-          )}
-
-          <Button fullWidth onClick={() => { setSelectedPromo(null); setStep('auth'); }} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
+          <Button fullWidth onClick={() => { setStep('auth'); }} variant="primary" className="text-lg" disabled={!hours.isCurrentlyOpen}>
             {hours.isCurrentlyOpen ? 'Sí, estoy aquí' : 'Cerrado'}
           </Button>
 
@@ -408,7 +389,6 @@ const LocationPage = ({ onConfirm }) => {
             onClick={() => {
               setStep('welcome')
               setPhone('')
-              setSelectedPromo(null)
             }}
             className="block w-full py-2 text-ui-muted text-sm font-semibold hover:text-ui-text transition-colors"
           >
@@ -442,7 +422,7 @@ const LocationPage = ({ onConfirm }) => {
         onClick={() => setIsMenuOpen(false)}
       >
         <div
-          className="relative w-full max-h-[92vh] overflow-auto rounded-3xl bg-white p-4 shadow-2xl flex flex-col items-center justify-start md:max-w-4xl md:p-6"
+          className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl bg-ui-card p-4 sm:p-6 shadow-2xl border border-ui-border flex flex-col items-center gap-6"
           onClick={(event) => event.stopPropagation()}
         >
           <button
@@ -454,150 +434,28 @@ const LocationPage = ({ onConfirm }) => {
             ×
           </button>
 
-          {promotions.length > 0 && (
-            <div className="flex justify-center gap-2 mb-4 w-full border-b border-ui-border pb-4 mt-2">
-              <button
-                type="button"
-                onClick={() => setActiveMenuTab('menu')}
-                className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
-                  activeMenuTab === 'menu'
-                    ? 'bg-brand-blue text-white shadow-md'
-                    : 'bg-ui-bg text-ui-muted hover:text-ui-text'
-                }`}
-              >
-                📖 Menú Completo
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMenuTab('promos')}
-                className={`px-4 py-2 rounded-xl text-sm font-black transition-all flex items-center gap-1.5 ${
-                  activeMenuTab === 'promos'
-                    ? 'bg-brand-orange text-white shadow-md'
-                    : 'bg-ui-bg text-ui-muted hover:text-ui-text'
-                }`}
-              >
-                🎁 Promociones de Hoy
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-              </button>
-            </div>
-          )}
+          <h3 className="text-xl font-extrabold text-ui-text border-b border-ui-border pb-2 w-full text-center mt-2">
+            📖 Menú y Promociones
+          </h3>
 
-          <div className="w-full overflow-y-auto flex-1 flex items-center justify-center">
-            {activeMenuTab === 'menu' || promotions.length === 0 ? (
+          <div className="w-full space-y-6">
+            <div className="space-y-2">
+              <span className="text-xs font-black uppercase text-ui-muted tracking-widest block text-center">Menú Principal</span>
               <img
                 src={menuImage}
                 alt="Menú Chilaquiles TOP"
-                className="h-auto w-full rounded-2xl object-contain max-h-[70vh]"
+                className="w-full h-auto rounded-2xl object-contain shadow-sm border border-ui-border"
               />
-            ) : (
-              <div className="w-full max-w-xl mx-auto space-y-4 py-4 text-left">
-                {promotions.map((promo) => (
-                  <div
-                    key={promo.id}
-                    className="bg-ui-bg border border-ui-border rounded-2xl p-4 flex flex-col justify-between gap-4 hover:border-brand-orange/40 transition-all shadow-sm"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <h4 className="font-extrabold text-lg text-ui-text">{promo.name}</h4>
-                        <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-orange/20">
-                          {promo.requestedCount} Platos
-                        </span>
-                        {promo.protein !== 'ALL' && (
-                          <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-blue/20">
-                            {promo.protein === 'POLLO' ? 'Pollo Cocido' : promo.protein === 'STEAK' ? 'Steak' : 'Chorizo'}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-ui-muted text-sm font-medium leading-normal">{promo.description}</p>
-                    </div>
+            </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-ui-border/50 mt-1">
-                      <div>
-                        <span className="text-[10px] font-black uppercase text-ui-muted tracking-widest block">Precio Promo</span>
-                        <span className="text-2xl font-black text-brand-blue">Q{Number(promo.promoPrice).toFixed(2)}</span>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          handleSelectPromo(promo)
-                          setIsMenuOpen(false)
-                        }}
-                        variant="primary"
-                        className="!py-2 !px-4 text-sm font-bold shadow-md hover:shadow-lg transition-all"
-                      >
-                        Pedir Promo →
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )}
-
-    {isPromosOpen && (
-      <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
-        onClick={() => setIsPromosOpen(false)}
-      >
-        <div
-          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-ui-card p-6 shadow-2xl border border-ui-border text-left"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            onClick={() => setIsPromosOpen(false)}
-            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ui-bg text-2xl font-black text-ui-text shadow-md transition hover:scale-105"
-            aria-label="Cerrar promociones"
-          >
-            ×
-          </button>
-          
-          <h3 className="text-2xl font-extrabold text-ui-text mb-2 flex items-center gap-2">
-            🎁 Promociones Especiales
-          </h3>
-          <p className="text-ui-muted text-sm mb-6 leading-relaxed">
-            Aprovecha nuestras ofertas exclusivas para hoy. Selecciona una promoción para configurar tu pedido automáticamente:
-          </p>
-
-          <div className="space-y-4">
-            {promotions.map((promo) => (
-              <div
-                key={promo.id}
-                className="bg-ui-bg border border-ui-border rounded-2xl p-4 flex flex-col justify-between gap-4 hover:border-brand-orange/40 transition-all shadow-sm"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <h4 className="font-extrabold text-lg text-ui-text">{promo.name}</h4>
-                    <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-orange/20">
-                      {promo.requestedCount} Platos
-                    </span>
-                    {promo.protein !== 'ALL' && (
-                      <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-brand-blue/20">
-                        {promo.protein === 'POLLO' ? 'Pollo Cocido' : promo.protein === 'STEAK' ? 'Steak' : 'Chorizo'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-ui-muted text-sm font-medium leading-normal">{promo.description}</p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-ui-border/50 mt-1">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-ui-muted tracking-widest block">Precio Promo</span>
-                    <span className="text-2xl font-black text-brand-blue">Q{Number(promo.promoPrice).toFixed(2)}</span>
-                  </div>
-                  <Button
-                    onClick={() => handleSelectPromo(promo)}
-                    variant="primary"
-                    className="!py-2 !px-4 text-sm font-bold shadow-md hover:shadow-lg transition-all"
-                  >
-                    Pedir Promo →
-                  </Button>
-                </div>
+            {promotions.filter(p => p.imageUrl).map((promo) => (
+              <div key={promo.id} className="space-y-2 border-t border-ui-border pt-4">
+                <span className="text-xs font-black uppercase text-brand-orange tracking-widest block text-center">✨ ¡Promoción: {promo.name}!</span>
+                <img
+                  src={promo.imageUrl}
+                  alt={promo.name}
+                  className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
+                />
               </div>
             ))}
           </div>
