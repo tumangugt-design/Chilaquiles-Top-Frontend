@@ -50,8 +50,8 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
         <div className="flex justify-between items-center text-sm text-ui-muted">
           <span className="text-ui-text">
             {plate.complement === 'AGUACATE' && 'Aguacate'}
-            {plate.complement === 'CEBOLLA_CARAMELIZADA' && 'Cebolla Caramelizada'}
-            {plate.complement === 'QUESO_EXTRA' && 'Queso Extra'}
+            {(plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') && 'Cebolla Caramelizada'}
+            {(plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') && 'Queso Extra'}
           </span>
           {showEdit && onEdit &&              <button
                 onClick={() => onEdit('COMPLEMENT')}
