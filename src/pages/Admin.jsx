@@ -441,7 +441,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [simulatedCosts, setSimulatedCosts] = useState({})
-  const [calcSelectedBases, setCalcSelectedBases] = useState(['totopos', 'queso', 'crema', 'cebolla', 'cilantro'])
+  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cebolla', 'cilantro'])
   const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
   const [isOpenBases, setIsOpenBases] = useState(false)
   const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
@@ -845,10 +845,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (calcSelectedEmpaques.includes('tenedor')) cost += getIngredientCost('tenedor', plate)
     if (calcSelectedEmpaques.includes('servilleta')) cost += getIngredientCost('servilleta', plate)
     if (calcSelectedEmpaques.includes('sticker')) cost += getIngredientCost('sticker', plate)
+
+    // Ingredientes fijos del plato; no son bases personalizables
+    cost += getIngredientCost('totopos', plate)
+    cost += getIngredientCost('queso', plate)
     
-    // Base de cada plato
-    if (calcSelectedBases.includes('totopos')) cost += getIngredientCost('totopos', plate)
-    if (calcSelectedBases.includes('queso')) cost += getIngredientCost('queso', plate)
+    // Base personalizable del plato: solo Crema, Cebolla y Cilantro
     if (calcSelectedBases.includes('crema')) cost += getIngredientCost('crema', plate)
     if (calcSelectedBases.includes('cebolla')) cost += getIngredientCost('cebolla', plate)
     if (calcSelectedBases.includes('cilantro')) cost += getIngredientCost('cilantro', plate)
@@ -961,7 +963,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         complement: normalizeComplementValue(calcPlate.complement) || calcPlate.complement,
         baseRecipe: calcPlate.baseRecipe,
       },
-      selectedBases: calcSelectedBases,
+      selectedBases: calcSelectedBases.filter(name => ['crema', 'cebolla', 'cilantro'].includes(name)),
       selectedEmpaques: calcSelectedEmpaques,
       estimatedUnitCost: Number(singlePlateCost.toFixed(2)),
       estimatedTotalCost: Number(totalPromoCost.toFixed(2)),
@@ -1016,7 +1018,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
     setCalcPromoPlates(String(promo.requestedCount || promo.platesCount || 2))
     if (promo.promoPrice) setCalcPromoPrice(String(promo.promoPrice))
-    if (Array.isArray(promo.selectedBases)) setCalcSelectedBases(promo.selectedBases)
+    if (Array.isArray(promo.selectedBases)) {
+      setCalcSelectedBases(promo.selectedBases.filter(name => ['crema', 'cebolla', 'cilantro'].includes(name)))
+    }
     if (Array.isArray(promo.selectedEmpaques)) setCalcSelectedEmpaques(promo.selectedEmpaques)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -1617,6 +1621,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   onChange={(e) => setInventoryCategoryFilter(e.target.value)}
                 >
                   <option value="ALL">Todas las categorías</option>
+                  <option value="Ingredientes fijos">Ingredientes fijos</option>
                   <option value="Base">Bases</option>
                   <option value="Salsas">Salsas</option>
                   <option value="Proteínas">Proteínas</option>
@@ -1993,7 +1998,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <span className="truncate">
                       {calcSelectedBases.length === 0 
                         ? 'Ninguno' 
-                        : calcSelectedBases.length === 5 
+                        : calcSelectedBases.length === 3 
                           ? 'Todos' 
                           : calcSelectedBases.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
                       }
@@ -2003,7 +2008,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   
                   {isOpenBases && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
-                      {['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].map((name) => {
+                      {['crema', 'cebolla', 'cilantro'].map((name) => {
                         const product = INVENTORY_PRODUCT_MAP[name]
                         if (!product) return null
                         const isChecked = calcSelectedBases.includes(name)
@@ -2096,7 +2101,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
               {/* Dynamic purchase simulation inputs for selected options */}
               {(() => {
-                const activeIngredients = []
+                const activeIngredients = ['totopos', 'queso']
                 if (calcPlate.sauce === 'ROJA') activeIngredients.push('salsa roja')
                 else if (calcPlate.sauce === 'VERDE') activeIngredients.push('salsa verde')
                 else if (calcPlate.sauce === 'DIVORCIADOS') {
@@ -2133,13 +2138,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   {
                     title: 'Ingredientes Base',
                     items: activeIngredients.filter(name => 
-                      ['totopos', 'queso', 'crema', 'cebolla', 'cilantro'].includes(name)
+                      ['crema', 'cebolla', 'cilantro'].includes(name)
                     )
                   },
                   {
-                    title: 'Empaque e Insumos Fijos',
+                    title: 'Ingredientes Fijos y Empaque',
                     items: activeIngredients.filter(name => 
-                      ['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz', 'plato de 4 onz', 'tapadera de 4 onz'].includes(name)
+                      ['totopos', 'queso', 'plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz', 'plato de 4 onz', 'tapadera de 4 onz'].includes(name)
                     )
                   }
                 ]
