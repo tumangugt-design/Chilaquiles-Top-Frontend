@@ -777,7 +777,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         }
       }
     }
-    return getProductCost(name)
+    return 0
   }
 
   const calculatePlateRecipeCost = (plate) => {
