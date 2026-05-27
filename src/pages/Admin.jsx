@@ -19,6 +19,8 @@ import {
   updateOperatingHours,
   getPromotions,
   updatePromotions,
+  getCalculatorCosts,
+  updateCalculatorCosts,
   getFinancesSummary,
   getAvailablePlates
 } from '../shared/config/api.js'
@@ -464,9 +466,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         const inventoryResponse = await getInventory()
         setInventory(inventoryResponse.data)
       } else if (activeTab === 'promotions') {
-        const [promotionsResponse, inventoryResponse] = await Promise.all([getPromotions(), getInventory()])
+        const [promotionsResponse, inventoryResponse, calcCostsResponse] = await Promise.all([
+          getPromotions(),
+          getInventory(),
+          getCalculatorCosts().catch(() => ({ data: {} }))
+        ])
         setPromotions(promotionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
+        setSimulatedCosts(calcCostsResponse.data || {})
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -762,7 +769,26 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return Number(item?.lastPrice || 0)
   }
 
-  const getIngredientCost = (name) => {
+  const getIngredientCost = (name, plate) => {
+    // Check if it's one of the selected ingredients in the plate configuration
+    const activeIngredients = []
+    if (plate?.sauce === 'ROJA') activeIngredients.push('salsa roja')
+    else if (plate?.sauce === 'VERDE') activeIngredients.push('salsa verde')
+    else if (plate?.sauce === 'DIVORCIADOS') {
+      activeIngredients.push('salsa roja')
+      activeIngredients.push('salsa verde')
+    }
+    
+    if (plate?.protein === 'POLLO') activeIngredients.push('pollo')
+    else if (plate?.protein === 'STEAK') activeIngredients.push('steak')
+    else if (plate?.protein === 'CHORIZO') activeIngredients.push('chorizo')
+    
+    if (plate?.complement === 'AGUACATE') activeIngredients.push('aguacate')
+    else if (plate?.complement === 'CEBOLLA_CARAMELIZADA' || plate?.complement === 'CEBOLLA CARAMELIZADA') activeIngredients.push('cebolla caramelizada')
+    else if (plate?.complement === 'QUESO_EXTRA' || plate?.complement === 'QUESO EXTRA') activeIngredients.push('queso extra')
+
+    const isActive = activeIngredients.includes(name)
+
     const sim = simulatedCosts[name]
     const qtyVal = Number(sim?.qty)
     const priceVal = Number(sim?.price)
@@ -777,46 +803,78 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         }
       }
     }
-    return 0
+
+    if (isActive) {
+      return 0
+    }
+
+    return getProductCost(name)
   }
 
   const calculatePlateRecipeCost = (plate) => {
     let cost = 0
-    cost += getIngredientCost('plato rectangular')
-    cost += getIngredientCost('tenedor')
-    cost += getIngredientCost('servilleta')
-    cost += getIngredientCost('sticker')
+    cost += getIngredientCost('plato rectangular', plate)
+    cost += getIngredientCost('tenedor', plate)
+    cost += getIngredientCost('servilleta', plate)
+    cost += getIngredientCost('sticker', plate)
     
-    cost += getIngredientCost('totopos')
-    cost += getIngredientCost('queso')
-    if (plate.baseRecipe?.cream !== false) cost += getIngredientCost('crema')
-    if (plate.baseRecipe?.onion !== false) cost += getIngredientCost('cebolla')
-    if (plate.baseRecipe?.cilantro !== false) cost += getIngredientCost('cilantro')
+    cost += getIngredientCost('totopos', plate)
+    cost += getIngredientCost('queso', plate)
+    if (plate.baseRecipe?.cream !== false) cost += getIngredientCost('crema', plate)
+    if (plate.baseRecipe?.onion !== false) cost += getIngredientCost('cebolla', plate)
+    if (plate.baseRecipe?.cilantro !== false) cost += getIngredientCost('cilantro', plate)
 
     if (plate.sauce === 'ROJA') {
-      cost += getIngredientCost('salsa roja')
-      cost += getIngredientCost('plato de 8 onz')
-      cost += getIngredientCost('tapadera de 8 onz')
+      cost += getIngredientCost('salsa roja', plate)
+      cost += getIngredientCost('plato de 8 onz', plate)
+      cost += getIngredientCost('tapadera de 8 onz', plate)
     } else if (plate.sauce === 'VERDE') {
-      cost += getIngredientCost('salsa verde')
-      cost += getIngredientCost('plato de 8 onz')
-      cost += getIngredientCost('tapadera de 8 onz')
+      cost += getIngredientCost('salsa verde', plate)
+      cost += getIngredientCost('plato de 8 onz', plate)
+      cost += getIngredientCost('tapadera de 8 onz', plate)
     } else if (plate.sauce === 'DIVORCIADOS') {
-      cost += getIngredientCost('salsa roja') * 0.5
-      cost += getIngredientCost('salsa verde') * 0.5
-      cost += getIngredientCost('plato de 4 onz') * 2
-      cost += getIngredientCost('tapadera de 4 onz') * 2
+      cost += getIngredientCost('salsa roja', plate) * 0.5
+      cost += getIngredientCost('salsa verde', plate) * 0.5
+      cost += getIngredientCost('plato de 4 onz', plate) * 2
+      cost += getIngredientCost('tapadera de 4 onz', plate) * 2
     }
 
-    if (plate.protein === 'STEAK') cost += getIngredientCost('steak')
-    if (plate.protein === 'POLLO') cost += getIngredientCost('pollo')
-    if (plate.protein === 'CHORIZO') cost += getIngredientCost('chorizo')
+    if (plate.protein === 'STEAK') cost += getIngredientCost('steak', plate)
+    if (plate.protein === 'POLLO') cost += getIngredientCost('pollo', plate)
+    if (plate.protein === 'CHORIZO') cost += getIngredientCost('chorizo', plate)
 
-    if (plate.complement === 'AGUACATE') cost += getIngredientCost('aguacate')
-    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') cost += getIngredientCost('cebolla caramelizada')
-    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') cost += getIngredientCost('queso extra')
+    if (plate.complement === 'AGUACATE') cost += getIngredientCost('aguacate', plate)
+    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') cost += getIngredientCost('cebolla caramelizada', plate)
+    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') cost += getIngredientCost('queso extra', plate)
 
     return cost
+  }
+
+  const handleSaveCalculatorCost = async (ingredientName) => {
+    try {
+      const item = simulatedCosts[ingredientName]
+      if (!item || !item.qty || !item.price) {
+        return toast.error('Ingresa cantidad y precio para guardar')
+      }
+      
+      const response = await getCalculatorCosts().catch(() => ({ data: {} }))
+      const current = response.data || {}
+      
+      const updated = {
+        ...current,
+        [ingredientName]: {
+          qty: item.qty,
+          unit: item.unit,
+          price: item.price
+        }
+      }
+      
+      await updateCalculatorCosts(updated)
+      setSimulatedCosts(updated)
+      toast.success(`Costo de ${INVENTORY_PRODUCT_MAP[ingredientName]?.label || ingredientName} guardado con éxito`)
+    } catch (err) {
+      toast.error('No se pudo guardar el costo del ingrediente')
+    }
   }
 
   const handleSavePromotion = async (e) => {
@@ -1697,7 +1755,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4">
               <div className="border-b border-ui-border pb-3 flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-black text-ui-text">Simulador de Costo de Plato</h3>
+                  <h3 className="text-lg font-black text-ui-text">Calculadora de Costo de Plato</h3>
                   <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Calcula el costo real de preparación según ingredientes</p>
                 </div>
                 <div className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider shrink-0">
@@ -1767,9 +1825,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 return (
                   <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-2">
                     <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">
-                      Simular Precio de Compra de Ingredientes Seleccionados (Opcional)
+                      Precio de Compra de Ingredientes Seleccionados (Opcional)
                     </p>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="flex flex-col gap-2">
                       {activeIngredients.map((name) => {
                         const product = INVENTORY_PRODUCT_MAP[name]
                         if (!product) return null
@@ -1787,31 +1845,33 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         }
                         
                         return (
-                          <div key={name} className="grid grid-cols-1 sm:grid-cols-[1.5fr,1fr,1fr,1.2fr] items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in">
-                            <div className="text-xs font-black text-ui-text capitalize">
-                              {product.label}
+                          <div key={name} className="flex flex-col md:flex-row items-end md:items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full">
+                            <div className="w-full md:w-1/4 text-left shrink-0">
+                              <div className="text-xs font-black text-ui-text capitalize">
+                                {product.label}
+                              </div>
                               <span className="block text-[8px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
                                 Usa {product.usedPerPlate} {product.unit} por plato
                               </span>
                             </div>
                             
-                            <div className="flex flex-col gap-0.5">
+                            <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
                               <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Cant. Comprada</span>
                               <input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
                                 placeholder="Ej. 10"
                                 value={sim.qty}
                                 onChange={(e) => updateSim('qty', e.target.value)}
                               />
                             </div>
 
-                            <div className="flex flex-col gap-0.5">
+                            <div className="w-full md:w-[100px] flex flex-col gap-0.5 shrink-0">
                               <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad</span>
                               <select
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
                                 value={sim.unit}
                                 onChange={(e) => updateSim('unit', e.target.value)}
                               >
@@ -1823,17 +1883,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                               </select>
                             </div>
 
-                            <div className="flex flex-col gap-0.5">
+                            <div className="w-full md:flex-1 flex flex-col gap-0.5 min-w-0">
                               <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</span>
                               <input
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs w-full"
                                 placeholder="Ej. 20"
                                 value={sim.price}
                                 onChange={(e) => updateSim('price', e.target.value)}
                               />
+                            </div>
+
+                            <div className="w-full md:w-auto shrink-0 pt-2 md:pt-4">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveCalculatorCost(name)}
+                                className="w-full md:w-auto bg-brand-blue text-white rounded-xl text-[9px] font-black uppercase tracking-widest px-3 py-2.5 hover:shadow-lg transition-all hover:bg-brand-blue/90"
+                              >
+                                Guardar
+                              </button>
                             </div>
                           </div>
                         )

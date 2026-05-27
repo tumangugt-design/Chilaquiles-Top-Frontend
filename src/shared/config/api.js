@@ -55,6 +55,8 @@ export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Da
 export const updateOperatingHours = (payload) => api.patch('/settings/operating-hours', payload)
 export const getPromotions = () => api.get(`/settings/promotions?t=${Date.now()}`)
 export const updatePromotions = (payload) => api.patch('/settings/promotions', payload)
+export const getCalculatorCosts = () => api.get(`/settings/calculator-costs?t=${Date.now()}`)
+export const updateCalculatorCosts = (payload) => api.patch('/settings/calculator-costs', payload)
 
 export const getFinancesSummary = () => api.get(`/finances/summary?t=${Date.now()}`)
 // Customer OTP
