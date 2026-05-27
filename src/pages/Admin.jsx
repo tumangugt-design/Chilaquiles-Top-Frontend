@@ -1275,10 +1275,16 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </div>
 
             {selectedInventoryProduct && entryStoredAmount > 0 && (
-              <div className="rounded-2xl border border-brand-blue/15 bg-brand-blue/5 px-4 py-3 text-sm font-bold text-ui-muted">
-                Se guardará como <span className="text-brand-blue font-black">{entryStoredAmount.toFixed(2)} {selectedInventoryProduct.unit}</span> en stock.
+              <div className="rounded-2xl border border-brand-blue/15 bg-brand-blue/5 px-4 py-3 text-sm font-bold text-ui-muted space-y-1">
+                <div>
+                  Se guardará como <span className="text-brand-blue font-black">{entryStoredAmount.toFixed(2)} {selectedInventoryProduct.unit}</span> en stock.
+                </div>
                 {entryTotalPrice !== null && !Number.isNaN(entryTotalPrice) && (
-                  <span> Precio fijo registrado: <span className="text-brand-blue font-black">Q{entryTotalPrice.toFixed(2)}</span>.</span>
+                  <div className="text-xs">
+                    Costo de porción calculado: <span className="text-brand-blue font-black">
+                      Q{((entryTotalPrice / entryStoredAmount) * (selectedInventoryProduct.usedPerPlate || 1)).toFixed(2)}
+                    </span> por plato (usando {selectedInventoryProduct.usedPerPlate} {selectedInventoryProduct.unit}).
+                  </div>
                 )}
               </div>
             )}
