@@ -412,6 +412,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   })
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
+  const [simulatedCosts, setSimulatedCosts] = useState({})
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
 
@@ -761,41 +762,59 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return Number(item?.lastPrice || 0)
   }
 
+  const getIngredientCost = (name) => {
+    const sim = simulatedCosts[name]
+    const qtyVal = Number(sim?.qty)
+    const priceVal = Number(sim?.price)
+    
+    if (qtyVal > 0 && priceVal > 0) {
+      const product = INVENTORY_PRODUCT_MAP[name]
+      if (product) {
+        const baseQty = convertInventoryAmountToBaseUnit(qtyVal, sim.unit, product)
+        if (baseQty > 0) {
+          const costPerBaseUnit = priceVal / baseQty
+          return costPerBaseUnit * (product.usedPerPlate || 0)
+        }
+      }
+    }
+    return 0
+  }
+
   const calculatePlateRecipeCost = (plate) => {
     let cost = 0
-    cost += getProductCost('plato rectangular')
-    cost += getProductCost('tenedor')
-    cost += getProductCost('servilleta')
-    cost += getProductCost('sticker')
+    cost += getIngredientCost('plato rectangular')
+    cost += getIngredientCost('tenedor')
+    cost += getIngredientCost('servilleta')
+    cost += getIngredientCost('sticker')
     
-    cost += getProductCost('totopos')
-    cost += getProductCost('queso')
-    if (plate.baseRecipe?.cream !== false) cost += getProductCost('crema')
-    if (plate.baseRecipe?.onion !== false) cost += getProductCost('cebolla')
-    if (plate.baseRecipe?.cilantro !== false) cost += getProductCost('cilantro')
+    cost += getIngredientCost('totopos')
+    cost += getIngredientCost('queso')
+    if (plate.baseRecipe?.cream !== false) cost += getIngredientCost('crema')
+    if (plate.baseRecipe?.onion !== false) cost += getIngredientCost('cebolla')
+    if (plate.baseRecipe?.cilantro !== false) cost += getIngredientCost('cilantro')
 
     if (plate.sauce === 'ROJA') {
-      cost += getProductCost('salsa roja')
-      cost += getProductCost('plato de 8 onz')
-      cost += getProductCost('tapadera de 8 onz')
+      cost += getIngredientCost('salsa roja')
+      cost += getIngredientCost('plato de 8 onz')
+      cost += getIngredientCost('tapadera de 8 onz')
     } else if (plate.sauce === 'VERDE') {
-      cost += getProductCost('salsa verde')
-      cost += getProductCost('plato de 8 onz')
-      cost += getProductCost('tapadera de 8 onz')
+      cost += getIngredientCost('salsa verde')
+      cost += getIngredientCost('plato de 8 onz')
+      cost += getIngredientCost('tapadera de 8 onz')
     } else if (plate.sauce === 'DIVORCIADOS') {
-      cost += getProductCost('salsa roja') * 0.5
-      cost += getProductCost('salsa verde') * 0.5
-      cost += getProductCost('plato de 4 onz') * 2
-      cost += getProductCost('tapadera de 4 onz') * 2
+      cost += getIngredientCost('salsa roja') * 0.5
+      cost += getIngredientCost('salsa verde') * 0.5
+      cost += getIngredientCost('plato de 4 onz') * 2
+      cost += getIngredientCost('tapadera de 4 onz') * 2
     }
 
-    if (plate.protein === 'STEAK') cost += getProductCost('steak')
-    if (plate.protein === 'POLLO') cost += getProductCost('pollo')
-    if (plate.protein === 'CHORIZO') cost += getProductCost('chorizo')
+    if (plate.protein === 'STEAK') cost += getIngredientCost('steak')
+    if (plate.protein === 'POLLO') cost += getIngredientCost('pollo')
+    if (plate.protein === 'CHORIZO') cost += getIngredientCost('chorizo')
 
-    if (plate.complement === 'AGUACATE') cost += getProductCost('aguacate')
-    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') cost += getProductCost('cebolla caramelizada')
-    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') cost += getProductCost('queso extra')
+    if (plate.complement === 'AGUACATE') cost += getIngredientCost('aguacate')
+    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') cost += getIngredientCost('cebolla caramelizada')
+    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') cost += getIngredientCost('queso extra')
 
     return cost
   }
@@ -1726,6 +1745,103 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </select>
                 </div>
               </div>
+
+              {/* Dynamic purchase simulation inputs for selected options */}
+              {(() => {
+                const activeIngredients = []
+                if (calcPlate.sauce === 'ROJA') activeIngredients.push('salsa roja')
+                else if (calcPlate.sauce === 'VERDE') activeIngredients.push('salsa verde')
+                else if (calcPlate.sauce === 'DIVORCIADOS') {
+                  activeIngredients.push('salsa roja')
+                  activeIngredients.push('salsa verde')
+                }
+                
+                if (calcPlate.protein === 'POLLO') activeIngredients.push('pollo')
+                else if (calcPlate.protein === 'STEAK') activeIngredients.push('steak')
+                else if (calcPlate.protein === 'CHORIZO') activeIngredients.push('chorizo')
+                
+                if (calcPlate.complement === 'AGUACATE') activeIngredients.push('aguacate')
+                else if (calcPlate.complement === 'CEBOLLA_CARAMELIZADA' || calcPlate.complement === 'CEBOLLA CARAMELIZADA') activeIngredients.push('cebolla caramelizada')
+                else if (calcPlate.complement === 'QUESO_EXTRA' || calcPlate.complement === 'QUESO EXTRA') activeIngredients.push('queso extra')
+
+                return (
+                  <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-2">
+                    <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">
+                      Simular Precio de Compra de Ingredientes Seleccionados (Opcional)
+                    </p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {activeIngredients.map((name) => {
+                        const product = INVENTORY_PRODUCT_MAP[name]
+                        if (!product) return null
+                        
+                        const sim = simulatedCosts[name] || { qty: '', unit: getAllowedInputUnits(product)[0]?.value || 'und', price: '' }
+                        
+                        const updateSim = (field, val) => {
+                          setSimulatedCosts(prev => ({
+                            ...prev,
+                            [name]: {
+                              ...sim,
+                              [field]: val
+                            }
+                          }))
+                        }
+                        
+                        return (
+                          <div key={name} className="grid grid-cols-1 sm:grid-cols-[1.5fr,1fr,1fr,1.2fr] items-center gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in">
+                            <div className="text-xs font-black text-ui-text capitalize">
+                              {product.label}
+                              <span className="block text-[8px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
+                                Usa {product.usedPerPlate} {product.unit} por plato
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Cant. Comprada</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                placeholder="Ej. 10"
+                                value={sim.qty}
+                                onChange={(e) => updateSim('qty', e.target.value)}
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Unidad</span>
+                              <select
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                value={sim.unit}
+                                onChange={(e) => updateSim('unit', e.target.value)}
+                              >
+                                {getAllowedInputUnits(product).map((u) => (
+                                  <option key={u.value} value={u.value}>
+                                    {u.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[8px] font-black uppercase text-ui-muted tracking-widest ml-1">Precio Compra (Q)</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="p-2 rounded-xl border border-ui-border bg-ui-bg/30 outline-none font-bold text-xs"
+                                placeholder="Ej. 20"
+                                value={sim.price}
+                                onChange={(e) => updateSim('price', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Promo Simulation Configuration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-ui-border/60 pt-4 mt-3">
