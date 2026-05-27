@@ -781,6 +781,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         }
       }
     }
+
+    // Default to 0 for active simulated items in the plate cost simulator if no custom input is provided
+    const simulatedActiveNames = [
+      'salsa roja', 'salsa verde',
+      'pollo', 'steak', 'chorizo',
+      'aguacate', 'cebolla caramelizada', 'queso extra'
+    ]
+    if (simulatedActiveNames.includes(name)) {
+      return 0
+    }
+
     return getProductCost(name)
   }
 
