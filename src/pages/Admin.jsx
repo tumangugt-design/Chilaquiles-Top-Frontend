@@ -2068,10 +2068,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           // quita la cebolla cruda de las bases porque se reemplaza con la caramelizada
                           setCalcSelectedBases(prev => prev.filter(b => b !== 'cebolla'))
                         } else {
-                          // si antes estaba cebolla caramelizada, vuelve a agregar la cebolla cruda
-                          if (calcPlate.complement === 'CEBOLLA_CARAMELIZADA') {
-                            setCalcSelectedBases(prev => prev.includes('cebolla') ? prev : [...prev, 'cebolla'])
-                          }
+                          // siempre agrega la cebolla cruda si no está ya
+                          setCalcSelectedBases(prev => prev.includes('cebolla') ? prev : [...prev, 'cebolla'])
                         }
                       }}
                   >

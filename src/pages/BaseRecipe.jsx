@@ -65,6 +65,14 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
     })
   }, [optionsLoaded, availableOptions, plate.baseRecipe, updatePlate])
 
+  // Cuando el complemento ya NO es Cebolla Caramelizada, vuelve a activar la cebolla cruda por defecto
+  useEffect(() => {
+    const isCebolla = plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA'
+    if (!isCebolla && plate.baseRecipe?.onion === false) {
+      updatePlate({ baseRecipe: { ...plate.baseRecipe, onion: true } })
+    }
+  }, [plate.complement])
+
   const toggleBase = (key, canSelect = true) => {
     if (!canSelect) return
     updatePlate({
