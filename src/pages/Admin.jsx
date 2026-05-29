@@ -526,7 +526,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPlates, setCalcPromoPlates] = useState('2')
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [simulatedCosts, setSimulatedCosts] = useState({})
-  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cebolla', 'cilantro'])
+  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cilantro'])
   const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
   const [isOpenBases, setIsOpenBases] = useState(false)
   const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
@@ -1572,7 +1572,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <p className="text-ui-muted text-xs mt-1">Las entradas que registres aparecerán aquí.</p>
                   </div>
                 ) : (
-                  inventoryLogs.map((log) => {
+                  inventoryLogs
+                    .filter((log) => !!INVENTORY_PRODUCT_MAP[log.ingredientName])
+                    .map((log) => {
                     const product = INVENTORY_PRODUCT_MAP[log.ingredientName]
                     const priceFromReason = log.reason?.match(new RegExp('Costo Total\\s*Q\\s*([\\d.]+)', 'i'))
                     const totalPrice = log.totalPrice !== undefined && log.totalPrice !== null
@@ -2059,7 +2061,19 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   <select
                     className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
                     value={calcPlate.complement}
-                    onChange={(e) => setCalcPlate({ ...calcPlate, complement: e.target.value })}
+                    onChange={(e) => {
+                        const nextComplement = e.target.value
+                        setCalcPlate({ ...calcPlate, complement: nextComplement })
+                        if (nextComplement === 'CEBOLLA_CARAMELIZADA') {
+                          // quita la cebolla cruda de las bases porque se reemplaza con la caramelizada
+                          setCalcSelectedBases(prev => prev.filter(b => b !== 'cebolla'))
+                        } else {
+                          // si antes estaba cebolla caramelizada, vuelve a agregar la cebolla cruda
+                          if (calcPlate.complement === 'CEBOLLA_CARAMELIZADA') {
+                            setCalcSelectedBases(prev => prev.includes('cebolla') ? prev : [...prev, 'cebolla'])
+                          }
+                        }
+                      }}
                   >
                     <option value="CEBOLLA_CARAMELIZADA">Cebolla Caramelizada</option>
                     <option value="AGUACATE">Aguacate</option>
@@ -2078,19 +2092,25 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs text-left flex justify-between items-center"
                   >
                     <span className="truncate">
-                      {calcSelectedBases.length === 0 
-                        ? 'Ninguno' 
-                        : calcSelectedBases.length === 3 
-                          ? 'Todos' 
-                          : calcSelectedBases.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
-                      }
+                      {(() => {
+                        const availBases = calcPlate.complement === 'CEBOLLA_CARAMELIZADA'
+                          ? ['crema', 'cilantro']
+                          : ['crema', 'cebolla', 'cilantro']
+                        const sel = calcSelectedBases.filter(b => availBases.includes(b))
+                        if (sel.length === 0) return 'Ninguno'
+                        if (sel.length === availBases.length) return 'Todos'
+                        return sel.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
+                      })()}
                     </span>
                     <span className="text-[10px] ml-1 shrink-0 text-ui-muted">▼</span>
                   </button>
                   
                   {isOpenBases && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
-                      {['crema', 'cebolla', 'cilantro'].map((name) => {
+                      {(calcPlate.complement === 'CEBOLLA_CARAMELIZADA'
+                        ? ['crema', 'cilantro']
+                        : ['crema', 'cebolla', 'cilantro']
+                      ).map((name) => {
                         const product = INVENTORY_PRODUCT_MAP[name]
                         if (!product) return null
                         const isChecked = calcSelectedBases.includes(name)
