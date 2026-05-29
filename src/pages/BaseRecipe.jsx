@@ -36,10 +36,12 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
+    const isCebolaCaramelizada = plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA'
     return OPTIONS_BASE_RECIPE
+      .filter((option) => !(isCebolaCaramelizada && option.id === 'onion'))
       .map((option) => ({ ...option, availability: getProductAvailability(statusMap, baseNameById[option.id]) }))
       .filter((option) => showUnavailable || option.availability.available)
-  }, [inventoryItems, optionsLoaded, showUnavailable])
+  }, [inventoryItems, optionsLoaded, showUnavailable, plate.complement])
 
   useEffect(() => {
     if (!optionsLoaded) return
