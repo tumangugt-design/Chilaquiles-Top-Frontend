@@ -1,19 +1,74 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { OPTIONS_COUNT, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 import { getPromotions } from '../shared/config/api.js'
+import toast from 'react-hot-toast'
 
 const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   const [promotions, setPromotions] = useState([])
   const [loading, setLoading] = useState(false)
+  const orderRef = useRef(order)
 
   useEffect(() => {
+    orderRef.current = order
+  }, [order])
+
+  useEffect(() => {
+    const fetchPromos = () => {
+      getPromotions()
+        .then((res) => {
+          const activePromos = (res.data || []).filter((p) => p.isActive)
+          setPromotions(activePromos)
+          
+          const currentOrder = orderRef.current
+          if (activePromos.length === 0 && currentOrder.requestedCount === 'PROMO') {
+            updateOrder({
+              requestedCount: null,
+              appliedPromo: null,
+              isPromo: false,
+              cart: [],
+            })
+            toast.error('No hay promociones activas disponibles en este momento.')
+          } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
+            const stillActive = activePromos.some((p) => p.id === currentOrder.appliedPromo.id)
+            if (!stillActive) {
+              updateOrder({
+                appliedPromo: null,
+                cart: [],
+              })
+              toast.error('La promoción seleccionada ya no está disponible.')
+            }
+          }
+        })
+        .catch(() => {
+          setPromotions([])
+        })
+    }
+
     setLoading(true)
     getPromotions()
       .then((res) => {
         const activePromos = (res.data || []).filter((p) => p.isActive)
         setPromotions(activePromos)
+        
+        const currentOrder = orderRef.current
+        if (activePromos.length === 0 && currentOrder.requestedCount === 'PROMO') {
+          updateOrder({
+            requestedCount: null,
+            appliedPromo: null,
+            isPromo: false,
+            cart: [],
+          })
+        } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
+          const stillActive = activePromos.some((p) => p.id === currentOrder.appliedPromo.id)
+          if (!stillActive) {
+            updateOrder({
+              appliedPromo: null,
+              cart: [],
+            })
+          }
+        }
       })
       .catch(() => {
         setPromotions([])
@@ -21,6 +76,9 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
       .finally(() => {
         setLoading(false)
       })
+
+    const interval = setInterval(fetchPromos, 4000)
+    return () => clearInterval(interval)
   }, [])
 
   const handleSelectPromo = (promo) => {
