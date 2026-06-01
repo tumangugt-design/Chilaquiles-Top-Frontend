@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { OPTIONS_COUNT, OPTIONS_SAUCE, OPTIONS_PROTEIN } from '../shared/constants/index.jsx'
+import { OPTIONS_COUNT, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 import { getPromotions } from '../shared/config/api.js'
@@ -114,8 +114,8 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
         </p>
       </div>
 
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${promotions.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 sm:gap-6`}>
-        {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO' || promotions.length > 0).map((opt) => (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO').map((opt) => (
           <OptionCard
             key={opt.id}
             title={opt.label}
@@ -128,6 +128,26 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
           />
         ))}
       </div>
+
+      {promotions.length > 0 && OPTIONS_COUNT.find(opt => opt.value === 'PROMO') && (() => {
+        const promoOption = OPTIONS_COUNT.find(opt => opt.value === 'PROMO')
+        return (
+          <div className="flex justify-center border-t border-ui-border pt-6 mt-6 animate-fade-in">
+            <div className="w-full max-w-[280px] sm:max-w-xs">
+              <OptionCard
+                key={promoOption.id}
+                title={promoOption.label}
+                price={promoOption.price ? `Q${promoOption.price}` : 'Especial'}
+                description={promoOption.description}
+                selected={order.requestedCount === promoOption.value}
+                illustration={promoOption.illustration}
+                badge={promoOption.badge}
+                onClick={() => handleSelectSize(promoOption.value)}
+              />
+            </div>
+          </div>
+        )
+      })()}
 
       {order.requestedCount === 'PROMO' && (
         <div className="space-y-4 animate-fade-in mt-6 border-t border-ui-border pt-6">
@@ -195,9 +215,9 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                       )}
                     </div>
 
-                    {/* Display Plates Visual Summary */}
+                    {/* Display Plates Visual Summary and Details */}
                     {promo.plates && promo.plates.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-4 space-y-2.5">
                         {promo.plates.map((plate, pIdx) => {
                           const sauceOpt = OPTIONS_SAUCE.find(
                             (o) => o.value === plate.sauce
@@ -205,24 +225,48 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                           const proteinOpt = OPTIONS_PROTEIN.find(
                             (o) => o.value === plate.protein
                           )
+                          const sauceL = sauceOpt?.label || plate.sauce
+                          const proteinL = proteinOpt?.label || plate.protein
+                          const complementL = OPTIONS_COMPLEMENT.find(
+                            (o) => o.value === plate.complement
+                          )?.label || plate.complement
+                          const basesL = formatBaseRecipe(plate.baseRecipe)
+
                           return (
-                            <div
-                              key={pIdx}
-                              className="flex items-center gap-1.5 bg-ui-bg/60 border border-ui-border/80 rounded-xl px-2 py-1"
-                            >
-                              {sauceOpt?.illustration && (
-                                <div className="w-5 h-5 scale-90 shrink-0">
-                                  {sauceOpt.illustration}
+                            <div key={pIdx} className="bg-ui-bg/40 border border-ui-border/50 rounded-2xl p-3 space-y-2 select-none">
+                              {/* Plate Header with SVGs */}
+                              <div className="flex items-center gap-2">
+                                <div className="flex -space-x-1">
+                                  {sauceOpt?.illustration && (
+                                    <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
+                                      {sauceOpt.illustration}
+                                    </div>
+                                  )}
+                                  {proteinOpt?.illustration && (
+                                    <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
+                                      {proteinOpt.illustration}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {proteinOpt?.illustration && (
-                                <div className="w-5 h-5 scale-90 shrink-0">
-                                  {proteinOpt.illustration}
+                                <span className="text-[10px] font-black text-brand-blue uppercase tracking-widest">
+                                  Plato {pIdx + 1}
+                                </span>
+                              </div>
+                              {/* Ingredients Details */}
+                              <div className="text-[11px] font-bold text-ui-text/80 leading-normal pl-1 space-y-0.5">
+                                <div>
+                                  <span className="capitalize">{sauceL?.toLowerCase()}</span>
+                                  <span className="text-ui-muted mx-1.5">•</span>
+                                  <span className="capitalize">{proteinL?.toLowerCase()}</span>
+                                  <span className="text-ui-muted mx-1.5">•</span>
+                                  <span className="capitalize">{complementL?.toLowerCase()}</span>
                                 </div>
-                              )}
-                              <span className="text-[10px] font-black text-ui-text uppercase tracking-wider">
-                                Plato {pIdx + 1}
-                              </span>
+                                {basesL && (
+                                  <div className="text-[10px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
+                                    Base: {basesL.toLowerCase()}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )
                         })}
