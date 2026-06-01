@@ -75,41 +75,67 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
       </div>
 
       <div className="space-y-4">
-        {order.cart.map((plate, idx) => (
-          <div key={plate.id} className="bg-ui-bg rounded-lg p-3 opacity-75">
-            <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
-              <span className="text-xs font-bold text-ui-muted uppercase">Plato #{idx + 1}</span>
-            </div>
-            <div className="text-[10px] text-ui-muted leading-tight space-y-0.5 mt-1">
-              <div>{getLabel(plate.sauce, OPTIONS_SAUCE)}, {getLabel(plate.protein, OPTIONS_PROTEIN)}</div>
-              {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && (
-                <div className="text-ui-text font-bold uppercase">{formatBaseRecipe(plate.baseRecipe)}</div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
-          <div className="flex justify-between items-center mb-2 border-b border-blue-100 pb-1">
-            <span className="text-xs font-bold text-brand-blue uppercase">
-              {`Plato ${totalItems} ${targetPlateCount > 1 ? `(${totalItems} de ${targetPlateCount})` : '(Editando)'}`}
-            </span>
-          </div>
-          {currentPlate.sauce || currentPlate.protein ? (
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Salsa</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.sauce, OPTIONS_SAUCE)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Proteína</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.protein, OPTIONS_PROTEIN)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Complemento</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.complement, OPTIONS_COMPLEMENT)}</span></div>
-              {showBaseInSummary && !!formatBaseRecipe(currentPlate.baseRecipe) && (
-                <div className="pt-1 border-t border-ui-border text-ui-text font-bold uppercase">
-                  {formatBaseRecipe(currentPlate.baseRecipe)}
+        {order.isPromo ? (
+          [...order.cart, order.currentPlate].filter(Boolean).map((plate, idx) => (
+            <div key={plate.id || idx} className="bg-ui-bg rounded-lg p-3">
+              <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
+                <span className="text-xs font-bold text-brand-blue uppercase">Plato #{idx + 1}</span>
+              </div>
+              <div className="text-[11px] leading-relaxed space-y-0.5 mt-1 font-bold">
+                <div>
+                  <span className="text-ui-text">{getLabel(plate.sauce, OPTIONS_SAUCE)}</span>
+                  <span className="text-ui-muted mx-1.5">•</span>
+                  <span className="text-ui-text">{getLabel(plate.protein, OPTIONS_PROTEIN)}</span>
+                  <span className="text-ui-muted mx-1.5">•</span>
+                  <span className="text-ui-text">{getLabel(plate.complement, OPTIONS_COMPLEMENT)}</span>
                 </div>
+                {!!formatBaseRecipe(plate.baseRecipe) && (
+                  <div className="text-ui-muted text-[10px] font-medium uppercase tracking-wide mt-1">
+                    Base: {formatBaseRecipe(plate.baseRecipe)}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            {order.cart.map((plate, idx) => (
+              <div key={plate.id} className="bg-ui-bg rounded-lg p-3 opacity-75">
+                <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
+                  <span className="text-xs font-bold text-ui-muted uppercase">Plato #{idx + 1}</span>
+                </div>
+                <div className="text-[10px] text-ui-muted leading-tight space-y-0.5 mt-1">
+                  <div>{getLabel(plate.sauce, OPTIONS_SAUCE)}, {getLabel(plate.protein, OPTIONS_PROTEIN)}</div>
+                  {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && (
+                    <div className="text-ui-text font-bold uppercase">{formatBaseRecipe(plate.baseRecipe)}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
+              <div className="flex justify-between items-center mb-2 border-b border-blue-100 pb-1">
+                <span className="text-xs font-bold text-brand-blue uppercase">
+                  {`Plato ${totalItems} ${targetPlateCount > 1 ? `(${totalItems} de ${targetPlateCount})` : '(Editando)'}`}
+                </span>
+              </div>
+              {currentPlate.sauce || currentPlate.protein ? (
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Salsa</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.sauce, OPTIONS_SAUCE)}</span></div>
+                  <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Proteína</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.protein, OPTIONS_PROTEIN)}</span></div>
+                  <div className="flex justify-between gap-4"><span className="text-ui-muted font-medium">Complemento</span><span className="text-ui-text font-bold text-right">{getLabel(currentPlate.complement, OPTIONS_COMPLEMENT)}</span></div>
+                  {showBaseInSummary && !!formatBaseRecipe(currentPlate.baseRecipe) && (
+                    <div className="pt-1 border-t border-ui-border text-ui-text font-bold uppercase">
+                      {formatBaseRecipe(currentPlate.baseRecipe)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-gray-400 italic">Seleccionando...</span>
               )}
             </div>
-          ) : (
-            <span className="text-xs text-gray-400 italic">Seleccionando...</span>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       <div className="pt-2 border-t border-gray-100 flex justify-between items-end">

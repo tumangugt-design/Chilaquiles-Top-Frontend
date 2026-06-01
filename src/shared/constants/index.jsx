@@ -171,6 +171,15 @@ export const OPTIONS_COUNT = [
     illustration: React.createElement(IllustrationCompleta),
     badge: 'Ahorro TOP',
   },
+  {
+    id: 'PROMO',
+    label: '🎁 Promociones',
+    value: 'PROMO',
+    description: 'Combos y ofertas especiales.',
+    price: null,
+    illustration: React.createElement(IllustrationCompleta),
+    badge: 'Especiales',
+  },
 ]
 
 export const OPTIONS_SAUCE = [

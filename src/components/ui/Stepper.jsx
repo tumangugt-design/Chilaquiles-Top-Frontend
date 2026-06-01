@@ -1,22 +1,29 @@
 import { useState, useEffect } from 'react'
 import { STEPS_ORDER } from '../../shared/constants/index.jsx'
 
-const Stepper = ({ currentStep }) => {
+const Stepper = ({ currentStep, isPromo = false }) => {
   if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION') return null
 
   const currentStepForProgress = currentStep === 'COPY_PLATE' ? 'SUMMARY' : currentStep
-  const currentIndex = STEPS_ORDER.indexOf(currentStepForProgress)
 
-  const milestones = [
-    { label: 'Tamaño', step: 'SIZE' },
-    { label: 'Salsa', step: 'SAUCE' },
-    { label: 'Proteína', step: 'PROTEIN' },
-    { label: 'Complemento', step: 'COMPLEMENT' },
-    { label: 'Base', step: 'BASE_RECIPE' },
-    { label: 'Confirmar', step: 'SUMMARY' },
-    { label: 'Temperatura', step: 'TEMPERATURE' },
-    { label: 'Datos', step: 'CUSTOMER' },
-  ]
+  const milestones = isPromo
+    ? [
+        { label: 'Tamaño', step: 'SIZE' },
+        { label: 'Temperatura', step: 'TEMPERATURE' },
+        { label: 'Datos', step: 'CUSTOMER' },
+      ]
+    : [
+        { label: 'Tamaño', step: 'SIZE' },
+        { label: 'Salsa', step: 'SAUCE' },
+        { label: 'Proteína', step: 'PROTEIN' },
+        { label: 'Complemento', step: 'COMPLEMENT' },
+        { label: 'Base', step: 'BASE_RECIPE' },
+        { label: 'Confirmar', step: 'SUMMARY' },
+        { label: 'Temperatura', step: 'TEMPERATURE' },
+        { label: 'Datos', step: 'CUSTOMER' },
+      ]
+
+  const currentIndex = milestones.findIndex(m => m.step === currentStepForProgress)
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
   useEffect(() => {
@@ -44,9 +51,8 @@ const Stepper = ({ currentStep }) => {
           <div className="absolute top-[50%] -translate-y-[50%] left-0 right-0 h-0.5 bg-ui-border -z-10 mx-10 rounded-full" />
 
           {milestones.map((m, idx) => {
-            const mIndex = STEPS_ORDER.indexOf(m.step)
-            const isActive = currentIndex === mIndex
-            const isPassed = currentIndex > mIndex
+            const isActive = currentIndex === idx
+            const isPassed = currentIndex > idx
 
             return (
               <div

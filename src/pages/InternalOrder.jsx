@@ -151,7 +151,11 @@ const InternalOrder = ({ onSuccess }) => {
   const nextStep = () => {
     const currentIndex = flowSteps.indexOf(currentStep)
     if (currentIndex >= 0 && currentIndex < flowSteps.length - 1) {
-      setCurrentStep(flowSteps[currentIndex + 1])
+      let nextIndex = currentIndex + 1
+      if (order.isPromo && currentStep === 'SIZE') {
+        nextIndex = flowSteps.indexOf('TEMPERATURE')
+      }
+      setCurrentStep(flowSteps[nextIndex])
       window.scrollTo(0, 0)
     }
   }
@@ -159,7 +163,11 @@ const InternalOrder = ({ onSuccess }) => {
   const prevStep = () => {
     const currentIndex = flowSteps.indexOf(currentStep)
     if (currentIndex > 0) {
-      setCurrentStep(flowSteps[currentIndex - 1])
+      let prevIndex = currentIndex - 1
+      if (order.isPromo && currentStep === 'TEMPERATURE') {
+        prevIndex = flowSteps.indexOf('SIZE')
+      }
+      setCurrentStep(flowSteps[prevIndex])
       window.scrollTo(0, 0)
     }
   }
@@ -260,7 +268,7 @@ const InternalOrder = ({ onSuccess }) => {
       <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-start justify-center gap-4 sm:gap-8">
           <div className="flex-1 w-full max-w-3xl">
-            <Stepper currentStep={currentStep} />
+            <Stepper currentStep={currentStep} isPromo={order.isPromo} />
             <div className="bg-ui-card rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-10 shadow-xl border border-ui-border min-h-[400px] sm:min-h-[500px] animate-fade-in transition-all">
               {renderStep()}
             </div>

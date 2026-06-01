@@ -25,7 +25,8 @@ import {
   getInventoryLogs
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
+import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, OPTIONS_BASE_RECIPE, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
+import OptionCard from '../components/ui/OptionCard.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import InternalOrder from './InternalOrder.jsx'
@@ -517,19 +518,48 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
   const [promotions, setPromotions] = useState([])
   const [promoForm, setPromoForm] = useState(resetPromoFormState())
-  const [calcPlate, setCalcPlate] = useState({
+  const defaultCalcPlateConfig = () => ({
     sauce: 'ROJA',
     protein: 'POLLO',
     complement: 'CEBOLLA_CARAMELIZADA',
-    baseRecipe: { cream: true, onion: true, cilantro: true }
+    selectedBases: ['crema', 'cilantro'],
   })
-  const [calcPromoPlates, setCalcPromoPlates] = useState('2')
+  const [calcPlates, setCalcPlates] = useState([defaultCalcPlateConfig(), defaultCalcPlateConfig()])
+  const [activeCalcPlateIndex, setActiveCalcPlateIndex] = useState(0)
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
-  const [simulatedCosts, setSimulatedCosts] = useState({})
-  const [calcSelectedBases, setCalcSelectedBases] = useState(['crema', 'cilantro'])
-  const [calcSelectedEmpaques, setCalcSelectedEmpaques] = useState(['plato rectangular', 'tenedor', 'servilleta', 'sticker', 'plato de 8 onz', 'tapadera de 8 onz'])
-  const [isOpenBases, setIsOpenBases] = useState(false)
-  const [isOpenEmpaques, setIsOpenEmpaques] = useState(false)
+  const calcPlate = calcPlates[activeCalcPlateIndex] || defaultCalcPlateConfig()
+  const calcSelectedBases = calcPlate.selectedBases || []
+  
+  const setCalcPlate = (updater) => {
+    setCalcPlates(prev => prev.map((p, i) => {
+      if (i !== activeCalcPlateIndex) return p
+      return typeof updater === 'function' ? updater(p) : { ...p, ...updater }
+    }))
+  }
+  const setCalcSelectedBases = (updater) => {
+    setCalcPlates(prev => prev.map((p, i) => {
+      if (i !== activeCalcPlateIndex) return p
+      const newBases = typeof updater === 'function' ? updater(p.selectedBases || []) : updater
+      return { ...p, selectedBases: newBases }
+    }))
+  }
+  const handlePromoPlatesChange = (countVal) => {
+    const count = Math.max(1, Number(countVal) || 1)
+    setCalcPlates(prev => {
+      const next = [...prev]
+      if (next.length < count) {
+        while (next.length < count) {
+          next.push(defaultCalcPlateConfig())
+        }
+      } else if (next.length > count) {
+        next.splice(count)
+      }
+      return next
+    })
+    if (activeCalcPlateIndex >= count) {
+      setActiveCalcPlateIndex(count - 1)
+    }
+  }
   const [inventoryLogs, setInventoryLogs] = useState([])
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
@@ -986,8 +1016,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') rows.push({ name: 'cebolla caramelizada' })
     if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') rows.push({ name: 'queso extra' })
 
+    const selectedBasesForPlate = plate.selectedBases || []
     BASE_INGREDIENT_NAMES.forEach((name) => {
-      if (calcSelectedBases.includes(name)) rows.push({ name })
+      if (selectedBasesForPlate.includes(name)) rows.push({ name })
     })
 
     return rows
@@ -2348,15 +2379,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Platos que incluye</label>
                   <input
-                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                    className="w-full p-3.5 rounded-2xl border border-ui-border bg-ui-bg text-ui-muted outline-none font-bold cursor-not-allowed"
                     type="number"
-                    min="1"
-                    step="1"
-                    value={promoForm.requestedCount || ''}
-                    onChange={(e) => {
-                      setPromoForm({ ...promoForm, requestedCount: e.target.value })
-                      setCalcPromoPlates(e.target.value)
-                    }}
+                    readOnly
+                    value={calcPlates.length}
                     placeholder="Ej. 2"
                   />
                 </div>
@@ -2369,47 +2395,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   rows={2}
                   value={promoForm.description || ''}
                   onChange={(e) => setPromoForm({ ...promoForm, description: e.target.value })}
-                  placeholder="Ej. Válido únicamente para consumo en restaurante."
+                  placeholder="Ej. Combo especial de chilaquiles con ingredientes predefinidos."
                 />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-2xl border border-ui-border bg-white/60 p-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Salsa permitida</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={promoForm.constraints?.sauce || 'ALL'}
-                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), sauce: e.target.value } })}
-                  >
-                    <option value="ALL">Cualquiera</option>
-                    {OPTIONS_SAUCE.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proteína permitida</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={promoForm.constraints?.protein || 'ALL'}
-                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), protein: e.target.value } })}
-                  >
-                    <option value="ALL">Cualquiera</option>
-                    {OPTIONS_PROTEIN.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Complemento permitido</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={promoForm.constraints?.complement || 'ALL'}
-                    onChange={(e) => setPromoForm({ ...promoForm, constraints: { ...(promoForm.constraints || {}), complement: e.target.value } })}
-                  >
-                    <option value="ALL">Cualquiera</option>
-                    {OPTIONS_COMPLEMENT.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </div>
-                <p className="sm:col-span-3 text-[10px] font-bold text-ui-muted leading-relaxed">
-                  Estos campos son los que se bloquean en el pedido del cliente. Déjalos en "Cualquiera" cuando la promo solo afecte precio/cantidad.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2434,49 +2421,29 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Imagen/Banner de la Promoción</label>
-                {promoForm.imageUrl ? (
-                  <div className="relative w-full h-48 border border-ui-border rounded-2xl overflow-hidden group">
-                    <img src={promoForm.imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setPromoForm({ ...promoForm, imageUrl: '' })}
-                      className="absolute top-2 right-2 bg-brand-red text-white rounded-xl px-3 py-1.5 hover:bg-brand-red/90 transition shadow-lg text-[10px] font-black uppercase tracking-wider"
-                    >
-                      Quitar Imagen
-                    </button>
+              {/* Profit Indicator */}
+              {(() => {
+                const totalCost = getPromoTotalCost()
+                const priceNum = Number(promoForm.promoPrice || calcPromoPrice) || 0
+                const profit = priceNum - totalCost
+                const profitMargin = priceNum > 0 ? (profit / priceNum * 100) : 0
+
+                return priceNum > 0 ? (
+                  <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-bold animate-fade-in ${
+                    profit >= 0
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : 'border-red-200 bg-red-50 text-red-700'
+                  }`}>
+                    <span>Rentabilidad estimada de la promo:</span>
+                    <span className="font-black text-xs sm:text-sm">
+                      {profit >= 0
+                        ? `✅ Utilidad: Q${profit.toFixed(2)} (${profitMargin.toFixed(0)}%)`
+                        : `⚠️ Pérdida: Q${Math.abs(profit).toFixed(2)} (${profitMargin.toFixed(0)}%)`
+                      }
+                    </span>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-ui-border rounded-2xl cursor-pointer bg-white hover:bg-ui-bg/50 transition-colors">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <span className="text-3xl mb-1">🖼️</span>
-                        <p className="text-xs font-bold text-ui-muted">Sube el banner de la promoción aquí</p>
-                        <p className="text-[9px] text-ui-muted mt-0.5">Formatos: PNG, JPG, WEBP (Máx. 2MB)</p>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files[0]
-                          if (file) {
-                            if (file.size > 2 * 1024 * 1024) {
-                              return toast.error('La imagen debe ser menor a 2MB')
-                            }
-                            const reader = new FileReader()
-                            reader.onloadend = () => {
-                              setPromoForm(prev => ({ ...prev, imageUrl: reader.result }))
-                            }
-                            reader.readAsDataURL(file)
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                )}
-              </div>
+                ) : null
+              })()}
 
               <div className="flex gap-2 pt-2">
                 <Button type="submit" className="flex-1 !py-4 animate-slide-up" disabled={isSaving}>
@@ -2507,12 +2474,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 return (
                   <div key={promo.id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-4 shadow-sm min-w-0 flex flex-col justify-between">
                     <div>
-                      {promo.imageUrl && (
-                        <div className="w-full h-36 rounded-xl overflow-hidden border border-ui-border mb-3">
-                          <img src={promo.imageUrl} alt={promo.name} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-
                       <div className="flex justify-between items-start gap-4">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-black text-base text-ui-text leading-tight break-words">{promo.name}</h4>
@@ -2525,12 +2486,30 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                             </p>
                           )}
 
-                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-wider text-ui-muted">
-                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Platos: {promo.requestedCount || promo.platesCount || 2}</span>
-                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Salsa: {getPromoConstraintLabel(promo, 'sauce')}</span>
-                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Proteína: {getPromoConstraintLabel(promo, 'protein')}</span>
-                            <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Complemento: {getPromoConstraintLabel(promo, 'complement')}</span>
-                          </div>
+                          {promo.plates && promo.plates.length > 0 ? (
+                            <div className="mt-3 space-y-1.5 border-t border-ui-border/60 pt-2.5">
+                              <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Platos incluidos ({promo.requestedCount || promo.plates.length}):</p>
+                              {promo.plates.map((plate, pIdx) => {
+                                const sauceL = getOptionLabel(plate.sauce, OPTIONS_SAUCE)
+                                const proteinL = getOptionLabel(plate.protein, OPTIONS_PROTEIN)
+                                const complementL = getOptionLabel(plate.complement, OPTIONS_COMPLEMENT)
+                                const basesL = formatBaseRecipe(plate.baseRecipe)
+                                return (
+                                  <div key={pIdx} className="text-[10px] font-bold text-ui-text bg-ui-bg/40 p-2 rounded-xl border border-ui-border/50">
+                                    <span className="text-brand-blue font-black">Plato {pIdx + 1}:</span> {sauceL} • {proteinL} • {complementL}
+                                    {basesL && <span className="text-ui-muted"> ({basesL})</span>}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-black uppercase tracking-wider text-ui-muted">
+                              <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Platos: {promo.requestedCount || promo.platesCount || 2}</span>
+                              <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Salsa: {getPromoConstraintLabel(promo, 'sauce')}</span>
+                              <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Proteína: {getPromoConstraintLabel(promo, 'protein')}</span>
+                              <span className="rounded-xl bg-ui-bg border border-ui-border px-2.5 py-2">Complemento: {getPromoConstraintLabel(promo, 'complement')}</span>
+                            </div>
+                          )}
 
                           {promo.estimatedTotalCost !== undefined && promo.estimatedTotalCost !== null && (
                             <div className="mt-3 rounded-xl border border-ui-border bg-ui-bg/60 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-wider">
