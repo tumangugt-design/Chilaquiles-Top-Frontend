@@ -188,7 +188,7 @@ const resetPromoFormState = () => ({
   description: '',
   promoPrice: '',
   requestedCount: '2',
-  isActive: false,
+  isActive: true,
   startDate: '',
   endDate: '',
   imageUrl: '',

@@ -8,14 +8,16 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION' || currentStep === 'COPY_PLATE') return null
 
   const currentPlate = order.currentPlate
-  const totalItems = order.cart.length + 1
   const promoRequestedCount = Number(order.appliedPromo?.requestedCount || 0)
   const promoPrice = Number(order.appliedPromo?.promoPrice || 0)
   const promoIsApplied = Boolean(order.appliedPromo && promoRequestedCount > 0 && promoPrice > 0)
+  const totalItems = order.isPromo
+    ? (promoIsApplied ? (order.cart.length + 1) : 0)
+    : (order.cart.length + 1)
   const targetPlateCount = promoIsApplied ? promoRequestedCount : Number(order.requestedCount || 1)
-  const grandTotal = promoIsApplied
-    ? promoPrice
-    : calculateTotal(Math.max(order.requestedCount || 0, totalItems))
+  const grandTotal = order.requestedCount === 'PROMO'
+    ? (promoIsApplied ? promoPrice : 0)
+    : calculateTotal(Math.max(Number(order.requestedCount) || 0, totalItems))
   const MAX_PLATES = 4
 
   const canContinue = () => {
@@ -76,27 +78,33 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
 
       <div className="space-y-4">
         {order.isPromo ? (
-          [...order.cart, order.currentPlate].filter(Boolean).map((plate, idx) => (
-            <div key={plate.id || idx} className="bg-ui-bg rounded-lg p-3">
-              <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
-                <span className="text-xs font-bold text-brand-blue uppercase">Plato #{idx + 1}</span>
-              </div>
-              <div className="text-[11px] leading-relaxed space-y-0.5 mt-1 font-bold">
-                <div>
-                  <span className="text-ui-text">{getLabel(plate.sauce, OPTIONS_SAUCE)}</span>
-                  <span className="text-ui-muted mx-1.5">•</span>
-                  <span className="text-ui-text">{getLabel(plate.protein, OPTIONS_PROTEIN)}</span>
-                  <span className="text-ui-muted mx-1.5">•</span>
-                  <span className="text-ui-text">{getLabel(plate.complement, OPTIONS_COMPLEMENT)}</span>
-                </div>
-                {!!formatBaseRecipe(plate.baseRecipe) && (
-                  <div className="text-ui-muted text-[10px] font-medium uppercase tracking-wide mt-1">
-                    Base: {formatBaseRecipe(plate.baseRecipe)}
-                  </div>
-                )}
-              </div>
+          !order.appliedPromo ? (
+            <div className="text-xs text-ui-muted italic py-4 text-center font-bold">
+              Selecciona una promoción para ver el detalle de platos
             </div>
-          ))
+          ) : (
+            [...order.cart, order.currentPlate].filter(Boolean).map((plate, idx) => (
+              <div key={plate.id || idx} className="bg-ui-bg rounded-lg p-3">
+                <div className="flex justify-between items-center mb-1 border-b border-ui-border pb-1">
+                  <span className="text-xs font-bold text-brand-blue uppercase">Plato #{idx + 1}</span>
+                </div>
+                <div className="text-[11px] leading-relaxed space-y-0.5 mt-1 font-bold">
+                  <div>
+                    <span className="text-ui-text">{getLabel(plate.sauce, OPTIONS_SAUCE)}</span>
+                    <span className="text-ui-muted mx-1.5">•</span>
+                    <span className="text-ui-text">{getLabel(plate.protein, OPTIONS_PROTEIN)}</span>
+                    <span className="text-ui-muted mx-1.5">•</span>
+                    <span className="text-ui-text">{getLabel(plate.complement, OPTIONS_COMPLEMENT)}</span>
+                  </div>
+                  {!!formatBaseRecipe(plate.baseRecipe) && (
+                    <div className="text-ui-muted text-[10px] font-medium uppercase tracking-wide mt-1">
+                      Base: {formatBaseRecipe(plate.baseRecipe)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )
         ) : (
           <>
             {order.cart.map((plate, idx) => (

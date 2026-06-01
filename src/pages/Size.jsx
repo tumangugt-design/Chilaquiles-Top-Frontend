@@ -9,21 +9,19 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (order.requestedCount === 'PROMO') {
-      setLoading(true)
-      getPromotions()
-        .then((res) => {
-          const activePromos = (res.data || []).filter((p) => p.isActive)
-          setPromotions(activePromos)
-        })
-        .catch(() => {
-          setPromotions([])
-        })
-        .finally(() => {
-          setLoading(false)
-        })
-    }
-  }, [order.requestedCount])
+    setLoading(true)
+    getPromotions()
+      .then((res) => {
+        const activePromos = (res.data || []).filter((p) => p.isActive)
+        setPromotions(activePromos)
+      })
+      .catch(() => {
+        setPromotions([])
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
 
   const handleSelectPromo = (promo) => {
     const plates = promo.plates || []
@@ -116,13 +114,13 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        {OPTIONS_COUNT.map((opt) => (
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${promotions.length > 0 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 sm:gap-6`}>
+        {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO' || promotions.length > 0).map((opt) => (
           <OptionCard
             key={opt.id}
             title={opt.label}
-            description={opt.description}
             price={opt.price ? `Q${opt.price}` : 'Especial'}
+            description={opt.description}
             selected={order.requestedCount === opt.value}
             illustration={opt.illustration}
             badge={opt.badge}
