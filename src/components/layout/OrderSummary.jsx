@@ -11,13 +11,17 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   const promoRequestedCount = Number(order.appliedPromo?.requestedCount || 0)
   const promoPrice = Number(order.appliedPromo?.promoPrice || 0)
   const promoIsApplied = Boolean(order.appliedPromo && promoRequestedCount > 0 && promoPrice > 0)
-  const totalItems = order.isPromo
-    ? (promoIsApplied ? (order.cart.length + 1) : 0)
-    : (order.cart.length + 1)
+  const totalItems = !order.requestedCount
+    ? 0
+    : order.isPromo
+      ? (promoIsApplied ? (order.cart.length + 1) : 0)
+      : (order.cart.length + 1)
   const targetPlateCount = promoIsApplied ? promoRequestedCount : Number(order.requestedCount || 1)
-  const grandTotal = order.requestedCount === 'PROMO'
-    ? (promoIsApplied ? promoPrice : 0)
-    : calculateTotal(Math.max(Number(order.requestedCount) || 0, totalItems))
+  const grandTotal = !order.requestedCount
+    ? 0
+    : order.requestedCount === 'PROMO'
+      ? (promoIsApplied ? promoPrice : 0)
+      : calculateTotal(Math.max(Number(order.requestedCount) || 0, totalItems))
   const MAX_PLATES = 4
 
   const canContinue = () => {
@@ -77,7 +81,11 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
       </div>
 
       <div className="space-y-4">
-        {order.isPromo ? (
+        {!order.requestedCount ? (
+          <div className="text-xs text-ui-muted italic py-6 text-center font-bold">
+            Selecciona el tamaño o una promoción para comenzar
+          </div>
+        ) : order.isPromo ? (
           !order.appliedPromo ? (
             <div className="text-xs text-ui-muted italic py-4 text-center font-bold">
               Selecciona una promoción para ver el detalle de platos

@@ -22,12 +22,20 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
           setPromotions(activePromos)
           
           const currentOrder = orderRef.current
+          const freshPlate = {
+            id: Math.random().toString(36).slice(2, 11),
+            sauce: null,
+            protein: null,
+            complement: null,
+            baseRecipe: { onion: true, cilantro: true, cream: true }
+          }
           if (activePromos.length === 0 && currentOrder.requestedCount === 'PROMO') {
             updateOrder({
               requestedCount: null,
               appliedPromo: null,
               isPromo: false,
               cart: [],
+              currentPlate: freshPlate,
             })
             toast.error('No hay promociones activas disponibles en este momento.')
           } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
@@ -36,6 +44,7 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
               updateOrder({
                 appliedPromo: null,
                 cart: [],
+                currentPlate: freshPlate,
               })
               toast.error('La promoción seleccionada ya no está disponible.')
             }
@@ -53,12 +62,20 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
         setPromotions(activePromos)
         
         const currentOrder = orderRef.current
+        const freshPlate = {
+          id: Math.random().toString(36).slice(2, 11),
+          sauce: null,
+          protein: null,
+          complement: null,
+          baseRecipe: { onion: true, cilantro: true, cream: true }
+        }
         if (activePromos.length === 0 && currentOrder.requestedCount === 'PROMO') {
           updateOrder({
             requestedCount: null,
             appliedPromo: null,
             isPromo: false,
             cart: [],
+            currentPlate: freshPlate,
           })
         } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
           const stillActive = activePromos.some((p) => p.id === currentOrder.appliedPromo.id)
@@ -66,6 +83,7 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
             updateOrder({
               appliedPromo: null,
               cart: [],
+              currentPlate: freshPlate,
             })
           }
         }
@@ -140,12 +158,20 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   }
 
   const handleSelectSize = (sizeVal) => {
+    const freshPlate = {
+      id: Math.random().toString(36).slice(2, 11),
+      sauce: null,
+      protein: null,
+      complement: null,
+      baseRecipe: { onion: true, cilantro: true, cream: true }
+    }
     if (sizeVal === 'PROMO') {
       updateOrder({
         requestedCount: 'PROMO',
         appliedPromo: null,
         isPromo: true,
         cart: [],
+        currentPlate: freshPlate,
       })
     } else {
       updateOrder({
@@ -153,6 +179,7 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
         appliedPromo: null,
         isPromo: false,
         cart: [],
+        currentPlate: freshPlate,
       })
     }
   }
