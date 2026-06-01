@@ -518,6 +518,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
   const [promotions, setPromotions] = useState([])
   const [promoForm, setPromoForm] = useState(resetPromoFormState())
+  const [simulatedCosts, setSimulatedCosts] = useState({})
   const defaultCalcPlateConfig = () => ({
     sauce: 'ROJA',
     protein: 'POLLO',
@@ -560,6 +561,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       setActiveCalcPlateIndex(count - 1)
     }
   }
+
+  const resetPromoForm = () => {
+    setPromoForm(resetPromoFormState())
+    setCalcPlates([defaultCalcPlateConfig(), defaultCalcPlateConfig()])
+    setActiveCalcPlateIndex(0)
+    setCalcPromoPrice('55')
+  }
+
   const [inventoryLogs, setInventoryLogs] = useState([])
   const stockAlertLoaded = useRef(false)
   const knownOrderIds = useRef(new Set())
@@ -1038,17 +1047,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return recipeCost + calculatePackagingCost(plate)
   }
 
+  const getPromoTotalCost = () => {
+    return calcPlates.reduce((total, plate) => total + calculatePlateRecipeCost(plate), 0)
+  }
+
   const handleSavePromotion = async (e) => {
     if (e) e.preventDefault()
     if (!promoForm.name) {
       return toast.error('Ingresa el nombre de la promoción')
     }
 
-    const requestedCount = Number(promoForm.requestedCount || calcPromoPlates || 2)
-    if (Number.isNaN(requestedCount) || requestedCount < 1) {
-      return toast.error('Ingresa una cantidad válida de platos para la promoción')
-    }
-
+    const requestedCount = calcPlates.length
     let priceNum = null
     const rawPrice = promoForm.promoPrice || calcPromoPrice
     if (rawPrice) {
@@ -1058,29 +1067,37 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       }
     }
 
-    const singlePlateCost = calculatePlateRecipeCost(calcPlate)
-    const totalPromoCost = singlePlateCost * requestedCount
+    const totalPromoCost = getPromoTotalCost()
     const profit = priceNum ? priceNum - totalPromoCost : null
     const profitMargin = priceNum ? (profit / priceNum) * 100 : null
+
+    const savedPlates = calcPlates.map(plate => {
+      const selectedBases = plate.selectedBases || []
+      return {
+        sauce: plate.sauce,
+        protein: plate.protein,
+        complement: plate.complement,
+        baseRecipe: {
+          cream: selectedBases.includes('crema'),
+          onion: selectedBases.includes('cebolla'),
+          cilantro: selectedBases.includes('cilantro')
+        }
+      }
+    })
 
     const normalizedPromo = {
       ...promoForm,
       requestedCount,
       promoPrice: priceNum,
-      constraints: {
-        sauce: getPromoConstraintValue(promoForm, 'sauce'),
-        protein: getPromoConstraintValue(promoForm, 'protein'),
-        complement: getPromoConstraintValue(promoForm, 'complement'),
-      },
-      recipe: {
-        sauce: calcPlate.sauce,
-        protein: calcPlate.protein,
-        complement: normalizeComplementValue(calcPlate.complement) || calcPlate.complement,
-        baseRecipe: calcPlate.baseRecipe,
-      },
-      selectedBases: calcSelectedBases.filter(name => BASE_INGREDIENT_NAMES.includes(name)),
-      selectedEmpaques: getAutomaticPackagingRows(calcPlate.sauce).map((item) => item.name),
-      estimatedUnitCost: Number(singlePlateCost.toFixed(2)),
+      plates: savedPlates,
+      // Fallback for older orders/clients querying recipe fields directly
+      recipe: savedPlates[0] ? {
+        sauce: savedPlates[0].sauce,
+        protein: savedPlates[0].protein,
+        complement: normalizeComplementValue(savedPlates[0].complement) || savedPlates[0].complement,
+        baseRecipe: savedPlates[0].baseRecipe,
+      } : undefined,
+      estimatedUnitCost: Number((totalPromoCost / requestedCount).toFixed(2)),
       estimatedTotalCost: Number(totalPromoCost.toFixed(2)),
       estimatedProfit: profit === null ? null : Number(profit.toFixed(2)),
       estimatedMargin: profitMargin === null ? null : Number(profitMargin.toFixed(2)),
@@ -1102,7 +1119,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       await updatePromotions(updatedPromos)
       setPromotions(updatedPromos)
       toast.success(promoForm.id ? 'Promoción actualizada con éxito' : 'Promoción creada con éxito')
-      setPromoForm(resetPromoFormState())
+      resetPromoForm()
     } catch (err) {
       toast.error('No se pudo guardar la promoción')
     } finally {
@@ -1116,26 +1133,44 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       ...promo,
       requestedCount: String(promo.requestedCount || promo.platesCount || 2),
       promoPrice: promo.promoPrice === null || promo.promoPrice === undefined ? '' : String(promo.promoPrice),
-      constraints: {
-        sauce: getPromoConstraintValue(promo, 'sauce'),
-        protein: getPromoConstraintValue(promo, 'protein'),
-        complement: getPromoConstraintValue(promo, 'complement'),
-      }
     })
 
-    if (promo.recipe) {
-      setCalcPlate({
+    if (Array.isArray(promo.plates) && promo.plates.length > 0) {
+      const loadedPlates = promo.plates.map(p => {
+        const bases = []
+        if (p.baseRecipe?.cream !== false) bases.push('crema')
+        if (p.baseRecipe?.onion !== false) bases.push('cebolla')
+        if (p.baseRecipe?.cilantro !== false) bases.push('cilantro')
+        return {
+          sauce: p.sauce || 'ROJA',
+          protein: p.protein || 'POLLO',
+          complement: p.complement || 'CEBOLLA_CARAMELIZADA',
+          selectedBases: bases
+        }
+      })
+      setCalcPlates(loadedPlates)
+      setActiveCalcPlateIndex(0)
+    } else if (promo.recipe) {
+      // Legacy fallback
+      const bases = []
+      if (promo.recipe.baseRecipe?.cream !== false) bases.push('crema')
+      if (promo.recipe.baseRecipe?.onion !== false) bases.push('cebolla')
+      if (promo.recipe.baseRecipe?.cilantro !== false) bases.push('cilantro')
+      const count = Number(promo.requestedCount || promo.platesCount || 2)
+      const single = {
         sauce: promo.recipe.sauce || 'ROJA',
         protein: promo.recipe.protein || 'POLLO',
-        complement: normalizeComplementValue(promo.recipe.complement) || 'CEBOLLA_CARAMELIZADA',
-        baseRecipe: promo.recipe.baseRecipe || { cream: true, onion: true, cilantro: true }
-      })
+        complement: promo.recipe.complement || 'CEBOLLA_CARAMELIZADA',
+        selectedBases: bases
+      }
+      setCalcPlates(Array(count).fill(null).map(() => ({ ...single })))
+      setActiveCalcPlateIndex(0)
+    } else {
+      setCalcPlates([defaultCalcPlateConfig(), defaultCalcPlateConfig()])
+      setActiveCalcPlateIndex(0)
     }
-    setCalcPromoPlates(String(promo.requestedCount || promo.platesCount || 2))
+
     if (promo.promoPrice) setCalcPromoPrice(String(promo.promoPrice))
-    if (Array.isArray(promo.selectedBases)) {
-      setCalcSelectedBases(promo.selectedBases.filter(name => BASE_INGREDIENT_NAMES.includes(name)))
-    }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -2047,138 +2082,144 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
-              { (isOpenBases || isOpenEmpaques) && (
-                <div 
-                  className="fixed inset-0 z-20 cursor-default" 
-                  onClick={() => {
-                    setIsOpenBases(false)
-                    setIsOpenEmpaques(false)
-                  }}
-                />
-              ) }
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 relative z-30">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Salsa</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={calcPlate.sauce}
-                    onChange={(e) => {
-                      const nextSauce = e.target.value
-                      setCalcPlate(prev => ({ ...prev, sauce: nextSauce }))
-                    }}
-                  >
-                    <option value="ROJA">Salsa Roja</option>
-                    <option value="VERDE">Salsa Verde</option>
-                    <option value="DIVORCIADOS">Divorciados</option>
-                  </select>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ui-border pb-4 mb-4">
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {calcPlates.map((plate, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveCalcPlateIndex(idx)}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border transition-all shrink-0 ${
+                        idx === activeCalcPlateIndex
+                          ? 'bg-brand-blue text-white border-brand-blue shadow-md'
+                          : 'bg-white text-ui-text border-ui-border hover:bg-ui-bg'
+                      }`}
+                    >
+                      Plato {idx + 1}
+                    </button>
+                  ))}
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Proteína</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={calcPlate.protein}
-                    onChange={(e) => setCalcPlate({ ...calcPlate, protein: e.target.value })}
-                  >
-                    <option value="POLLO">Pollo Cocido</option>
-                    <option value="STEAK">Steak</option>
-                    <option value="CHORIZO">Chorizo Argentino</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Complemento</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    value={calcPlate.complement}
-                    onChange={(e) => {
-                        const nextComplement = e.target.value
-                        setCalcPlate({ ...calcPlate, complement: nextComplement })
-                        if (nextComplement === 'CEBOLLA_CARAMELIZADA') {
-                          // quita la cebolla cruda de las bases porque se reemplaza con la caramelizada
-                          setCalcSelectedBases(prev => prev.filter(b => b !== 'cebolla'))
-                        } else {
-                          // siempre agrega la cebolla cruda si no está ya
-                          setCalcSelectedBases(prev => prev.includes('cebolla') ? prev : [...prev, 'cebolla'])
-                        }
-                      }}
-                  >
-                    <option value="CEBOLLA_CARAMELIZADA">Cebolla Caramelizada</option>
-                    <option value="AGUACATE">Aguacate</option>
-                    <option value="QUESO_EXTRA">Queso Extra</option>
-                  </select>
-                </div>
-
-                {/* Ingredientes Base (Multi-select) */}
-                <div className="space-y-1 relative">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Ingredientes Base</label>
+                {activeCalcPlateIndex > 0 && (
                   <button
                     type="button"
                     onClick={() => {
-                      setIsOpenBases(!isOpenBases)
+                      const prevPlate = calcPlates[activeCalcPlateIndex - 1]
+                      setCalcPlate({
+                        sauce: prevPlate.sauce,
+                        protein: prevPlate.protein,
+                        complement: prevPlate.complement,
+                        selectedBases: [...(prevPlate.selectedBases || [])]
+                      })
+                      toast.success(`Copiada la receta del Plato ${activeCalcPlateIndex}`)
                     }}
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs text-left flex justify-between items-center"
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-brand-blue/10 text-brand-blue border-brand-blue/30 hover:bg-brand-blue/20 transition-all flex items-center gap-1.5"
                   >
-                    <span className="truncate">
-                      {(() => {
-                        const availBases = calcPlate.complement === 'CEBOLLA_CARAMELIZADA'
-                          ? ['crema', 'cilantro']
-                          : ['crema', 'cebolla', 'cilantro']
-                        const sel = calcSelectedBases.filter(b => availBases.includes(b))
-                        if (sel.length === 0) return 'Ninguno'
-                        if (sel.length === availBases.length) return 'Todos'
-                        return sel.map(b => INVENTORY_PRODUCT_MAP[b]?.label || b).join(', ')
-                      })()}
-                    </span>
-                    <span className="text-[10px] ml-1 shrink-0 text-ui-muted">▼</span>
+                    📋 Copiar del Plato {activeCalcPlateIndex}
                   </button>
-                  
-                  {isOpenBases && (
-                    <div className="absolute left-0 right-0 mt-1 bg-white border border-ui-border rounded-xl shadow-lg z-30 max-h-60 overflow-y-auto p-2 space-y-1">
-                      {(calcPlate.complement === 'CEBOLLA_CARAMELIZADA'
-                        ? ['crema', 'cilantro']
-                        : ['crema', 'cebolla', 'cilantro']
-                      ).map((name) => {
-                        const product = INVENTORY_PRODUCT_MAP[name]
-                        if (!product) return null
-                        const isChecked = calcSelectedBases.includes(name)
-                        
-                        return (
-                          <label key={name} className="flex items-center gap-2 p-2 hover:bg-ui-bg/30 rounded-lg cursor-pointer text-xs font-bold text-ui-text select-none">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              className="rounded text-brand-blue border-ui-border focus:ring-brand-blue"
-                              onChange={() => {
-                                if (isChecked) {
-                                  setCalcSelectedBases(calcSelectedBases.filter(b => b !== name))
-                                } else {
-                                  setCalcSelectedBases([...calcSelectedBases, name])
-                                }
-                              }}
-                            />
-                            <span className="capitalize">{product.label}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  )}
+                )}
+              </div>
+
+              {/* Grid of OptionCards for active plate */}
+              <div className="space-y-6">
+                {/* Sauce selection */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Salsa</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {OPTIONS_SAUCE.map((opt) => (
+                      <OptionCard
+                        key={opt.id}
+                        title={opt.label}
+                        description={opt.description}
+                        selected={calcPlate.sauce === opt.value}
+                        illustration={opt.illustration}
+                        badge={opt.badge}
+                        onClick={() => setCalcPlate({ sauce: opt.value })}
+                      />
+                    ))}
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">Empaque automático</label>
-                  <div className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs min-h-[42px] flex items-center">
-                    <span className="truncate text-ui-muted">{getAutomaticPackagingLabel(calcPlate.sauce)}</span>
+                {/* Protein selection */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Proteína</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {OPTIONS_PROTEIN.map((opt) => (
+                      <OptionCard
+                        key={opt.id}
+                        title={opt.label}
+                        description={opt.description}
+                        selected={calcPlate.protein === opt.value}
+                        illustration={opt.illustration}
+                        onClick={() => setCalcPlate({ protein: opt.value })}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Complement selection */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Complemento</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {OPTIONS_COMPLEMENT.map((opt) => (
+                      <OptionCard
+                        key={opt.id}
+                        title={opt.label}
+                        description={opt.description}
+                        selected={calcPlate.complement === opt.value}
+                        illustration={opt.illustration}
+                        onClick={() => {
+                          const nextComplement = opt.value
+                          setCalcPlate({ complement: nextComplement })
+                          if (nextComplement === 'CEBOLLA_CARAMELIZADA') {
+                            setCalcSelectedBases(prev => prev.filter(b => b !== 'cebolla'))
+                          } else {
+                            setCalcSelectedBases(prev => prev.includes('cebolla') ? prev : [...prev, 'cebolla'])
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bases selection */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Ingredientes Base</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {OPTIONS_BASE_RECIPE.map((opt) => {
+                      const MAP_BASE_RECIPE_ID = {
+                        cream: 'crema',
+                        onion: 'cebolla',
+                        cilantro: 'cilantro'
+                      }
+                      const name = MAP_BASE_RECIPE_ID[opt.id] || opt.id
+                      if (name === 'cebolla' && calcPlate.complement === 'CEBOLLA_CARAMELIZADA') return null
+                      
+                      const isChecked = calcSelectedBases.includes(name)
+                      return (
+                        <OptionCard
+                          key={opt.id}
+                          title={opt.label}
+                          description={opt.description}
+                          selected={isChecked}
+                          illustration={opt.illustration}
+                          onClick={() => {
+                            if (isChecked) {
+                              setCalcSelectedBases(calcSelectedBases.filter(b => b !== name))
+                            } else {
+                              setCalcSelectedBases([...calcSelectedBases, name])
+                            }
+                          }}
+                        />
+                      )
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Read-only cost breakdown for selected recipe */}
+              {/* Cost breakdown for the active plate */}
               {(() => {
                 const selectedRows = getSelectedRecipeRows(calcPlate)
-                const packagingRows = getAutomaticPackagingRows(calcPlate)
-                const platesCountForDetails = Number(calcPromoPlates) || 1
+                const packagingRows = getAutomaticPackagingRows(calcPlate.sauce)
 
                 const renderCostRow = (item, typeLabel = 'Ingrediente') => {
                   const name = item.name
@@ -2197,7 +2238,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   const unitCostLabel = unitCost !== null
                     ? `Q${formatCurrency(unitCost)} por ${product.unit}`
                     : (detail.cost > 0 ? 'Precio por porción guardado' : 'Pendiente')
-                  const promoLineCost = detail.cost * platesCountForDetails
 
                   return (
                     <div key={`${typeLabel}-${name}-${item.usedAmount ?? item.qty ?? product.usedPerPlate}`} className="grid grid-cols-1 md:grid-cols-[1.2fr,0.7fr,1fr,0.85fr,0.85fr] gap-3 bg-white p-3 rounded-2xl border border-ui-border shadow-sm animate-fade-in w-full items-center">
@@ -2219,11 +2259,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         <p className="text-xs font-black text-ui-text">{unitCostLabel}</p>
                       </div>
                       <div className={`rounded-xl px-3 py-2 text-right border ${hasCost ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Costo promo</p>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-ui-muted">Costo unitario</p>
                         <p className={`text-sm font-black ${hasCost ? 'text-green-600' : 'text-orange-500'}`}>
-                          {hasCost ? `Q${promoLineCost.toFixed(2)}` : 'Pendiente'}
+                          {hasCost ? `Q${detail.cost.toFixed(2)}` : 'Pendiente'}
                         </p>
-                        <p className="text-[8px] font-bold text-ui-muted mt-0.5">Q{detail.cost.toFixed(2)} por plato</p>
+                        <p className="text-[8px] font-bold text-ui-muted mt-0.5">por plato</p>
                       </div>
                     </div>
                   )
@@ -2233,10 +2273,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   <div className="mt-3 border-t border-ui-border/60 pt-3 space-y-4">
                     <div className="rounded-2xl border border-brand-blue/10 bg-brand-blue/5 px-4 py-3">
                       <p className="text-[10px] font-black uppercase text-brand-blue tracking-widest">
-                        Cálculos automáticos de la promoción
+                        Cálculos automáticos del plato seleccionado
                       </p>
                       <p className="text-xs font-bold text-ui-muted mt-1">
-                        Aquí no se ingresa precio ni cantidad. Solo selecciona salsa, proteína, complemento y bases; el sistema toma la última entrada real del inventario y calcula cuánto cuesta la porción usada por plato.
+                        Toma la última entrada real del inventario y calcula cuánto cuesta la porción usada por plato.
                       </p>
                     </div>
 
@@ -2278,11 +2318,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     step="1"
                     className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
                     placeholder="Ej. 2 para 2x1"
-                    value={calcPromoPlates}
-                    onChange={(e) => {
-                      setCalcPromoPlates(e.target.value)
-                      setPromoForm((prev) => ({ ...prev, requestedCount: e.target.value }))
-                    }}
+                    value={calcPlates.length}
+                    onChange={(e) => handlePromoPlatesChange(e.target.value)}
                   />
                 </div>
 
@@ -2307,11 +2344,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
               {/* Recipe Cost Result Summary */}
               {(() => {
-                const singlePlateCost = calculatePlateRecipeCost(calcPlate)
-                const platesCount = Number(calcPromoPlates) || 1
+                const totalPromoCost = getPromoTotalCost()
+                const platesCount = calcPlates.length
                 const promoPriceVal = Number(calcPromoPrice) || 0
-                
-                const totalPromoCost = singlePlateCost * platesCount
                 const profit = promoPriceVal - totalPromoCost
                 const profitMargin = promoPriceVal > 0 ? (profit / promoPriceVal * 100) : 0
 
@@ -2321,7 +2356,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Costo Total de Insumos de la Promo</p>
                       <p className="text-3xl font-black text-brand-blue mt-1">Q{totalPromoCost.toFixed(2)}</p>
                       <p className="text-[10px] text-ui-muted font-bold mt-1">
-                        Equivale a Q{singlePlateCost.toFixed(2)} c/u por {platesCount} {platesCount === 1 ? 'plato' : 'platos'}.
+                        Suma de {platesCount} {platesCount === 1 ? 'plato configurado' : 'platos configurados'}.
                       </p>
                     </div>
                     <div className="text-center sm:text-right">
@@ -2452,7 +2487,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 {promoForm.id && (
                   <button
                     type="button"
-                    onClick={() => setPromoForm(resetPromoFormState())}
+                    onClick={resetPromoForm}
                     className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
                   >
                     Cancelar
