@@ -112,16 +112,117 @@ export const IllustrationCebollaCaramel = () => (
 )
 
 export const IllustrationQuesoExtra = () => (
-  <BlackPorcelainBowl>
-    <g transform="translate(25, 10)">
-      <path d="M20 40 Q60 5 100 40 Z" fill={CHEESE_BASE} />
-      <line x1="30" y1="35" x2="40" y2="25" stroke={CHEESE_SHADOW} strokeWidth="2" strokeLinecap="round" />
-      <line x1="50" y1="20" x2="60" y2="30" stroke={CHEESE_SHADOW} strokeWidth="2" strokeLinecap="round" />
-      <line x1="70" y1="25" x2="80" y2="15" stroke={CHEESE_SHADOW} strokeWidth="2" strokeLinecap="round" />
-      <line x1="90" y1="35" x2="85" y2="25" stroke={CHEESE_SHADOW} strokeWidth="2" strokeLinecap="round" />
+  <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+    {/* Shadow */}
+    <ellipse cx="100" cy="120" rx="70" ry="12" fill="#000000" fillOpacity="0.15" />
+    
+    {/* Cheese Wedge */}
+    {/* Top Face */}
+    <path d="M 40 90 L 125 50 L 150 85 C 120 110 75 110 40 90 Z" fill="#FEF08A" stroke="#FDE047" strokeWidth="1" />
+    {/* Front Left Face */}
+    <path d="M 40 90 L 125 50 L 125 95 L 40 125 Z" fill="#FDE047" stroke="#FBBF24" strokeWidth="1" />
+    {/* Front Right Face */}
+    <path d="M 125 50 L 150 85 L 150 120 L 125 95 Z" fill="#EAB308" stroke="#CA8A04" strokeWidth="1" />
+    
+    {/* Holes on Top Face */}
+    <ellipse cx="75" cy="78" rx="8" ry="4" fill="#EAB308" opacity="0.3" />
+    <ellipse cx="110" cy="72" rx="6" ry="3" fill="#EAB308" opacity="0.3" />
+    
+    {/* Holes on Front Left Face */}
+    <ellipse cx="65" cy="105" rx="7" ry="11" fill="#CA8A04" opacity="0.3" />
+    <ellipse cx="100" cy="80" rx="5" ry="8" fill="#CA8A04" opacity="0.3" />
+    
+    {/* Holes on Front Right Face */}
+    <ellipse cx="138" cy="98" rx="4" ry="6" fill="#A16207" opacity="0.3" />
+
+    {/* Extra Cheese Block/Cube 1 next to it */}
+    <g transform="translate(115, 105)">
+      {/* Shadow */}
+      <ellipse cx="20" cy="20" rx="12" ry="4" fill="#000000" fillOpacity="0.1" />
+      {/* Top */}
+      <path d="M 10 5 L 25 0 L 35 7 L 20 12 Z" fill="#FEF08A" />
+      {/* Left */}
+      <path d="M 10 5 L 20 12 L 20 22 L 10 15 Z" fill="#FDE047" />
+      {/* Right */}
+      <path d="M 20 12 L 35 7 L 35 17 L 20 22 Z" fill="#EAB308" />
     </g>
-  </BlackPorcelainBowl>
+    
+    {/* Extra Cheese Block/Cube 2 */}
+    <g transform="translate(25, 110)">
+      {/* Shadow */}
+      <ellipse cx="15" cy="15" rx="10" ry="3" fill="#000000" fillOpacity="0.1" />
+      {/* Top */}
+      <path d="M 5 3 L 15 0 L 22 5 L 12 8 Z" fill="#FEF08A" />
+      {/* Left */}
+      <path d="M 5 3 L 12 8 L 12 15 L 5 10 Z" fill="#FDE047" />
+      {/* Right */}
+      <path d="M 12 8 L 22 5 L 22 12 L 12 15 Z" fill="#EAB308" />
+    </g>
+  </svg>
 )
+
+export const IllustrationQueso = () => (
+  <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+    {/* Shadow */}
+    <ellipse cx="100" cy="120" rx="60" ry="12" fill="#000000" fillOpacity="0.15" />
+    
+    {/* Cheese Wedge */}
+    {/* Top Face */}
+    <path d="M 45 90 L 135 50 L 160 85 C 130 110 80 110 45 90 Z" fill="#FEF08A" stroke="#FDE047" strokeWidth="1" />
+    {/* Front Left Face */}
+    <path d="M 45 90 L 130 50 L 130 95 L 45 125 Z" fill="#FDE047" stroke="#FBBF24" strokeWidth="1" />
+    {/* Front Right Face */}
+    <path d="M 130 50 L 160 85 L 160 120 L 130 95 Z" fill="#EAB308" stroke="#CA8A04" strokeWidth="1" />
+    
+    {/* Cheese holes on Top Face */}
+    <ellipse cx="85" cy="78" rx="8" ry="4" fill="#EAB308" opacity="0.3" />
+    <ellipse cx="120" cy="72" rx="6" ry="3" fill="#EAB308" opacity="0.3" />
+    <ellipse cx="140" cy="85" rx="5" ry="2.5" fill="#EAB308" opacity="0.3" />
+    
+    {/* Cheese holes on Front Left Face */}
+    <ellipse cx="75" cy="105" rx="7" ry="11" fill="#CA8A04" opacity="0.3" />
+    <ellipse cx="110" cy="80" rx="5" ry="8" fill="#CA8A04" opacity="0.3" />
+    <ellipse cx="55" cy="115" rx="4" ry="6" fill="#CA8A04" opacity="0.3" />
+    
+    {/* Cheese holes on Front Right Face */}
+    <ellipse cx="145" cy="98" rx="5" ry="8" fill="#A16207" opacity="0.3" />
+  </svg>
+)
+
+export const IllustrationTotopos = () => (
+  <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+    {/* Shadow */}
+    <ellipse cx="100" cy="115" rx="65" ry="12" fill="#000000" fillOpacity="0.2" />
+    
+    {/* Tortilla Chips / Nachos */}
+    {/* Background layer chips */}
+    <path d="M 50 110 L 95 45 L 125 105 Z" fill="#D97706" opacity="0.9" />
+    <path d="M 90 105 L 135 40 L 165 115 Z" fill="#B45309" opacity="0.9" />
+    
+    {/* Mid layer chips */}
+    <path d="M 65 115 L 110 50 L 145 115 Z" fill="#FBBF24" stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M 110 110 L 140 60 L 168 110 Z" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M 35 115 L 70 65 L 98 115 Z" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" strokeLinejoin="round" />
+    
+    {/* Foreground chips */}
+    <path d="M 50 120 L 85 75 L 115 120 Z" fill="#FCD34D" stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M 90 125 L 125 70 L 155 125 Z" fill="#FCD34D" stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M 72 128 L 105 85 L 132 128 Z" fill="#FCD34D" stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" />
+
+    {/* Details (salt specks / toasted bubbles) */}
+    <circle cx="85" cy="100" r="1.5" fill="#FFFFFF" fillOpacity="0.8" />
+    <circle cx="95" cy="110" r="1.5" fill="#FFFFFF" fillOpacity="0.8" />
+    <circle cx="110" cy="95" r="1.5" fill="#FFFFFF" fillOpacity="0.8" />
+    <circle cx="120" cy="115" r="1.5" fill="#FFFFFF" fillOpacity="0.8" />
+    <circle cx="130" cy="105" r="1.5" fill="#FFFFFF" fillOpacity="0.8" />
+    
+    <circle cx="68" cy="108" r="1" fill="#B45309" />
+    <circle cx="102" cy="78" r="1.5" fill="#B45309" />
+    <circle cx="125" cy="85" r="1.2" fill="#B45309" />
+    <circle cx="140" cy="118" r="1.5" fill="#B45309" />
+  </svg>
+)
+
 
 export const IllustrationCebolla = () => (
   <BlackPorcelainBowl>

@@ -62,6 +62,8 @@ import {
   IllustrationAguacate,
   IllustrationCebollaCaramel,
   IllustrationQuesoExtra,
+  IllustrationQueso,
+  IllustrationTotopos,
   IllustrationCebolla,
   IllustrationCilantro,
   IllustrationCrema
@@ -558,6 +560,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [newPackagingQty, setNewPackagingQty] = useState('')
   const [newPackagingPrice, setNewPackagingPrice] = useState('')
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
+  const [recipeCategoryFilter, setRecipeCategoryFilter] = useState('ALL')
   
   const calcPlate = calcPlates[activeCalcPlateIndex] || defaultCalcPlateConfig()
   const calcSelectedBases = calcPlate.selectedBases || []
@@ -2939,29 +2942,52 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <h2 className="text-3xl font-black tracking-tight text-ui-text">Recetario</h2>
               <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Configura las porciones e insumos consumidos por plato y su costo.</p>
             </div>
+            <div className="relative w-full sm:w-64">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
+              <select 
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+                value={recipeCategoryFilter}
+                onChange={(e) => setRecipeCategoryFilter(e.target.value)}
+              >
+                <option value="ALL">Todas las categorías</option>
+                <option value="Ingredientes fijos">Ingredientes fijos</option>
+                <option value="Base">Bases</option>
+                <option value="Salsas">Salsas</option>
+                <option value="Proteínas">Proteínas</option>
+                <option value="Complementos">Complementos</option>
+                <option value="Empaque">Empaque</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            {portions.map((portion) => {
-              const product = inventory.find(i => i.name === portion.name)
-              const label = product?.label || portion.name
-              const category = product?.category || 'Otros'
-              const sim = simulatedCosts[portion.name] || {}
-              const lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
-              
-              return (
-                <PortionRow
-                  key={portion.name}
-                  portion={portion}
-                  label={label}
-                  category={category}
-                  lastPurchaseText={lastPurchaseText}
-                  sim={sim}
-                  product={product}
-                  onSave={async (qty, unit, price) => {
-                    try {
-                      await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
-                      toast.success(`Porción de ${label} actualizada exitosamente`)
+            {portions
+              .filter((portion) => {
+                if (recipeCategoryFilter === 'ALL') return true
+                const category = getProductPortionConfig(portion.name).category
+                return category === recipeCategoryFilter
+              })
+              .map((portion) => {
+                const config = getProductPortionConfig(portion.name)
+                const product = inventory.find(i => i.name === portion.name)
+                const label = config.label
+                const category = config.category
+                const sim = simulatedCosts[portion.name] || {}
+                const lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
+                
+                return (
+                  <PortionRow
+                    key={portion.name}
+                    portion={portion}
+                    label={label}
+                    category={category}
+                    lastPurchaseText={lastPurchaseText}
+                    sim={sim}
+                    product={product}
+                    onSave={async (qty, unit, price) => {
+                      try {
+                        await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
+                        toast.success(`Porción de ${label} actualizada exitosamente`)
                       loadData()
                     } catch (err) {
                       toast.error('No se pudo actualizar la porción')
@@ -3113,7 +3139,9 @@ const getIngredientSvg = (name) => {
   if (n.includes('chorizo')) return <IllustrationChorizo />
   if (n.includes('aguacate')) return <IllustrationAguacate />
   if (n.includes('cebolla caramelizada')) return <IllustrationCebollaCaramel />
+  if (n.includes('totopo')) return <IllustrationTotopos />
   if (n.includes('queso extra')) return <IllustrationQuesoExtra />
+  if (n.includes('queso')) return <IllustrationQueso />
   if (n.includes('cebolla')) return <IllustrationCebolla />
   if (n.includes('cilantro')) return <IllustrationCilantro />
   if (n.includes('crema')) return <IllustrationCrema />
@@ -3167,6 +3195,8 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
 
   const getCategoryBadgeClass = (cat) => {
     const c = String(cat).toLowerCase()
+    if (c.includes('fijo')) return 'bg-orange-50 text-orange-700 border-orange-200'
+    if (c.includes('base')) return 'bg-purple-50 text-purple-700 border-purple-200'
     if (c.includes('prote')) return 'bg-red-50 text-red-700 border-red-200'
     if (c.includes('salsa')) return 'bg-green-50 text-green-700 border-green-200'
     if (c.includes('comple')) return 'bg-amber-50 text-amber-700 border-amber-200'
