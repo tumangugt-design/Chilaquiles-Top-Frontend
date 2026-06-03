@@ -555,6 +555,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
   const [newPackagingName, setNewPackagingName] = useState('')
+  const [newPackagingQty, setNewPackagingQty] = useState('')
+  const [newPackagingPrice, setNewPackagingPrice] = useState('')
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
   
   const calcPlate = calcPlates[activeCalcPlateIndex] || defaultCalcPlateConfig()
@@ -1397,12 +1399,28 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     if (!newPackagingName) {
       return toast.error('Ingresa el nombre del producto de empaque')
     }
+
+    const qty = newPackagingQty === '' ? 0 : Number(newPackagingQty)
+    const price = newPackagingPrice === '' ? 0 : Number(newPackagingPrice)
+
+    if (newPackagingQty !== '' && (Number.isNaN(qty) || qty < 0)) {
+      return toast.error('Ingresa una cantidad inicial válida')
+    }
+    if (newPackagingPrice !== '' && (Number.isNaN(price) || price < 0)) {
+      return toast.error('Ingresa un costo total válido')
+    }
     
     setIsCreatingPackaging(true)
     try {
-      await createPackagingProduct(newPackagingName)
-      toast.success('Producto de empaque creado exitosamente')
+      await createPackagingProduct({
+        name: newPackagingName,
+        amount: qty,
+        totalPrice: price
+      })
+      toast.success('Producto de empaque creado y entrada registrada exitosamente')
       setNewPackagingName('')
+      setNewPackagingQty('')
+      setNewPackagingPrice('')
       setPackagingModalOpen(false)
       loadData()
     } catch (err) {
@@ -2978,6 +2996,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 type="button"
                 onClick={() => {
                   setNewPackagingName('')
+                  setNewPackagingQty('')
+                  setNewPackagingPrice('')
                   setPackagingModalOpen(false)
                 }}
                 className="rounded-full bg-ui-bg p-1.5 text-ui-muted hover:text-ui-text transition-colors"
@@ -2999,28 +3019,62 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                  Categoría Fija
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value="EMPAQUE"
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                    Cantidad Inicial
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ej. 100"
+                    value={newPackagingQty}
+                    onChange={(e) => setNewPackagingQty(e.target.value)}
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                    Costo Total (Q)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ej. 69.00"
+                    value={newPackagingPrice}
+                    onChange={(e) => setNewPackagingPrice(e.target.value)}
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                  Unidad de Entrada
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value="Unidad"
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                    Categoría Fija
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="EMPAQUE"
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                    Unidad de Entrada
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="Unidad"
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
+                  />
+                </div>
               </div>
+
               <div className="flex gap-3 pt-2">
                 <Button type="submit" className="flex-1 !py-4" disabled={isCreatingPackaging}>
                   {isCreatingPackaging ? 'Creando...' : 'Crear Producto'}
@@ -3029,6 +3083,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   type="button"
                   onClick={() => {
                     setNewPackagingName('')
+                    setNewPackagingQty('')
+                    setNewPackagingPrice('')
                     setPackagingModalOpen(false)
                   }}
                   className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"

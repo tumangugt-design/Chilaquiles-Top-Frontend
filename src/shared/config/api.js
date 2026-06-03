@@ -71,7 +71,7 @@ export const verifyOtp = (phone, code) => api.post('/auth/verify-otp', { phone, 
 
 export const getPortions = () => api.get(`/inventory/portions?t=${Date.now()}`)
 export const updatePortion = (name, payload) => api.put(`/inventory/portions/${encodeURIComponent(name)}`, payload)
-export const createPackagingProduct = (name) => api.post('/inventory/packaging', { name })
+export const createPackagingProduct = (payload) => api.post('/inventory/packaging', payload)
 
 export default api
 
