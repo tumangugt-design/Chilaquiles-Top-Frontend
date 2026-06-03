@@ -22,7 +22,10 @@ import {
   getFinancesSummary,
   getAvailablePlates,
   getLastPurchases,
-  getInventoryLogs
+  getInventoryLogs,
+  getPortions,
+  updatePortion,
+  createPackagingProduct
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, OPTIONS_BASE_RECIPE, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
@@ -52,6 +55,21 @@ import {
   ClipboardList
 } from 'lucide-react'
 import AdminNavbar from '../components/layout/AdminNavbar.jsx'
+import {
+  IllustrationSteak,
+  IllustrationPollo,
+  IllustrationChorizo,
+  IllustrationAguacate,
+  IllustrationCebollaCaramel,
+  IllustrationQuesoExtra,
+  IllustrationCebolla,
+  IllustrationCilantro,
+  IllustrationCrema
+} from '../components/illustrations/IngredientIllustrations.jsx'
+import {
+  IllustrationRoja,
+  IllustrationVerde
+} from '../components/illustrations/SauceIllustrations.jsx'
 
 const emptyItem = { name: '', amount: '', unit: '', price: '' }
 
@@ -534,6 +552,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [calcPromoPrice, setCalcPromoPrice] = useState('55')
   const [platesCountInput, setPlatesCountInput] = useState('2')
   
+  const [portions, setPortions] = useState([])
+  const [packagingModalOpen, setPackagingModalOpen] = useState(false)
+  const [newPackagingName, setNewPackagingName] = useState('')
+  const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
+  
   const calcPlate = calcPlates[activeCalcPlateIndex] || defaultCalcPlateConfig()
   const calcSelectedBases = calcPlate.selectedBases || []
   
@@ -682,16 +705,24 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setInventory(inventoryResponse.data)
         if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
-        const [promotionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
+        const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse] = await Promise.all([
           getPromotions(),
           getInventory(),
-          getLastPurchases().catch(() => ({ data: {} }))
+          getLastPurchases().catch(() => ({ data: {} })),
+          getPortions().catch(() => ({ data: [] }))
         ])
         setPromotions(promotionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
-
-        // La calculadora de promociones es solo lectura: usa únicamente la última entrada real de inventario.
-        // No mezcla precios manuales guardados en promociones para evitar costos inflados o duplicados.
+        setPortions(portionsResponse.data || [])
+        setSimulatedCosts(lastPurchasesResponse.data || {})
+      } else if (activeTab === 'recipe_book') {
+        const [portionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
+          getPortions().catch(() => ({ data: [] })),
+          getInventory(),
+          getLastPurchases().catch(() => ({ data: {} }))
+        ])
+        setPortions(portionsResponse.data || [])
+        setInventory(inventoryResponse.data || [])
         setSimulatedCosts(lastPurchasesResponse.data || {})
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
@@ -986,21 +1017,35 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const getProductPortionConfig = (name) => {
+    const normalized = String(name || '').trim().toLowerCase()
+    const portion = portions.find(p => p.name === normalized)
+    const product = inventory.find(i => i.name === normalized)
+    const catalogItem = INVENTORY_PRODUCT_MAP[normalized]
+    return {
+      name: normalized,
+      usedPerPlate: portion ? portion.usedPerPlate : (catalogItem?.usedPerPlate || 1),
+      unit: portion ? portion.unit : (catalogItem?.unit || 'und'),
+      label: product?.label || catalogItem?.label || name,
+      category: product?.category || catalogItem?.category || 'Otros',
+      price: portion ? portion.price : (product?.lastPrice || 0)
+    }
+  }
+
   const getProductCost = (name) => {
-    const item = inventory.find(i => i.name === name)
-    return Number(item?.lastPrice || 0)
+    const config = getProductPortionConfig(name)
+    return config.price
   }
 
   const getIngredientCostDetail = (name, usedAmountOverride = null) => {
     const sim = simulatedCosts[name] || {}
-    const product = INVENTORY_PRODUCT_MAP[name]
-    const inventoryItem = inventory.find(i => i.name === name)
-    const usedAmount = Number(usedAmountOverride ?? product?.usedPerPlate ?? 0)
+    const config = getProductPortionConfig(name)
+    const usedAmount = Number(usedAmountOverride ?? config.usedPerPlate ?? 0)
     const qtyVal = sim?.qty !== undefined && sim?.qty !== '' ? Number(sim.qty) : 0
     const priceVal = sim?.price !== undefined && sim?.price !== '' ? Number(sim.price) : 0
-    const unit = sim?.unit || product?.unit || ''
+    const unit = sim?.unit || config.unit || ''
 
-    if (!product || !usedAmount || usedAmount <= 0) {
+    if (!config.usedPerPlate || usedAmount <= 0) {
       return {
         cost: 0,
         usedAmount: 0,
@@ -1014,13 +1059,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
 
     if (qtyVal > 0 && priceVal > 0) {
-      const baseQty = convertInventoryAmountToBaseUnit(qtyVal, unit, product)
+      const baseQty = convertInventoryAmountToBaseUnit(qtyVal, unit, config)
       if (baseQty > 0) {
         const costPerBaseUnit = priceVal / baseQty
+        const portionInBaseUnit = convertInventoryAmountToBaseUnit(usedAmount, config.unit, config)
         return {
-          cost: costPerBaseUnit * usedAmount,
+          cost: costPerBaseUnit * portionInBaseUnit,
           usedAmount,
-          unit: product.unit,
+          unit: config.unit,
           baseQty,
           purchaseQty: qtyVal,
           purchaseUnit: unit,
@@ -1031,15 +1077,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       }
     }
 
-    // Respaldo para datos viejos: lastPrice representa el costo de la porción completa por plato.
-    const fallbackPortionPrice = Number(sim?.portionPrice || inventoryItem?.lastPrice || 0)
+    const fallbackPortionPrice = Number(config.price || 0)
     if (fallbackPortionPrice > 0) {
-      const portionQty = Number(product.usedPerPlate || usedAmount || 1)
+      const portionQty = Number(config.usedPerPlate || usedAmount || 1)
       const adjustedPortionPrice = portionQty > 0 ? fallbackPortionPrice * (usedAmount / portionQty) : fallbackPortionPrice
       return {
         cost: adjustedPortionPrice,
         usedAmount,
-        unit: product.unit,
+        unit: config.unit,
         baseQty: 0,
         purchaseQty: qtyVal,
         purchaseUnit: unit,
@@ -1052,7 +1097,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return {
       cost: 0,
       usedAmount,
-      unit: product.unit,
+      unit: config.unit,
       baseQty: 0,
       purchaseQty: qtyVal,
       purchaseUnit: unit,
@@ -1065,33 +1110,50 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const getIngredientCost = (name, usedAmountOverride = null) => getIngredientCostDetail(name, usedAmountOverride).cost
 
   const getSelectedRecipeRows = (plate = calcPlate) => {
-    const rows = [...FIXED_RECIPE_INGREDIENT_NAMES.map((name) => ({ name }))]
+    const rows = [...FIXED_RECIPE_INGREDIENT_NAMES.map((name) => ({ name, usedAmount: getProductPortionConfig(name).usedPerPlate }))]
 
-    if (plate.sauce === 'ROJA') rows.push({ name: 'salsa roja' })
-    else if (plate.sauce === 'VERDE') rows.push({ name: 'salsa verde' })
+    if (plate.sauce === 'ROJA') rows.push({ name: 'salsa roja', usedAmount: getProductPortionConfig('salsa roja').usedPerPlate })
+    else if (plate.sauce === 'VERDE') rows.push({ name: 'salsa verde', usedAmount: getProductPortionConfig('salsa verde').usedPerPlate })
     else if (plate.sauce === 'DIVORCIADOS') {
-      rows.push({ name: 'salsa roja', usedAmount: Number(INVENTORY_PRODUCT_MAP['salsa roja']?.usedPerPlate || 0) / 2 })
-      rows.push({ name: 'salsa verde', usedAmount: Number(INVENTORY_PRODUCT_MAP['salsa verde']?.usedPerPlate || 0) / 2 })
+      rows.push({ name: 'salsa roja', usedAmount: getProductPortionConfig('salsa roja').usedPerPlate / 2 })
+      rows.push({ name: 'salsa verde', usedAmount: getProductPortionConfig('salsa verde').usedPerPlate / 2 })
     }
 
-    if (plate.protein === 'STEAK') rows.push({ name: 'steak' })
-    if (plate.protein === 'POLLO') rows.push({ name: 'pollo' })
-    if (plate.protein === 'CHORIZO') rows.push({ name: 'chorizo' })
+    if (plate.protein === 'STEAK') rows.push({ name: 'steak', usedAmount: getProductPortionConfig('steak').usedPerPlate })
+    if (plate.protein === 'POLLO') rows.push({ name: 'pollo', usedAmount: getProductPortionConfig('pollo').usedPerPlate })
+    if (plate.protein === 'CHORIZO') rows.push({ name: 'chorizo', usedAmount: getProductPortionConfig('chorizo').usedPerPlate })
 
-    if (plate.complement === 'AGUACATE') rows.push({ name: 'aguacate' })
-    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') rows.push({ name: 'cebolla caramelizada' })
-    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') rows.push({ name: 'queso extra' })
+    if (plate.complement === 'AGUACATE') rows.push({ name: 'aguacate', usedAmount: getProductPortionConfig('aguacate').usedPerPlate })
+    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') rows.push({ name: 'cebolla caramelizada', usedAmount: getProductPortionConfig('cebolla caramelizada').usedPerPlate })
+    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') rows.push({ name: 'queso extra', usedAmount: getProductPortionConfig('queso extra').usedPerPlate })
 
     const selectedBasesForPlate = plate.selectedBases || []
     BASE_INGREDIENT_NAMES.forEach((name) => {
-      if (selectedBasesForPlate.includes(name)) rows.push({ name })
+      if (selectedBasesForPlate.includes(name)) rows.push({ name, usedAmount: getProductPortionConfig(name).usedPerPlate })
     })
 
     return rows
   }
 
+  const getPackagingRows = (plate) => {
+    const allPackagingProducts = inventory.filter(item => item.category === 'Empaque')
+    const sauce = plate.sauce || 'ROJA'
+    const autoRows = getAutomaticPackagingRows(sauce)
+    const autoQtyMap = Object.fromEntries(autoRows.map(item => [item.name, item.qty]))
+
+    return allPackagingProducts.map((prod) => {
+      const name = prod.name
+      const override = plate.packagingOverrides?.[name]
+      const defaultQty = autoQtyMap[name] !== undefined ? autoQtyMap[name] : 0
+      return {
+        name,
+        qty: override !== undefined ? Number(override) : defaultQty
+      }
+    })
+  }
+
   const calculatePackagingCost = (plate = calcPlate) => {
-    return getAutomaticPackagingRows(plate.sauce).reduce((total, item) => {
+    return getPackagingRows(plate).reduce((total, item) => {
       return total + getIngredientCost(item.name, item.qty)
     }, 0)
   }
@@ -1317,6 +1379,50 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       ...prev,
       search: value
     }))
+  }
+
+  const handleCreatePackaging = async (e) => {
+    if (e) e.preventDefault()
+    if (!newPackagingName) {
+      return toast.error('Ingresa el nombre del producto de empaque')
+    }
+    
+    setIsCreatingPackaging(true)
+    try {
+      await createPackagingProduct(newPackagingName)
+      toast.success('Producto de empaque creado exitosamente')
+      setNewPackagingName('')
+      setPackagingModalOpen(false)
+      loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo crear el empaque')
+    } finally {
+      setIsCreatingPackaging(false)
+    }
+  }
+
+  const handleCalculateAutoPortionPrice = (name, qty, unit) => {
+    const sim = simulatedCosts[name] || {}
+    const product = inventory.find(i => i.name === name)
+    const qtyVal = sim?.qty !== undefined && sim?.qty !== '' ? Number(sim.qty) : 0
+    const priceVal = sim?.price !== undefined && sim?.price !== '' ? Number(sim.price) : 0
+    const purchaseUnit = sim?.unit || product?.unit || ''
+
+    if (!product || qtyVal <= 0 || priceVal <= 0) {
+      toast.error('No hay compras registradas para calcular costo de este producto en automático.')
+      return null
+    }
+
+    try {
+      const baseQty = convertInventoryAmountToBaseUnit(qtyVal, purchaseUnit, product)
+      const costPerBaseUnit = priceVal / baseQty
+      const portionInBaseUnit = convertInventoryAmountToBaseUnit(Number(qty), unit, product)
+      const calculatedPrice = costPerBaseUnit * portionInBaseUnit
+      return Number(calculatedPrice.toFixed(2))
+    } catch (e) {
+      toast.error('Error al realizar conversión de unidades.')
+      return null
+    }
   }
 
   if (!session || session.role !== 'ADMIN') {
@@ -1612,9 +1718,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       {activeTab === 'entries' && (
         <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 animate-fade-in min-w-0">
           <form onSubmit={submitInventory} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-5 min-w-0">
-            <div className="border-b border-ui-border pb-4">
-              <h2 className="text-xl font-black text-ui-text">Entrada de Inventario</h2>
-              <p className="text-sm text-ui-muted mt-1">Selecciona el producto y registra la cantidad ingresada.</p>
+            <div className="border-b border-ui-border pb-4 flex justify-between items-start">
+              <div>
+                <h2 className="text-xl font-black text-ui-text">Entrada de Inventario</h2>
+                <p className="text-sm text-ui-muted mt-1">Selecciona el producto y registra la cantidad ingresada.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPackagingModalOpen(true)}
+                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-brand-orange/30 bg-brand-orange/10 text-brand-orange hover:bg-brand-orange/20 transition-all shrink-0"
+              >
+                + Crear Producto
+              </button>
             </div>
 
             <div className="space-y-2">
@@ -1625,7 +1740,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 onChange={(e) => handleProductChange(e.target.value)}
               >
                 <option value="">Selecciona un producto</option>
-                {INVENTORY_PRODUCT_OPTIONS.map((product) => (
+                {dynamicInventoryOptions.map((product) => (
                   <option key={product.value} value={product.value}>
                     {product.category} · {product.label}
                   </option>
@@ -1710,9 +1825,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </div>
                 ) : (
                   inventoryLogs
-                    .filter((log) => !!INVENTORY_PRODUCT_MAP[log.ingredientName])
+                    .filter((log) => !!getProductPortionConfig(log.ingredientName).label)
                     .map((log) => {
-                    const product = INVENTORY_PRODUCT_MAP[log.ingredientName]
+                    const product = getProductPortionConfig(log.ingredientName)
                     const priceFromReason = log.reason?.match(new RegExp('Costo Total\\s*Q\\s*([\\d.]+)', 'i'))
                     const totalPrice = log.totalPrice !== undefined && log.totalPrice !== null
                       ? Number(log.totalPrice)
@@ -1871,11 +1986,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             {inventory
               .filter(item => {
                 if (inventoryCategoryFilter === 'ALL') return true
-                const meta = INVENTORY_PRODUCT_MAP[item.name]
+                const meta = getProductPortionConfig(item.name)
                 return meta?.category === inventoryCategoryFilter
               })
               .map((item) => {
-              const meta = INVENTORY_PRODUCT_MAP[item.name]
+              const meta = getProductPortionConfig(item.name)
               const isPackaging = meta?.category === 'Empaque'
               const isActive = isPackaging ? true : item.isActive !== false
               const stockStoredPreview = stockEditForm.name === item.name
@@ -2153,10 +2268,35 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
+              {/* Cantidad de Platos en Promoción */}
+              <div className="bg-white rounded-2xl border border-ui-border p-4 space-y-1">
+                <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">
+                  Cantidad de Platos en Promoción
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
+                  placeholder="Ej. 2 para 2x1"
+                  value={platesCountInput}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setPlatesCountInput(val)
+                    if (val !== '') {
+                      const count = Math.max(0, Number(val) || 0)
+                      handlePromoPlatesChange(count)
+                    } else {
+                      handlePromoPlatesChange(0)
+                    }
+                  }}
+                />
+              </div>
+
               {calcPlates.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-ui-border rounded-2xl bg-white text-center">
                   <p className="text-sm font-bold text-ui-muted mb-2">No hay platos en la promoción</p>
-                  <p className="text-xs text-ui-muted">Ingresa la cantidad de platos abajo para comenzar a configurar.</p>
+                  <p className="text-xs text-ui-muted">Ingresa la cantidad de platos arriba para comenzar a configurar.</p>
                 </div>
               ) : (
                 <>
@@ -2310,29 +2450,135 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
                   {/* Cost breakdown list for the active plate */}
                   <div className="bg-white rounded-2xl border border-ui-border p-4 mt-6 space-y-4 shadow-sm">
-                    <h4 className="text-xs font-black uppercase text-brand-blue tracking-widest border-b border-ui-border pb-2">
-                      Desglose de Insumos - Plato {activeCalcPlateIndex + 1}
-                    </h4>
+                    <div className="flex items-center justify-between border-b border-ui-border pb-2">
+                      <h4 className="text-xs font-black uppercase text-brand-blue tracking-widest">
+                        Desglose de Insumos - Plato {activeCalcPlateIndex + 1}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setPackagingModalOpen(true)}
+                        className="text-[9px] font-black uppercase text-brand-orange hover:underline"
+                      >
+                        + Crear Producto
+                      </button>
+                    </div>
                     <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                       {getSelectedRecipeRows(calcPlate).map((item) => {
-                        const product = INVENTORY_PRODUCT_MAP[item.name]
-                        if (!product) return null
+                        const config = getProductPortionConfig(item.name)
                         const detail = getIngredientCostDetail(item.name, item.usedAmount)
                         return (
-                          <div key={item.name} className="flex justify-between items-center text-xs text-ui-text font-bold">
-                            <span className="capitalize">{product.label}</span>
+                          <div key={item.name} className="flex justify-between items-center text-xs text-ui-text font-bold py-1 border-b border-dashed border-ui-border/40 last:border-b-0">
+                            <span className="capitalize">{config.label}</span>
                             <span className="text-ui-muted font-medium">Q{detail.cost.toFixed(2)}</span>
                           </div>
                         )
                       })}
-                      {getAutomaticPackagingRows(calcPlate.sauce).map((item) => {
-                        const product = INVENTORY_PRODUCT_MAP[item.name]
-                        if (!product) return null
+                      {getPackagingRows(calcPlate).map((item) => {
+                        const config = getProductPortionConfig(item.name)
+                        const isDeleted = item.qty === 0
                         const detail = getIngredientCostDetail(item.name, item.qty)
                         return (
-                          <div key={item.name} className="flex justify-between items-center text-xs text-ui-text font-bold">
-                            <span className="capitalize">{product.label}</span>
-                            <span className="text-ui-muted font-medium">Q{detail.cost.toFixed(2)}</span>
+                          <div key={item.name} className={`flex justify-between items-center text-xs font-bold py-1 border-b border-dashed border-ui-border/40 last:border-b-0 ${isDeleted ? 'opacity-40 line-through text-ui-muted' : 'text-ui-text'}`}>
+                            <div className="flex flex-col">
+                              <span className="capitalize">{config.label}</span>
+                              {!isDeleted && (
+                                <span className="text-[10px] text-ui-muted font-bold">Cantidad: {item.qty} {config.unit}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-ui-muted font-medium">Q{detail.cost.toFixed(2)}</span>
+                              <div className="flex items-center gap-1 ml-2">
+                                {!isDeleted ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedPlates = [...calcPlates]
+                                        const currentPlate = { ...updatedPlates[activeCalcPlateIndex] }
+                                        const nextQty = Math.max(0, item.qty - 1)
+                                        currentPlate.packagingOverrides = {
+                                          ...(currentPlate.packagingOverrides || {}),
+                                          [item.name]: nextQty
+                                        }
+                                        updatedPlates[activeCalcPlateIndex] = currentPlate
+                                        setCalcPlates(updatedPlates)
+                                      }}
+                                      className="w-5 h-5 flex items-center justify-center rounded bg-ui-bg border border-ui-border text-[10px] font-black text-ui-text hover:bg-ui-border transition-all"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={item.qty}
+                                      onChange={(e) => {
+                                        const val = Math.max(0, Number(e.target.value) || 0)
+                                        const updatedPlates = [...calcPlates]
+                                        const currentPlate = { ...updatedPlates[activeCalcPlateIndex] }
+                                        currentPlate.packagingOverrides = {
+                                          ...(currentPlate.packagingOverrides || {}),
+                                          [item.name]: val
+                                        }
+                                        updatedPlates[activeCalcPlateIndex] = currentPlate
+                                        setCalcPlates(updatedPlates)
+                                      }}
+                                      className="w-8 text-center text-[10px] font-black border border-ui-border rounded py-0.5 outline-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedPlates = [...calcPlates]
+                                        const currentPlate = { ...updatedPlates[activeCalcPlateIndex] }
+                                        const nextQty = item.qty + 1
+                                        currentPlate.packagingOverrides = {
+                                          ...(currentPlate.packagingOverrides || {}),
+                                          [item.name]: nextQty
+                                        }
+                                        updatedPlates[activeCalcPlateIndex] = currentPlate
+                                        setCalcPlates(updatedPlates)
+                                      }}
+                                      className="w-5 h-5 flex items-center justify-center rounded bg-ui-bg border border-ui-border text-[10px] font-black text-ui-text hover:bg-ui-border transition-all"
+                                    >
+                                      +
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedPlates = [...calcPlates]
+                                        const currentPlate = { ...updatedPlates[activeCalcPlateIndex] }
+                                        currentPlate.packagingOverrides = {
+                                          ...(currentPlate.packagingOverrides || {}),
+                                          [item.name]: 0
+                                        }
+                                        updatedPlates[activeCalcPlateIndex] = currentPlate
+                                        setCalcPlates(updatedPlates)
+                                      }}
+                                      className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 text-red-500 transition-all text-xs"
+                                      title="Eliminar"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedPlates = [...calcPlates]
+                                      const currentPlate = { ...updatedPlates[activeCalcPlateIndex] }
+                                      currentPlate.packagingOverrides = {
+                                        ...(currentPlate.packagingOverrides || {}),
+                                        [item.name]: 1
+                                      }
+                                      updatedPlates[activeCalcPlateIndex] = currentPlate
+                                      setCalcPlates(updatedPlates)
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue text-[9px] font-black uppercase tracking-wider border border-brand-blue/20 hover:bg-brand-blue/20 transition-all"
+                                  >
+                                    Agregar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )
                       })}
@@ -2344,33 +2590,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </div>
                 </>
               )}
-
-              {/* Promo Simulation Configuration */}
-              <div className="grid grid-cols-1 gap-3 border-t border-ui-border/60 pt-4 mt-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-widest ml-1">
-                    Cantidad de Platos en Promoción
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white outline-none font-bold text-xs"
-                    placeholder="Ej. 2 para 2x1"
-                    value={platesCountInput}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setPlatesCountInput(val)
-                      if (val !== '') {
-                        const count = Math.max(0, Number(val) || 0)
-                        handlePromoPlatesChange(count)
-                      } else {
-                        handlePromoPlatesChange(0)
-                      }
-                    }}
-                  />
-                </div>
-              </div>
 
               {/* Recipe Cost Result Summary */}
               {(() => {
@@ -2690,6 +2909,56 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           </div>
         </div>
       )}
+
+      {activeTab === 'recipe_book' && (
+        <div className="space-y-8 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-ui-border pb-6 gap-4">
+            <div>
+              <h2 className="text-3xl font-black tracking-tight text-ui-text">Recetario</h2>
+              <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Configura las porciones e insumos consumidos por plato y su costo.</p>
+            </div>
+            <Button
+              onClick={() => setPackagingModalOpen(true)}
+              className="!py-3 flex items-center gap-2 self-start sm:self-auto"
+            >
+              <PlusCircle size={18} />
+              Crear Producto (Empaque)
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {portions.map((portion) => {
+              const product = inventory.find(i => i.name === portion.name)
+              const label = product?.label || portion.name
+              const category = product?.category || 'Otros'
+              const sim = simulatedCosts[portion.name] || {}
+              const lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
+              
+              return (
+                <PortionRow
+                  key={portion.name}
+                  portion={portion}
+                  label={label}
+                  category={category}
+                  lastPurchaseText={lastPurchaseText}
+                  sim={sim}
+                  product={product}
+                  onSave={async (qty, unit, price) => {
+                    try {
+                      await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
+                      toast.success(`Porción de ${label} actualizada exitosamente`)
+                      loadData()
+                    } catch (err) {
+                      toast.error('No se pudo actualizar la porción')
+                    }
+                  }}
+                  onCalculateAuto={(qty, unit) => handleCalculateAutoPortionPrice(portion.name, qty, unit)}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
               </>
             )}
           </div>
@@ -2701,12 +2970,288 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         onClose={closeHistoryModal}
         onSearchChange={updateHistorySearch}
       />
+
+      {/* Modal de Creación de Empaque */}
+      {packagingModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-2xl animate-scale-up">
+            <div className="flex items-center justify-between border-b border-ui-border pb-4 mb-4">
+              <h3 className="text-lg font-black text-ui-text">Crear Producto de Empaque</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewPackagingName('')
+                  setPackagingModalOpen(false)
+                }}
+                className="rounded-full bg-ui-bg p-1.5 text-ui-muted hover:text-ui-text transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreatePackaging} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                  Nombre del Producto
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Plato rectangular de 32 oz"
+                  value={newPackagingName}
+                  onChange={(e) => setNewPackagingName(e.target.value)}
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                  Categoría Fija
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value="EMPAQUE"
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                  Unidad de Entrada
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value="Unidad"
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" className="flex-1 !py-4" disabled={isCreatingPackaging}>
+                  {isCreatingPackaging ? 'Creando...' : 'Crear Producto'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewPackagingName('')
+                    setPackagingModalOpen(false)
+                  }}
+                  className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       <footer className="py-10 text-center">
         <p className="text-[10px] font-black text-ui-muted uppercase tracking-[0.2em] opacity-40">
           Chilaquiles TOP · Sistema de Gestión Administrativa
         </p>
       </footer>
+    </div>
+  )
+}
+
+const getIngredientSvg = (name) => {
+  const n = String(name || '').toLowerCase().trim()
+  if (n.includes('steak')) return <IllustrationSteak />
+  if (n.includes('pollo')) return <IllustrationPollo />
+  if (n.includes('chorizo')) return <IllustrationChorizo />
+  if (n.includes('aguacate')) return <IllustrationAguacate />
+  if (n.includes('cebolla caramelizada')) return <IllustrationCebollaCaramel />
+  if (n.includes('queso extra')) return <IllustrationQuesoExtra />
+  if (n.includes('cebolla')) return <IllustrationCebolla />
+  if (n.includes('cilantro')) return <IllustrationCilantro />
+  if (n.includes('crema')) return <IllustrationCrema />
+  if (n.includes('roja')) return <IllustrationRoja />
+  if (n.includes('verde')) return <IllustrationVerde />
+  
+  return (
+    <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
+      <ellipse cx="100" cy="110" rx="65" ry="12" fill="#000000" fillOpacity="0.3" />
+      <path d="M40 50 L40 90 Q40 115 65 120 L135 120 Q160 115 160 90 L160 50" fill="#E2E8F0" />
+      <path d="M40 50 L65 35 L135 35 L160 50 L135 65 L65 65 L40 50 Z" fill="#CBD5E1" />
+      <circle cx="100" cy="80" r="15" fill="#94A3B8" />
+    </svg>
+  )
+}
+
+const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, onSave, onCalculateAuto }) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editQty, setEditQty] = useState(portion.usedPerPlate)
+  const [editUnit, setEditUnit] = useState(portion.unit)
+  const [editPrice, setEditPrice] = useState(portion.price)
+
+  useEffect(() => {
+    setEditQty(portion.usedPerPlate)
+    setEditUnit(portion.unit)
+    setEditPrice(portion.price)
+  }, [portion])
+
+  const allowedUnits = getAllowedInputUnits(product)
+
+  const handleSave = () => {
+    if (editQty <= 0) {
+      toast.error('La porción debe ser mayor a 0')
+      return
+    }
+    if (editPrice < 0) {
+      toast.error('El costo de la porción no puede ser negativo')
+      return
+    }
+    onSave(editQty, editUnit, editPrice)
+    setIsEditing(false)
+  }
+
+  const handleAuto = () => {
+    const calculated = onCalculateAuto(editQty, editUnit)
+    if (calculated !== null && calculated !== undefined) {
+      setEditPrice(calculated)
+      toast.success(`Costo autocalculado: Q${calculated}`)
+    }
+  }
+
+  const getCategoryBadgeClass = (cat) => {
+    const c = String(cat).toLowerCase()
+    if (c.includes('prote')) return 'bg-red-50 text-red-700 border-red-200'
+    if (c.includes('salsa')) return 'bg-green-50 text-green-700 border-green-200'
+    if (c.includes('comple')) return 'bg-amber-50 text-amber-700 border-amber-200'
+    if (c.includes('empaque')) return 'bg-blue-50 text-blue-700 border-blue-200'
+    return 'bg-slate-50 text-slate-700 border-slate-200'
+  }
+
+  return (
+    <div className="bg-white rounded-3xl border border-ui-border shadow-sm p-6 hover:shadow-md transition-all duration-300">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        
+        <div className="flex items-center gap-4 flex-1">
+          <div className="w-20 h-20 rounded-2xl bg-ui-bg overflow-hidden flex items-center justify-center shrink-0 border border-ui-border/50">
+            {getIngredientSvg(portion.name)}
+          </div>
+          
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-black text-ui-text capitalize leading-none">
+                {label.toLowerCase()}
+              </h3>
+              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(category)}`}>
+                {category}
+              </span>
+            </div>
+            
+            <p className="text-xs text-ui-muted font-bold truncate">
+              {lastPurchaseText}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-6 md:gap-8 bg-ui-bg/30 border border-ui-border/40 rounded-2xl p-4 md:p-5 shrink-0">
+          {isEditing ? (
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="space-y-1.5 w-24">
+                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Porción</label>
+                <input
+                  type="number"
+                  min="0.001"
+                  step="any"
+                  value={editQty}
+                  onChange={(e) => setEditQty(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
+
+              <div className="space-y-1.5 w-20">
+                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Unidad</label>
+                <select
+                  value={editUnit}
+                  onChange={(e) => setEditUnit(e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                >
+                  {allowedUnits.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5 w-32 relative">
+                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Costo Porción</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ui-muted font-bold">Q</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full pl-7 pr-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  />
+                </div>
+              </div>
+
+              {sim.qty && (
+                <button
+                  type="button"
+                  onClick={handleAuto}
+                  className="px-3 py-2 rounded-xl bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange text-[10px] font-black uppercase tracking-wider border border-brand-orange/25 transition-colors h-[38px] active:scale-95"
+                  title="Calcular a partir de última compra"
+                >
+                  💡 Autocalcular
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex gap-6 md:gap-8 select-none">
+              <div>
+                <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Porción del Plato</span>
+                <span className="text-sm font-black text-ui-text">{portion.usedPerPlate} {portion.unit}</span>
+              </div>
+              <div className="border-l border-ui-border/50 h-8 self-center" />
+              <div>
+                <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Costo Porción</span>
+                <span className="text-sm font-black text-brand-blue">Q{Number(portion.price || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 md:self-center">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditQty(portion.usedPerPlate)
+                  setEditUnit(portion.unit)
+                  setEditPrice(portion.price)
+                  setIsEditing(false)
+                }}
+                className="px-4 py-2 border border-ui-border bg-white text-ui-muted hover:text-ui-text text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="px-5 py-2.5 bg-ui-bg hover:bg-ui-bg/80 text-ui-text border border-ui-border text-[10px] font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95"
+            >
+              Editar
+            </button>
+          )}
+        </div>
+
+      </div>
     </div>
   )
 }

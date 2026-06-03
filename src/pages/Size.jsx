@@ -8,6 +8,11 @@ import toast from 'react-hot-toast'
 const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   const [promotions, setPromotions] = useState([])
   const [loading, setLoading] = useState(false)
+  const [activeCategory, setActiveCategory] = useState(() => {
+    if (order.requestedCount === 'PROMO') return 'PROMO'
+    if (order.requestedCount) return 'NORMAL'
+    return null
+  })
   const orderRef = useRef(order)
 
   useEffect(() => {
@@ -192,187 +197,248 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
       <div className="max-w-xl">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 sm:mb-3">
-          ¿Cuánta hambre tienes?
+          Escoge tu menú
         </h2>
         <p className="text-base sm:text-lg text-gray-500">
-          Selecciona la cantidad de platos o elige una de nuestras promociones.
+          Selecciona una de nuestras opciones de menú clásico o descubre nuestras promociones.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-        {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO').map((opt) => (
-          <OptionCard
-            key={opt.id}
-            title={opt.label}
-            price={opt.price ? `Q${opt.price}` : 'Especial'}
-            description={opt.description}
-            selected={order.requestedCount === opt.value}
-            illustration={opt.illustration}
-            badge={opt.badge}
-            onClick={() => handleSelectSize(opt.value)}
-          />
-        ))}
-      </div>
-
-      {promotions.length > 0 && OPTIONS_COUNT.find(opt => opt.value === 'PROMO') && (() => {
-        const promoOption = OPTIONS_COUNT.find(opt => opt.value === 'PROMO')
-        return (
-          <div className="flex justify-center border-t border-ui-border pt-6 mt-6 animate-fade-in">
-            <div className="w-full max-w-[280px] sm:max-w-xs">
-              <OptionCard
-                key={promoOption.id}
-                title={promoOption.label}
-                price={promoOption.price ? `Q${promoOption.price}` : 'Especial'}
-                description={promoOption.description}
-                selected={order.requestedCount === promoOption.value}
-                illustration={promoOption.illustration}
-                badge={promoOption.badge}
-                onClick={() => handleSelectSize(promoOption.value)}
-              />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div
+          onClick={() => setActiveCategory(activeCategory === 'NORMAL' ? null : 'NORMAL')}
+          className={`cursor-pointer rounded-[2rem] border-2 p-6 transition-all duration-300 relative bg-white select-none ${
+            activeCategory === 'NORMAL'
+              ? 'border-brand-blue ring-4 ring-brand-blue/10 shadow-lg'
+              : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                Chilaquiles Clásicos
+              </span>
+              <h3 className="text-xl font-black text-ui-text mt-3">Menú Normal</h3>
+              <p className="text-xs text-ui-muted font-bold mt-1">Arma tu plato individual, en pareja o para compartir.</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-black text-lg">
+              🍽️
             </div>
           </div>
-        )
-      })()}
-
-      {order.requestedCount === 'PROMO' && (
-        <div className="space-y-4 animate-fade-in mt-6 border-t border-ui-border pt-6">
-          <h3 className="text-lg font-black uppercase text-brand-blue tracking-widest">
-            Promociones Disponibles
-          </h3>
-          {loading ? (
-            <div className="p-8 text-center text-ui-muted font-bold">
-              Cargando promociones...
-            </div>
-          ) : promotions.length === 0 ? (
-            <div className="p-8 text-center rounded-2xl border-2 border-dashed border-ui-border text-ui-muted font-bold bg-white">
-              No hay promociones activas en este momento.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {promotions.map((promo) => {
-                const isSelected = order.appliedPromo?.id === promo.id
-
-                return (
-                  <div
-                    key={promo.id}
-                    onClick={() => handleSelectPromo(promo)}
-                    className={`cursor-pointer rounded-2xl border-2 p-5 bg-white transition-all duration-300 relative ${
-                      isSelected
-                        ? 'border-brand-blue ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-lg'
-                        : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
-                    }`}
-                  >
-                    {/* Checked Indicator */}
-                    <div
-                      className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                        isSelected
-                          ? 'bg-brand-blue text-white scale-100'
-                          : 'bg-ui-bg text-transparent border border-ui-border'
-                      }`}
-                    >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={3}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-
-                    <div>
-                      <span className="bg-brand-orange text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        {promo.requestedCount || promo.plates?.length || 2}{' '}
-                        Platos
-                      </span>
-                      <h4 className="font-black text-lg text-ui-text mt-2 leading-tight">
-                        {promo.name}
-                      </h4>
-                      {promo.description && (
-                        <p className="text-xs text-ui-muted font-medium mt-1 leading-normal">
-                          {promo.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Display Plates Visual Summary and Details */}
-                    {promo.plates && promo.plates.length > 0 && (
-                      <div className="mt-4 space-y-2.5">
-                        {promo.plates.map((plate, pIdx) => {
-                          const sauceOpt = OPTIONS_SAUCE.find(
-                            (o) => o.value === plate.sauce
-                          )
-                          const proteinOpt = OPTIONS_PROTEIN.find(
-                            (o) => o.value === plate.protein
-                          )
-                          const sauceL = sauceOpt?.label || plate.sauce
-                          const proteinL = proteinOpt?.label || plate.protein
-                          const complementL = OPTIONS_COMPLEMENT.find(
-                            (o) => o.value === plate.complement
-                          )?.label || plate.complement
-                          const basesL = formatBaseRecipe(plate.baseRecipe)
-
-                          return (
-                            <div key={pIdx} className="bg-ui-bg/40 border border-ui-border/50 rounded-2xl p-3 space-y-2 select-none">
-                              {/* Plate Header with SVGs */}
-                              <div className="flex items-center gap-2">
-                                <div className="flex -space-x-1">
-                                  {sauceOpt?.illustration && (
-                                    <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
-                                      {sauceOpt.illustration}
-                                    </div>
-                                  )}
-                                  {proteinOpt?.illustration && (
-                                    <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
-                                      {proteinOpt.illustration}
-                                    </div>
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-black text-brand-blue uppercase tracking-widest">
-                                  Plato {pIdx + 1}
-                                </span>
-                              </div>
-                              {/* Ingredients Details */}
-                              <div className="text-[11px] font-bold text-ui-text/80 leading-normal pl-1 space-y-0.5">
-                                <div>
-                                  <span className="capitalize">{sauceL?.toLowerCase()}</span>
-                                  <span className="text-ui-muted mx-1.5">•</span>
-                                  <span className="capitalize">{proteinL?.toLowerCase()}</span>
-                                  <span className="text-ui-muted mx-1.5">•</span>
-                                  <span className="capitalize">{complementL?.toLowerCase()}</span>
-                                </div>
-                                {basesL && (
-                                  <div className="text-[10px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
-                                    Base: {basesL.toLowerCase()}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    <div className="mt-4 pt-3 border-t border-ui-border flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase text-ui-muted tracking-widest">
-                        Precio especial
-                      </span>
-                      <span className="text-xl font-black text-brand-blue">
-                        Q{Number(promo.promoPrice || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+          
+          {['1', '2', '3', 1, 2, 3].includes(order.requestedCount) && (
+            <div className="mt-4 flex items-center justify-between border-t border-ui-border/50 pt-3">
+              <span className="text-[10px] font-black uppercase text-brand-orange tracking-widest">
+                Seleccionado:
+              </span>
+              <span className="text-xs font-black text-ui-text">
+                {order.requestedCount} {order.requestedCount == 1 ? 'Plato' : 'Platos'}
+              </span>
             </div>
           )}
         </div>
-      )}
+
+        <div
+          onClick={() => setActiveCategory(activeCategory === 'PROMO' ? null : 'PROMO')}
+          className={`cursor-pointer rounded-[2rem] border-2 p-6 transition-all duration-300 relative bg-white select-none ${
+            activeCategory === 'PROMO'
+              ? 'border-brand-blue ring-4 ring-brand-blue/10 shadow-lg'
+              : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              {promotions.length > 0 ? (
+                <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-bold">
+                  Ahorro TOP
+                </span>
+              ) : (
+                <span className="bg-ui-bg text-ui-muted border border-ui-border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  Sin promociones
+                </span>
+              )}
+              <h3 className="text-xl font-black text-ui-text mt-3">Promociones</h3>
+              <p className="text-xs text-ui-muted font-bold mt-1">Ahorra en grande con combos y ofertas especiales.</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange font-black text-lg">
+              🎁
+            </div>
+          </div>
+
+          {order.requestedCount === 'PROMO' && order.appliedPromo && (
+            <div className="mt-4 flex items-center justify-between border-t border-ui-border/50 pt-3">
+              <span className="text-[10px] font-black uppercase text-brand-blue tracking-widest">
+                Seleccionado:
+              </span>
+              <span className="text-xs font-black text-ui-text truncate max-w-[180px]">
+                {order.appliedPromo.name}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${activeCategory === 'NORMAL' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">
+          <div className="pt-6 border-t border-ui-border mt-6">
+            <h3 className="text-lg font-black uppercase text-brand-blue tracking-widest mb-4">
+              ¿Cuántos platos deseas?
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO').map((opt) => (
+                <OptionCard
+                  key={opt.id}
+                  title={opt.label}
+                  price={opt.price ? `Q${opt.price}` : 'Especial'}
+                  description={opt.description}
+                  selected={order.requestedCount === opt.value}
+                  illustration={opt.illustration}
+                  badge={opt.badge}
+                  onClick={() => handleSelectSize(opt.value)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${activeCategory === 'PROMO' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">
+          <div className="pt-6 border-t border-ui-border mt-6 space-y-4">
+            <h3 className="text-lg font-black uppercase text-brand-blue tracking-widest">
+              Promociones Disponibles
+            </h3>
+            {loading ? (
+              <div className="p-8 text-center text-ui-muted font-bold">
+                Cargando promociones...
+              </div>
+            ) : promotions.length === 0 ? (
+              <div className="p-8 text-center rounded-[2rem] border-2 border-dashed border-ui-border text-ui-muted font-bold bg-white">
+                No hay promociones activas en este momento.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {promotions.map((promo) => {
+                  const isSelected = order.appliedPromo?.id === promo.id
+
+                  return (
+                    <div
+                      key={promo.id}
+                      onClick={() => handleSelectPromo(promo)}
+                      className={`cursor-pointer rounded-2xl border-2 p-5 bg-white transition-all duration-300 relative ${
+                        isSelected
+                          ? 'border-brand-blue ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-lg'
+                          : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                          isSelected
+                            ? 'bg-brand-blue text-white scale-100'
+                            : 'bg-ui-bg text-transparent border border-ui-border'
+                        }`}
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+
+                      <div>
+                        <span className="bg-brand-orange text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          {promo.requestedCount || promo.plates?.length || 2}{' '}
+                          Platos
+                        </span>
+                        <h4 className="font-black text-lg text-ui-text mt-2 leading-tight">
+                          {promo.name}
+                        </h4>
+                        {promo.description && (
+                          <p className="text-xs text-ui-muted font-medium mt-1 leading-normal">
+                            {promo.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {promo.plates && promo.plates.length > 0 && (
+                        <div className="mt-4 space-y-2.5">
+                          {promo.plates.map((plate, pIdx) => {
+                            const sauceOpt = OPTIONS_SAUCE.find(
+                              (o) => o.value === plate.sauce
+                            )
+                            const proteinOpt = OPTIONS_PROTEIN.find(
+                              (o) => o.value === plate.protein
+                            )
+                            const sauceL = sauceOpt?.label || plate.sauce
+                            const proteinL = proteinOpt?.label || plate.protein
+                            const complementL = OPTIONS_COMPLEMENT.find(
+                              (o) => o.value === plate.complement
+                            )?.label || plate.complement
+                            const basesL = formatBaseRecipe(plate.baseRecipe)
+
+                            return (
+                              <div key={pIdx} className="bg-ui-bg/40 border border-ui-border/50 rounded-2xl p-3 space-y-2 select-none">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex -space-x-1">
+                                    {sauceOpt?.illustration && (
+                                      <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
+                                        {sauceOpt.illustration}
+                                      </div>
+                                    )}
+                                    {proteinOpt?.illustration && (
+                                      <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
+                                        {proteinOpt.illustration}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-black text-brand-blue uppercase tracking-widest">
+                                    Plato {pIdx + 1}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] font-bold text-ui-text/80 leading-normal pl-1 space-y-0.5">
+                                  <div>
+                                    <span className="capitalize">{sauceL?.toLowerCase()}</span>
+                                    <span className="text-ui-muted mx-1.5">•</span>
+                                    <span className="capitalize">{proteinL?.toLowerCase()}</span>
+                                    <span className="text-ui-muted mx-1.5">•</span>
+                                    <span className="capitalize">{complementL?.toLowerCase()}</span>
+                                  </div>
+                                  {basesL && (
+                                    <div className="text-[10px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
+                                      Base: {basesL.toLowerCase()}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      <div className="mt-4 pt-3 border-t border-ui-border flex justify-between items-center">
+                        <span className="text-[9px] font-black uppercase text-ui-muted tracking-widest">
+                          Precio especial
+                        </span>
+                        <span className="text-xl font-black text-brand-blue">
+                          Q{Number(promo.promoPrice || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="pt-8 flex justify-between items-center border-t border-ui-border mt-4">
         <button

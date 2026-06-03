@@ -69,5 +69,9 @@ export const getFinancesSummary = () => api.get(`/finances/summary?t=${Date.now(
 export const sendOtp = (phone) => api.post('/auth/send-otp', { phone })
 export const verifyOtp = (phone, code) => api.post('/auth/verify-otp', { phone, code })
 
+export const getPortions = () => api.get(`/inventory/portions?t=${Date.now()}`)
+export const updatePortion = (name, payload) => api.put(`/inventory/portions/${encodeURIComponent(name)}`, payload)
+export const createPackagingProduct = (name) => api.post('/inventory/packaging', { name })
+
 export default api
 

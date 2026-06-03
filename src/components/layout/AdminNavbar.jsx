@@ -38,6 +38,7 @@ const navigationSections = [
     items: [
       { id: 'entries', label: 'Entradas', icon: PackagePlus },
       { id: 'inventory', label: 'Stock', icon: Box },
+      { id: 'recipe_book', label: 'Recetario', icon: ClipboardList },
       { id: 'schedule', label: 'Horario', icon: Clock },
     ],
   },
