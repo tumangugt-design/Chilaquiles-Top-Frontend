@@ -894,7 +894,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     })
   }
 
-  const selectedInventoryProduct = INVENTORY_PRODUCT_MAP[itemForm.name]
+  const dynamicInventoryOptions = inventory.map((item) => {
+    const catalogItem = INVENTORY_PRODUCT_MAP[item.name]
+    const label = catalogItem?.label || item.name.charAt(0).toUpperCase() + item.name.slice(1)
+    return {
+      value: item.name,
+      label: label,
+      category: item.category || 'Otros',
+      unit: item.unit,
+    }
+  })
+
+  const selectedInventoryProduct = inventory.find(i => i.name === itemForm.name) || INVENTORY_PRODUCT_MAP[itemForm.name]
   const entryStoredAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, selectedInventoryProduct)
   const entryTotalPrice = itemForm.price === '' ? null : Number(itemForm.price)
 
@@ -2454,13 +2465,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       <h4 className="text-xs font-black uppercase text-brand-blue tracking-widest">
                         Desglose de Insumos - Plato {activeCalcPlateIndex + 1}
                       </h4>
-                      <button
-                        type="button"
-                        onClick={() => setPackagingModalOpen(true)}
-                        className="text-[9px] font-black uppercase text-brand-orange hover:underline"
-                      >
-                        + Crear Producto
-                      </button>
                     </div>
                     <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                       {getSelectedRecipeRows(calcPlate).map((item) => {
@@ -2917,13 +2921,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <h2 className="text-3xl font-black tracking-tight text-ui-text">Recetario</h2>
               <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Configura las porciones e insumos consumidos por plato y su costo.</p>
             </div>
-            <Button
-              onClick={() => setPackagingModalOpen(true)}
-              className="!py-3 flex items-center gap-2 self-start sm:self-auto"
-            >
-              <PlusCircle size={18} />
-              Crear Producto (Empaque)
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
