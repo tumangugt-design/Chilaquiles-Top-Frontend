@@ -1049,6 +1049,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const getDivorciadosPortion = () => {
+    const configRoja = getProductPortionConfig('salsa roja')
+    const configVerde = getProductPortionConfig('salsa verde')
+    return {
+      name: 'divorciados',
+      usedPerPlate: (configRoja.usedPerPlate / 2) + (configVerde.usedPerPlate / 2),
+      unit: 'ml',
+      price: (configRoja.price / 2) + (configVerde.price / 2),
+      isVirtual: true
+    }
+  }
+
   const getProductCost = (name) => {
     const config = getProductPortionConfig(name)
     return config.price
@@ -2962,42 +2974,55 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            {portions
-              .filter((portion) => {
-                if (recipeCategoryFilter === 'ALL') return true
-                const category = getProductPortionConfig(portion.name).category
-                return category === recipeCategoryFilter
-              })
-              .map((portion) => {
-                const config = getProductPortionConfig(portion.name)
-                const product = inventory.find(i => i.name === portion.name)
-                const label = config.label
-                const category = config.category
-                const sim = simulatedCosts[portion.name] || {}
-                const lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
-                
-                return (
-                  <PortionRow
-                    key={portion.name}
-                    portion={portion}
-                    label={label}
-                    category={category}
-                    lastPurchaseText={lastPurchaseText}
-                    sim={sim}
-                    product={product}
-                    onSave={async (qty, unit, price) => {
-                      try {
-                        await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
-                        toast.success(`Porción de ${label} actualizada exitosamente`)
-                      loadData()
-                    } catch (err) {
-                      toast.error('No se pudo actualizar la porción')
-                    }
-                  }}
-                  onCalculateAuto={(qty, unit) => handleCalculateAutoPortionPrice(portion.name, qty, unit)}
-                />
-              )
-            })}
+            {(() => {
+              const list = [...portions]
+              if (portions.length > 0 && !list.some(p => p.name === 'divorciados')) {
+                list.push(getDivorciadosPortion())
+              }
+              return list
+                .filter((portion) => {
+                  if (recipeCategoryFilter === 'ALL') return true
+                  const category = portion.isVirtual ? 'Salsas' : getProductPortionConfig(portion.name).category
+                  return category === recipeCategoryFilter
+                })
+                .map((portion) => {
+                  const config = getProductPortionConfig(portion.name)
+                  const product = inventory.find(i => i.name === portion.name)
+                  const label = portion.isVirtual ? 'Salsa Divorciados' : config.label
+                  const category = portion.isVirtual ? 'Salsas' : config.category
+                  
+                  let lastPurchaseText = ''
+                  if (portion.isVirtual) {
+                    lastPurchaseText = 'Cálculo automático (50% Roja + 50% Verde)'
+                  } else {
+                    const sim = simulatedCosts[portion.name] || {}
+                    lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
+                  }
+                  
+                  return (
+                    <PortionRow
+                      key={portion.name}
+                      portion={portion}
+                      label={label}
+                      category={category}
+                      lastPurchaseText={lastPurchaseText}
+                      sim={simulatedCosts[portion.name] || {}}
+                      product={product}
+                      isReadOnly={portion.isVirtual}
+                      onSave={async (qty, unit, price) => {
+                        try {
+                          await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
+                          toast.success(`Porción de ${label} actualizada exitosamente`)
+                          loadData()
+                        } catch (err) {
+                          toast.error('No se pudo actualizar la porción')
+                        }
+                      }}
+                      onCalculateAuto={(qty, unit) => handleCalculateAutoPortionPrice(portion.name, qty, unit)}
+                    />
+                  )
+                })
+            })()}
           </div>
         </div>
       )}
@@ -3160,7 +3185,7 @@ const getIngredientSvg = (name) => {
   )
 }
 
-const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, onSave, onCalculateAuto }) => {
+const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, onSave, onCalculateAuto, isReadOnly }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editQty, setEditQty] = useState(portion.usedPerPlate)
   const [editUnit, setEditUnit] = useState(portion.unit)
@@ -3303,7 +3328,11 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
         </div>
 
         <div className="flex items-center gap-2 shrink-0 md:self-center">
-          {isEditing ? (
+          {isReadOnly ? (
+            <span className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-xl">
+              Autocalculado
+            </span>
+          ) : isEditing ? (
             <>
               <button
                 type="button"
