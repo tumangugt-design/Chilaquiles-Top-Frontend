@@ -70,7 +70,8 @@ import {
 } from '../components/illustrations/IngredientIllustrations.jsx'
 import {
   IllustrationRoja,
-  IllustrationVerde
+  IllustrationVerde,
+  IllustrationDivorciados
 } from '../components/illustrations/SauceIllustrations.jsx'
 
 const emptyItem = { name: '', amount: '', unit: '', price: '' }
@@ -3145,6 +3146,7 @@ const getIngredientSvg = (name) => {
   if (n.includes('cebolla')) return <IllustrationCebolla />
   if (n.includes('cilantro')) return <IllustrationCilantro />
   if (n.includes('crema')) return <IllustrationCrema />
+  if (n.includes('divorciados')) return <IllustrationDivorciados />
   if (n.includes('roja')) return <IllustrationRoja />
   if (n.includes('verde')) return <IllustrationVerde />
   
