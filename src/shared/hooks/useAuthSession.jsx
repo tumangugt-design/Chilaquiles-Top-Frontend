@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { authStaffLogin, getSession, setStaffToken, clearStaffToken, getStaffToken } from '../config/api.js'
+import { toast } from 'react-hot-toast'
 
 export const useAuthSession = (panelRole) => {
   const [session, setSession] = useState(null)
@@ -31,7 +32,7 @@ export const useAuthSession = (panelRole) => {
         clearStaffToken()
         setSession(null)
         setError(message)
-        if (showUnauthorizedAlert) window.alert(message)
+        if (showUnauthorizedAlert) toast.error(message)
         return null
       }
 

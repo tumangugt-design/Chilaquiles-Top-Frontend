@@ -33,6 +33,7 @@ import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, OPTIONS_BASE_RECIPE, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import toast from 'react-hot-toast'
+import Swal from 'sweetalert2'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import InternalOrder from './InternalOrder.jsx'
 import { 
@@ -860,7 +861,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const removeStaffUser = async (user) => {
-    if (!window.confirm(`¿Eliminar a ${user.name || user.username}?`)) return
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Deseas eliminar a ${user.name || user.username}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!result.isConfirmed) return
     try {
       await deleteUser(user._id)
       toast.success('Usuario eliminado')
@@ -1214,8 +1225,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const handlePromoImageChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('La imagen es demasiado grande. Máximo 2MB.')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('La imagen supera el límite de tamaño de 10MB. Por favor sube una más pequeña.')
       return
     }
     const reader = new FileReader()
@@ -1444,7 +1455,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const handleDeleteCoupon = async (code) => {
-    if (!window.confirm(`¿Seguro que deseas eliminar el cupón ${code}?`)) return
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Seguro que deseas eliminar el cupón ${code}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!result.isConfirmed) return
     try {
       const nextCoupons = coupons.filter(c => c.code !== code)
       const res = await updateCoupons(nextCoupons)

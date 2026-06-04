@@ -142,7 +142,7 @@ const SummaryPage = ({ order, updateOrder, onNext, onBack, onEdit, onAddAnother 
       </div>
 
       {/* Sección de Cupón de Descuento */}
-      {isComplete && (
+      {isComplete && !order.isPromo && (
         <div className="bg-ui-card border border-ui-border rounded-2xl p-5 mt-6 shadow-sm">
           <h3 className="font-bold text-ui-text text-sm mb-3 uppercase tracking-wider">¿Tienes un código de descuento?</h3>
           {order.couponCode ? (

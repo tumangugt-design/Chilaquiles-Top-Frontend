@@ -147,7 +147,22 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {OPTIONS_BASE_RECIPE.map((opt) => {
+                    {OPTIONS_BASE_RECIPE.filter((opt) => {
+                      if (!order?.appliedPromo) return true
+                      
+                      // For modern promotions with a plates array
+                      if (Array.isArray(order.appliedPromo.plates) && order.appliedPromo.plates[pIdx]) {
+                        const promoPlate = order.appliedPromo.plates[pIdx]
+                        return promoPlate.baseRecipe?.[opt.id] === true
+                      }
+                      
+                      // For legacy/single recipe promotions
+                      if (order.appliedPromo.recipe?.baseRecipe) {
+                        return order.appliedPromo.recipe.baseRecipe?.[opt.id] === true
+                      }
+                      
+                      return true
+                    }).map((opt) => {
                       const isSelected = plateItem.baseRecipe?.[opt.id] !== false
                       return (
                         <div
