@@ -73,5 +73,9 @@ export const getPortions = () => api.get(`/inventory/portions?t=${Date.now()}`)
 export const updatePortion = (name, payload) => api.put(`/inventory/portions/${encodeURIComponent(name)}`, payload)
 export const createPackagingProduct = (payload) => api.post('/inventory/packaging', payload)
 
+export const getCoupons = () => api.get(`/settings/coupons?t=${Date.now()}`)
+export const updateCoupons = (payload) => api.patch('/settings/coupons', payload)
+export const validateCoupon = (code) => api.post('/settings/validate-coupon', { code })
+
 export default api
 

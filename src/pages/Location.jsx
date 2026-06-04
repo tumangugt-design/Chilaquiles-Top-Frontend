@@ -330,7 +330,7 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
             <p className="text-ui-muted leading-relaxed text-sm sm:text-base px-2">
               Ingresa tu número y te enviaremos un código para continuar con tu pedido.
             </p>
-            {availableCount === 0 && (
+            {availableCount === 0 && hours.isCurrentlyOpen && (
               <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-600">
                 No hay platos disponibles por el momento. Vuelve en otro momento.
               </div>
@@ -438,52 +438,192 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
 
     {isMenuOpen && (
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-3 backdrop-blur-md sm:p-6"
         onClick={() => setIsMenuOpen(false)}
       >
         <div
-          className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl bg-ui-card p-4 sm:p-6 shadow-2xl border border-ui-border flex flex-col items-center gap-6"
+          className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-[2.5rem] bg-[#1e130b] p-3 sm:p-5 shadow-2xl border border-amber-950/40 flex flex-col gap-4 animate-scale-up"
           onClick={(event) => event.stopPropagation()}
         >
           <button
             type="button"
             onClick={() => setIsMenuOpen(false)}
-            className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ui-bg text-2xl font-black text-ui-text shadow-lg transition hover:scale-105"
+            className="absolute right-6 top-6 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-2xl font-black text-amber-950 shadow-lg transition hover:scale-105 hover:bg-white"
             aria-label="Cerrar menú"
           >
             ×
           </button>
 
-          <h3 className="text-xl font-extrabold text-ui-text border-b border-ui-border pb-2 w-full text-center mt-2">
-            📖 Menú y Promociones
-          </h3>
+          {/* Book Spine Fold Divider (Desktop only) */}
+          <div className="absolute inset-y-0 left-1/2 w-1.5 bg-gradient-to-r from-black/15 via-black/40 to-black/15 -ml-[3px] hidden md:block z-20 pointer-events-none rounded-full" />
 
-          <div className="w-full space-y-6">
-            <div className="space-y-2">
-              <span className="text-xs font-black uppercase text-ui-muted tracking-widest block text-center">Menú Principal</span>
-              <img
-                src={menuImage}
-                alt="Menú Chilaquiles TOP"
-                className="w-full h-auto rounded-2xl object-contain shadow-sm border border-ui-border"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#fbf9f4] rounded-[2rem] p-5 sm:p-8 relative overflow-hidden select-none border-4 border-amber-950/30">
+            {/* Elegant Background Corner Ornaments or Thin Inner Borders */}
+            <div className="absolute inset-3 border border-amber-900/10 rounded-[1.6rem] pointer-events-none" />
+            
+            {/* LEFT PAGE: BRANDING & PRICES */}
+            <div className="space-y-6 relative z-10 pr-2 md:border-r border-dashed border-amber-900/20 md:pr-6">
+              <div className="text-center space-y-2 mt-4">
+                <span className="text-[10px] font-black uppercase text-amber-800 tracking-[0.25em]">Est. 2026</span>
+                <div className="inline-block border-y-2 border-amber-900/40 py-1.5 px-4 w-full">
+                  <h3 className="font-extrabold text-2xl sm:text-3xl tracking-[0.12em] text-amber-950 uppercase font-serif">
+                    CHILAQUILES TOP
+                  </h3>
+                </div>
+                <p className="text-[10px] font-black tracking-widest text-amber-800 uppercase italic">BEST IN TOWN</p>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs sm:text-sm text-justify leading-relaxed text-amber-950/80 font-sans font-medium italic px-2">
+                  “Los chilaquiles son una receta tradicional mexicana preparada a base de crujientes totopos (tortillas fritas en porciones perfectas) bañados en salsas calientes de sabor único, espolvoreados con queso y acompañados de tu proteína favorita.”
+                </p>
+
+                {/* Best in town Seal & 100% Auténtico */}
+                <div className="flex items-center justify-center gap-4 bg-amber-900/5 py-4 px-5 rounded-2xl border border-amber-900/10">
+                  <svg className="w-16 h-16 shrink-0 filter drop-shadow-md" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#78350f" />
+                    <circle cx="50" cy="50" r="41" fill="none" stroke="#fbf9f4" strokeWidth="1" strokeDasharray="3,3" />
+                    <path id="textPathMenu" d="M 16,50 A 34,34 0 1,1 84,50 A 34,34 0 1,1 16,50" fill="none" />
+                    <text fill="#fbf9f4" fontSize="6.8" fontWeight="900" letterSpacing="0.8">
+                      <textPath href="#textPathMenu" startOffset="50%" textAnchor="middle">
+                        * BEST IN TOWN * CHILAQUILES
+                      </textPath>
+                    </text>
+                    <text x="50" y="56" fill="#fbf9f4" fontSize="13" fontWeight="900" textAnchor="middle" fontFamily="sans-serif">TOP</text>
+                  </svg>
+                  <div className="text-left">
+                    <p className="text-xs font-black uppercase tracking-wider text-amber-950">Sabor 100% Auténtico</p>
+                    <p className="text-[10px] font-medium text-amber-950/70 mt-0.5 leading-snug">Elaborados diariamente con ingredientes frescos seleccionados en cocina.</p>
+                  </div>
+                </div>
+
+                {/* Pricing layout */}
+                <div className="space-y-2.5 pt-2">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800 text-center">Nuestros Precios</h4>
+                  <div className="space-y-2">
+                    {[
+                      { label: '1 Plato Individual', price: 'Q50', desc: 'Porción perfecta para iniciar tu antojo.' },
+                      { label: '2 Platos en Pareja', price: 'Q90', desc: 'La mejor opción para compartir un momento.' },
+                      { label: '3 Platos Ahorro TOP', price: 'Q120', desc: 'Ideal para grupos grandes o mucha hambre.' }
+                    ].map((p, idx) => (
+                      <div key={idx} className="flex justify-between items-center bg-[#f7f4ea]/80 p-3 rounded-xl border border-amber-900/10 hover:bg-[#f7f4ea] transition-all">
+                        <div className="text-left pr-4">
+                          <p className="text-xs font-black text-amber-950 uppercase">{p.label}</p>
+                          <p className="text-[10px] text-amber-900/70 font-semibold leading-tight mt-0.5">{p.desc}</p>
+                        </div>
+                        <span className="text-lg sm:text-xl font-black text-[#0c2461] tracking-tight">{p.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {promotions.filter(p => p.imageUrl).map((promo) => (
-              <button
-                key={promo.id}
-                type="button"
-                onClick={() => applyPromotion(promo)}
-                className="block w-full border-t border-ui-border pt-4 text-left transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-ui-card rounded-2xl"
-                aria-label={`Pedir promoción ${promo.name || ''}`.trim()}
-              >
-                <img
-                  src={promo.imageUrl}
-                  alt={promo.name || 'Promoción Chilaquiles TOP'}
-                  className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
-                />
-              </button>
-            ))}
+            {/* RIGHT PAGE: THE PLATE AND CUSTOMIZATIONS */}
+            <div className="space-y-6 relative z-10 pl-2 md:pl-6 pt-4 md:pt-0">
+              <div className="text-center space-y-2 mt-2">
+                <span className="text-[10px] font-black uppercase text-amber-800 tracking-[0.25em]">Personalización</span>
+                <h4 className="font-serif font-black text-lg text-amber-950 uppercase tracking-widest border-b border-amber-900/20 pb-2">
+                  Arma Tu Plato
+                </h4>
+              </div>
+
+              {/* Stylized SVG Plate of Chilaquiles */}
+              <div className="flex justify-center py-1">
+                <div className="relative p-2 bg-[#78350f]/5 rounded-3xl border border-[#78350f]/10 flex items-center justify-center shrink-0 w-36 h-28">
+                  <svg className="w-full h-full shrink-0" viewBox="0 0 120 100" fill="none">
+                    <ellipse cx="60" cy="65" rx="50" ry="25" fill="#2d3748" />
+                    <ellipse cx="60" cy="63" rx="46" ry="22" fill="#fbf9f4" stroke="#78350f" strokeWidth="2" />
+                    {/* Totopos */}
+                    <polygon points="35,60 55,45 50,65" fill="#ecc94b" stroke="#d69e2e" strokeWidth="1" />
+                    <polygon points="50,60 70,40 65,65" fill="#ecc94b" stroke="#d69e2e" strokeWidth="1" />
+                    <polygon points="65,60 85,45 80,65" fill="#ecc94b" stroke="#d69e2e" strokeWidth="1" />
+                    <polygon points="42,65 62,50 58,70" fill="#ecc94b" stroke="#d69e2e" strokeWidth="1" />
+                    <polygon points="58,65 78,50 74,70" fill="#ecc94b" stroke="#d69e2e" strokeWidth="1" />
+                    {/* Salsa */}
+                    <path d="M 40,55 Q 50,48 60,52 T 80,50 Q 82,58 75,62 T 45,60 Z" fill="#e53e3e" opacity="0.85" />
+                    {/* Pollo */}
+                    <circle cx="50" cy="58" r="2.5" fill="#f7fafc" />
+                    <circle cx="62" cy="56" r="2" fill="#f7fafc" />
+                    <circle cx="70" cy="59" r="2.5" fill="#f7fafc" />
+                    {/* Queso/Cilantro */}
+                    <path d="M 42,54 L 46,56 M 58,52 L 60,55 M 68,51 L 70,54" stroke="#ecc94b" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M 45,58 L 47,59 M 55,59 L 56,61 M 65,58 L 67,60" stroke="#38a169" strokeWidth="1.5" strokeLinecap="round" />
+                    {/* Crema */}
+                    <path d="M 38,62 Q 55,56 78,59" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    {
+                      num: '1',
+                      title: 'Salsa',
+                      items: 'Salsa Roja (tomate no picante), Salsa Verde (miltomate no picante) o Divorciados (mitad y mitad).'
+                    },
+                    {
+                      num: '2',
+                      title: 'Proteína',
+                      items: 'Steak de res asado en tiras, pechuga de pollo deshebrada o chorizo argentino aromático.'
+                    },
+                    {
+                      num: '3',
+                      title: 'Complemento',
+                      items: 'Aguacate hass, queso mozzarella extra o cebolla caramelizada cocida a fuego lento.'
+                    }
+                  ].map((col, idx) => (
+                    <div key={idx} className="bg-amber-900/5 rounded-xl p-3.5 border border-amber-900/10 text-left space-y-1">
+                      <div className="flex items-center gap-2 border-b border-amber-900/10 pb-1.5">
+                        <span className="w-5 h-5 rounded-full bg-[#0c2461] text-white text-[10px] font-black flex items-center justify-center font-sans">{col.num}</span>
+                        <h4 className="font-black text-xs uppercase tracking-wider text-amber-950">{col.title}</h4>
+                      </div>
+                      <p className="text-[11px] text-amber-900/90 leading-normal font-sans font-medium">{col.items}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Note about CCC */}
+                <div className="bg-[#f7f4ea] border border-amber-900/15 rounded-xl p-3.5 text-center mt-2 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#0c2461]">
+                    🥛 CCC Incluido por defecto
+                  </p>
+                  <p className="text-[10px] text-amber-950/80 font-medium leading-normal mt-0.5">
+                    Todos nuestros platos incluyen Crema, Cebolla blanca cruda y Cilantro fresco. Podrás desmarcar cualquiera de ellos en el paso de "Receta Base".
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
+          
+          {/* Active promotions list at the bottom of the booklet */}
+          {promotions.filter(p => p.imageUrl).length > 0 && (
+            <div className="px-3 sm:px-5 pb-3">
+              <span className="text-[10px] font-black uppercase text-amber-200/80 tracking-widest block text-center mb-3">🎁 Promociones Especiales</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-1">
+                {promotions.filter(p => p.imageUrl).map((promo) => (
+                  <button
+                    key={promo.id}
+                    type="button"
+                    onClick={() => applyPromotion(promo)}
+                    className="block w-full text-left transition hover:scale-[1.02] focus:outline-none rounded-xl overflow-hidden shadow-md border border-amber-950/40 relative group bg-black"
+                    aria-label={`Pedir promoción ${promo.name || ''}`.trim()}
+                  >
+                    <img
+                      src={promo.imageUrl}
+                      alt={promo.name || 'Promoción Chilaquiles TOP'}
+                      className="w-full h-24 object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
+                      <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest leading-none">Pedir ahora</p>
+                      <h4 className="text-white text-xs font-black uppercase truncate mt-1 leading-tight">{promo.name}</h4>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )}

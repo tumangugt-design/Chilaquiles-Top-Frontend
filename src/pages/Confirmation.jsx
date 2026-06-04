@@ -50,11 +50,21 @@ const ConfirmationPage = ({ order, onReset }) => {
         </div>
 
         <div className="bg-brand-blue/5 rounded-2xl p-4 text-center border border-brand-blue/10">
-          <p className="text-xs font-black text-brand-blue uppercase tracking-widest">Entrega estimada: 20-30 min</p>
+          <p className="text-xs font-black text-brand-blue uppercase tracking-widest">tiempo de entrega estimado: 15-45 minutos</p>
         </div>
       </div>
 
       <div className="space-y-4">
+        <Button
+          fullWidth
+          onClick={() => {
+            onReset()
+            window.location.href = '/'
+          }}
+          className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-black py-4 text-lg rounded-2xl shadow-xl shadow-green-500/30 border-0"
+        >
+          Continuar
+        </Button>
         <Button fullWidth onClick={onReset} variant="secondary" className="border-2 border-ui-border">
           Volver al inicio
         </Button>

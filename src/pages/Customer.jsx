@@ -186,8 +186,8 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
       if (!isInternal && !isInsideZona6VillaNueva(location)) {
         const nextData = { ...localData, location: null }
         updateCustomer(nextData)
-        setCoverageError('Rango fuera de cobertura. Solo atendemos Zona 6 de Villa Nueva.')
-        toast.error('Cobertura fuera de rango. Solo atendemos Zona 6 de Villa Nueva.', { id: 'gps-location' })
+        setCoverageError('Rango fuera de cobertura. Solo atendemos algunas zonas de Villa Nueva y alrededores.')
+        toast.error('Cobertura fuera de rango. Solo atendemos algunas zonas de Villa Nueva y alrededores.', { id: 'gps-location' })
         setMapQuery(CUSTOMER_COVERAGE_QUERY)
         setLoadingLoc(false)
         return
@@ -306,6 +306,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         sauceTemperature: order.sauceTemperature,
         items: itemsToSend,
         appliedPromo: order.appliedPromo ? { id: order.appliedPromo.id } : null,
+        couponCode: order.couponCode || null,
         ...(isInternal ? { isInternal: true } : {}),
       })
 
@@ -429,7 +430,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
                   {coverageError}
                 </div>
               )}
-              <p className="text-xs font-bold text-ui-muted">La ubicación se toma únicamente desde el GPS actual del cliente. Cobertura válida: Zona 6 de Villa Nueva.</p>
+              <p className="text-xs font-bold text-ui-muted">La ubicación se toma únicamente desde el GPS actual del cliente. Cobertura válida: algunas zonas de Villa Nueva y alrededores.</p>
             </div>
           )}
         </div>

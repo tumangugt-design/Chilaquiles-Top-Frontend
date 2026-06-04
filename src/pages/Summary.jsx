@@ -1,7 +1,8 @@
-
-
+import { useState } from 'react'
 import { OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, formatBaseRecipe, getOptionLabel } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
+import { validateCoupon } from '../shared/config/api.js'
+import toast from 'react-hot-toast'
 
 const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
   const sauceLabel = getOptionLabel(plate.sauce, OPTIONS_SAUCE)
@@ -75,12 +76,33 @@ const PlateDetails = ({ plate, onEdit, title, showEdit = true, idx }) => {
   )
 }
 
-const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
+const SummaryPage = ({ order, updateOrder, onNext, onBack, onEdit, onAddAnother }) => {
+  const [couponInput, setCouponInput] = useState('')
+  const [isValidating, setIsValidating] = useState(false)
 
   const allPlates = [...order.cart, order.currentPlate]
   const platesCount = allPlates.length
   const requestedCount = Number(order.appliedPromo?.requestedCount || order.requestedCount || 1)
   const isComplete = platesCount >= requestedCount
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    setIsValidating(true)
+    try {
+      const res = await validateCoupon(couponInput.trim())
+      const coupon = res.data
+      updateOrder({
+        couponCode: coupon.code,
+        couponDiscountPercent: coupon.discountPercent,
+      })
+      toast.success(`Cupón ${coupon.code} aplicado con éxito (-${coupon.discountPercent}%)`)
+      setCouponInput('')
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Código de cupón inválido.')
+    } finally {
+      setIsValidating(false)
+    }
+  }
 
   const getAddAnotherLabel = () => {
     if (platesCount === 1) return 'Personalizar Segundo Plato'
@@ -112,12 +134,52 @@ const SummaryPage = ({ order, onNext, onBack, onEdit, onAddAnother }) => {
               plate={plate}
               title={`Plato ${idx + 1}`}
               onEdit={isCurrent ? onEdit : undefined}
-              showEdit={isCurrent}
+              showEdit={isCurrent && !order.isPromo}
               idx={idx}
             />
           )
         })}
       </div>
+
+      {/* Sección de Cupón de Descuento */}
+      {isComplete && (
+        <div className="bg-ui-card border border-ui-border rounded-2xl p-5 mt-6 shadow-sm">
+          <h3 className="font-bold text-ui-text text-sm mb-3 uppercase tracking-wider">¿Tienes un código de descuento?</h3>
+          {order.couponCode ? (
+            <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+              <div className="flex items-center space-x-2">
+                <span className="bg-green-500 text-white font-black text-[10px] uppercase px-2 py-0.5 rounded-md">Activo</span>
+                <span className="text-green-700 font-bold text-sm">
+                  {order.couponCode} ({order.couponDiscountPercent}% de descuento)
+                </span>
+              </div>
+              <button
+                onClick={() => updateOrder({ couponCode: null, couponDiscountPercent: 0 })}
+                className="text-red-500 hover:text-red-700 font-black text-xs uppercase transition-colors"
+              >
+                Quitar
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="Ej: IAN123TOP"
+                className="flex-1 p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text font-black uppercase placeholder:normal-case outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all"
+              />
+              <Button
+                onClick={handleApplyCoupon}
+                disabled={isValidating || !couponInput.trim()}
+                className="px-6 py-3.5 font-black rounded-xl"
+              >
+                {isValidating ? 'Validando...' : 'Aplicar'}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {}
       <div className="mt-6">

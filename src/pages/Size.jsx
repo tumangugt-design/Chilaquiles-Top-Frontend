@@ -189,101 +189,105 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
     }
   }
 
+  const [activeTab, setActiveTab] = useState(() => {
+    if (order.requestedCount === 'PROMO') return 'PROMO'
+    return 'NORMAL'
+  })
+
+  const touchStartX = useRef(0)
+  const touchEndX = useRef(0)
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX
+    touchEndX.current = e.targetTouches[0].clientX
+  }
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX
+  }
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current
+    if (diff > 75) {
+      if (activeTab === 'NORMAL') {
+        setActiveTab('PROMO')
+        toast.dismiss()
+        toast('Deslizado a Promociones 🎁', { icon: '✨', duration: 1500 })
+      }
+    } else if (diff < -75) {
+      if (activeTab === 'PROMO') {
+        setActiveTab('NORMAL')
+        toast.dismiss()
+        toast('Deslizado a Menú Normal 🍽️', { icon: '✨', duration: 1500 })
+      }
+    }
+  }
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+  }
+
   const isNextDisabled =
     !order.requestedCount ||
     (order.requestedCount === 'PROMO' && !order.appliedPromo)
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fade-in">
-      <div className="max-w-xl">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 sm:mb-3">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in select-none">
+      <div className="text-center max-w-xl mx-auto">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
           Escoge tu menú
         </h2>
-        <p className="text-base sm:text-lg text-gray-500">
-          Selecciona una de nuestras opciones de menú clásico o descubre nuestras promociones.
+        <p className="text-sm sm:text-base text-gray-500">
+          Desliza o toca para cambiar entre nuestro menú clásico y promociones.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div
-          onClick={() => setActiveCategory(activeCategory === 'NORMAL' ? null : 'NORMAL')}
-          className={`cursor-pointer rounded-[2rem] border-2 p-6 transition-all duration-300 relative bg-white select-none ${
-            activeCategory === 'NORMAL'
-              ? 'border-brand-blue ring-4 ring-brand-blue/10 shadow-lg'
-              : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+      {/* Ribbon Segments Control */}
+      <div className="flex bg-ui-bg p-1.5 rounded-2xl border border-ui-border max-w-md mx-auto relative select-none">
+        <button
+          type="button"
+          onClick={() => handleTabChange('NORMAL')}
+          className={`flex-1 py-3 text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all duration-300 ${
+            activeTab === 'NORMAL'
+              ? 'bg-[#0c2461] text-white shadow-md'
+              : 'text-ui-muted hover:text-ui-text'
           }`}
         >
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                Chilaquiles Clásicos
-              </span>
-              <h3 className="text-xl font-black text-ui-text mt-3">Menú Normal</h3>
-              <p className="text-xs text-ui-muted font-bold mt-1">Arma tu plato individual, en pareja o para compartir.</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-black text-lg">
-              🍽️
-            </div>
-          </div>
-          
-          {['1', '2', '3', 1, 2, 3].includes(order.requestedCount) && (
-            <div className="mt-4 flex items-center justify-between border-t border-ui-border/50 pt-3">
-              <span className="text-[10px] font-black uppercase text-brand-orange tracking-widest">
-                Seleccionado:
-              </span>
-              <span className="text-xs font-black text-ui-text">
-                {order.requestedCount} {order.requestedCount == 1 ? 'Plato' : 'Platos'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div
-          onClick={() => setActiveCategory(activeCategory === 'PROMO' ? null : 'PROMO')}
-          className={`cursor-pointer rounded-[2rem] border-2 p-6 transition-all duration-300 relative bg-white select-none ${
-            activeCategory === 'PROMO'
-              ? 'border-brand-blue ring-4 ring-brand-blue/10 shadow-lg'
-              : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+          Menú Normal
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTabChange('PROMO')}
+          className={`flex-1 py-3 text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 ${
+            activeTab === 'PROMO'
+              ? 'bg-[#0c2461] text-white shadow-md'
+              : 'text-ui-muted hover:text-ui-text'
           }`}
         >
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              {promotions.length > 0 ? (
-                <span className="bg-brand-orange/10 text-brand-orange text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider font-bold">
-                  Ahorro TOP
-                </span>
-              ) : (
-                <span className="bg-ui-bg text-ui-muted border border-ui-border text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  Sin promociones
-                </span>
-              )}
-              <h3 className="text-xl font-black text-ui-text mt-3">Promociones</h3>
-              <p className="text-xs text-ui-muted font-bold mt-1">Ahorra en grande con combos y ofertas especiales.</p>
-            </div>
-            <div className="w-12 h-12 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange font-black text-lg">
-              🎁
-            </div>
-          </div>
-
-          {order.requestedCount === 'PROMO' && order.appliedPromo && (
-            <div className="mt-4 flex items-center justify-between border-t border-ui-border/50 pt-3">
-              <span className="text-[10px] font-black uppercase text-brand-blue tracking-widest">
-                Seleccionado:
-              </span>
-              <span className="text-xs font-black text-ui-text truncate max-w-[180px]">
-                {order.appliedPromo.name}
-              </span>
-            </div>
+          Promociones
+          {promotions.length > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${activeTab === 'PROMO' ? 'bg-white text-[#0c2461]' : 'bg-brand-orange text-white'}`}>
+              {promotions.length}
+            </span>
           )}
-        </div>
+        </button>
       </div>
 
-      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${activeCategory === 'NORMAL' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-        <div className="overflow-hidden">
-          <div className="pt-6 border-t border-ui-border mt-6">
-            <h3 className="text-lg font-black uppercase text-brand-blue tracking-widest mb-4">
-              ¿Cuántos platos deseas?
-            </h3>
+      {/* Swipeable View Container */}
+      <div 
+        onTouchStart={handleTouchStart} 
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd}
+        className="min-h-[320px] transition-all duration-300"
+      >
+        {activeTab === 'NORMAL' ? (
+          <div className="space-y-4 animate-fade-in">
+            <div className="text-center sm:text-left">
+              <h3 className="text-base font-black uppercase text-brand-blue tracking-widest mb-1">
+                ¿Cuántos platos deseas?
+              </h3>
+              <p className="text-xs text-ui-muted font-bold">Selecciona el tamaño de tu orden:</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               {OPTIONS_COUNT.filter(opt => opt.value !== 'PROMO').map((opt) => (
                 <OptionCard
@@ -299,21 +303,21 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
               ))}
             </div>
           </div>
-        </div>
-      </div>
+        ) : (
+          <div className="space-y-4 animate-fade-in">
+            <div className="text-center sm:text-left">
+              <h3 className="text-base font-black uppercase text-brand-blue tracking-widest mb-1">
+                Promociones Especiales
+              </h3>
+              <p className="text-xs text-ui-muted font-bold">Ahorra más eligiendo una de nuestras promociones:</p>
+            </div>
 
-      <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${activeCategory === 'PROMO' ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-        <div className="overflow-hidden">
-          <div className="pt-6 border-t border-ui-border mt-6 space-y-4">
-            <h3 className="text-lg font-black uppercase text-brand-blue tracking-widest">
-              Promociones Disponibles
-            </h3>
             {loading ? (
-              <div className="p-8 text-center text-ui-muted font-bold">
-                Cargando promociones...
+              <div className="p-12 text-center text-ui-muted font-bold animate-pulse">
+                Cargando promociones disponibles...
               </div>
             ) : promotions.length === 0 ? (
-              <div className="p-8 text-center rounded-[2rem] border-2 border-dashed border-ui-border text-ui-muted font-bold bg-white">
+              <div className="p-12 text-center rounded-[2rem] border-2 border-dashed border-ui-border text-ui-muted font-bold bg-white">
                 No hay promociones activas en este momento.
               </div>
             ) : (
@@ -325,16 +329,16 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                     <div
                       key={promo.id}
                       onClick={() => handleSelectPromo(promo)}
-                      className={`cursor-pointer rounded-2xl border-2 p-5 bg-white transition-all duration-300 relative ${
+                      className={`cursor-pointer rounded-2xl border-2 p-5 bg-white transition-all duration-300 relative flex flex-col justify-between ${
                         isSelected
-                          ? 'border-brand-blue ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-lg'
+                          ? 'border-[#0c2461] ring-4 ring-[#0c2461]/10 transform scale-[1.01] shadow-lg'
                           : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
                       }`}
                     >
                       <div
                         className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                           isSelected
-                            ? 'bg-brand-blue text-white scale-100'
+                            ? 'bg-[#0c2461] text-white scale-100'
                             : 'bg-ui-bg text-transparent border border-ui-border'
                         }`}
                       >
@@ -353,75 +357,21 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                         </svg>
                       </div>
 
-                      <div>
+                      <div className="space-y-2">
                         <span className="bg-brand-orange text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                           {promo.requestedCount || promo.plates?.length || 2}{' '}
                           Platos
                         </span>
-                        <h4 className="font-black text-lg text-ui-text mt-2 leading-tight">
+                        <h4 className="font-black text-lg text-ui-text leading-tight pt-1">
                           {promo.name}
                         </h4>
-                        {promo.description && (
-                          <p className="text-xs text-ui-muted font-medium mt-1 leading-normal">
-                            {promo.description}
+                        
+                        {(promo.contentDescription || promo.description) && (
+                          <p className="text-xs text-[#2d3748] font-bold leading-relaxed bg-[#0c2461]/5 border border-[#0c2461]/10 p-3 rounded-xl whitespace-pre-line">
+                            {promo.contentDescription || promo.description}
                           </p>
                         )}
                       </div>
-
-                      {promo.plates && promo.plates.length > 0 && (
-                        <div className="mt-4 space-y-2.5">
-                          {promo.plates.map((plate, pIdx) => {
-                            const sauceOpt = OPTIONS_SAUCE.find(
-                              (o) => o.value === plate.sauce
-                            )
-                            const proteinOpt = OPTIONS_PROTEIN.find(
-                              (o) => o.value === plate.protein
-                            )
-                            const sauceL = sauceOpt?.label || plate.sauce
-                            const proteinL = proteinOpt?.label || plate.protein
-                            const complementL = OPTIONS_COMPLEMENT.find(
-                              (o) => o.value === plate.complement
-                            )?.label || plate.complement
-                            const basesL = formatBaseRecipe(plate.baseRecipe)
-
-                            return (
-                              <div key={pIdx} className="bg-ui-bg/40 border border-ui-border/50 rounded-2xl p-3 space-y-2 select-none">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex -space-x-1">
-                                    {sauceOpt?.illustration && (
-                                      <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
-                                        {sauceOpt.illustration}
-                                      </div>
-                                    )}
-                                    {proteinOpt?.illustration && (
-                                      <div className="w-6 h-6 border-2 border-white rounded-full bg-white overflow-hidden shadow-sm scale-90 shrink-0">
-                                        {proteinOpt.illustration}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] font-black text-brand-blue uppercase tracking-widest">
-                                    Plato {pIdx + 1}
-                                  </span>
-                                </div>
-                                <div className="text-[11px] font-bold text-ui-text/80 leading-normal pl-1 space-y-0.5">
-                                  <div>
-                                    <span className="capitalize">{sauceL?.toLowerCase()}</span>
-                                    <span className="text-ui-muted mx-1.5">•</span>
-                                    <span className="capitalize">{proteinL?.toLowerCase()}</span>
-                                    <span className="text-ui-muted mx-1.5">•</span>
-                                    <span className="capitalize">{complementL?.toLowerCase()}</span>
-                                  </div>
-                                  {basesL && (
-                                    <div className="text-[10px] font-bold text-ui-muted uppercase tracking-wider mt-0.5">
-                                      Base: {basesL.toLowerCase()}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
 
                       <div className="mt-4 pt-3 border-t border-ui-border flex justify-between items-center">
                         <span className="text-[9px] font-black uppercase text-ui-muted tracking-widest">
@@ -437,7 +387,7 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       <div className="pt-8 flex justify-between items-center border-t border-ui-border mt-4">

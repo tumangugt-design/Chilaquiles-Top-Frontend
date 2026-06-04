@@ -1,11 +1,13 @@
 import Logo from '../Logo.jsx'
 
-const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfileClick, availableCount = null }) => {
+const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfileClick, availableCount = null, isClosed = false }) => {
   return (
     <header className={`fixed top-0 inset-x-0 z-50 ${isPanel ? 'backdrop-blur-xl bg-ui-bg/80 border-b border-ui-border/50' : 'bg-gradient-to-b from-ui-bg via-ui-bg/80 to-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3 sm:space-x-4">
-          <Logo className="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-lg transition-transform hover:scale-105" />
+          <a href="/">
+            <Logo className="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-lg transition-transform hover:scale-105" />
+          </a>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -26,7 +28,7 @@ const Header = ({ isPanel = false, panelRole = null, userPhoto = null, onProfile
             </button>
           )}
 
-          {!isPanel && (
+          {!isPanel && !isClosed && (
             <div className="bg-green-500/10 px-3 sm:px-4 py-2 rounded-2xl border border-green-500/20 text-center min-w-[110px]">
               <div className="text-sm sm:text-base font-black text-green-600 leading-none">
                 {typeof availableCount === 'number' ? availableCount : 0}

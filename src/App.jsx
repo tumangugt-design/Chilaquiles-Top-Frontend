@@ -5,7 +5,7 @@ import OrderSummary from './components/layout/OrderSummary.jsx'
 import Stepper from './components/ui/Stepper.jsx'
 import { STEPS_ORDER, normalizePromotionForOrder, getPromoConstraint } from './shared/constants/index.jsx'
 import { useOrder } from './shared/hooks/useOrder.jsx'
-import { getAvailablePlates } from './shared/config/api.js'
+import { getAvailablePlates, getOperatingHours } from './shared/config/api.js'
 import LocationPage from './pages/Location.jsx'
 import SizePage from './pages/Size.jsx'
 import SaucePage from './pages/Sauce.jsx'
@@ -29,6 +29,7 @@ import DataDeletion from './pages/DataDeletion.jsx'
 
 function CustomerFlow({ onToggleTheme, currentTheme }) {
   const [currentStep, setCurrentStep] = useState('LOCATION')
+  const [isClosed, setIsClosed] = useState(true)
   const {
     order,
     availablePlates,
@@ -46,12 +47,19 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
 
     const loadAvailablePlates = async () => {
       try {
-        const response = await getAvailablePlates()
+        const [platesResponse, hoursResponse] = await Promise.all([
+          getAvailablePlates(),
+          getOperatingHours()
+        ])
         if (mounted) {
-          setAvailablePlates(Number(response.data?.count || 0))
+          setAvailablePlates(Number(platesResponse.data?.count || 0))
+          setIsClosed(!hoursResponse.data?.isCurrentlyOpen)
         }
       } catch {
-        if (mounted) setAvailablePlates(0)
+        if (mounted) {
+          setAvailablePlates(0)
+          setIsClosed(false)
+        }
       }
     }
 
@@ -68,6 +76,10 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     if (currentIndex >= 0 && currentIndex < STEPS_ORDER.length - 1) {
       let nextIndex = currentIndex + 1
       if (order.isPromo && currentStep === 'SIZE') {
+        nextIndex = STEPS_ORDER.indexOf('BASE_RECIPE')
+      } else if (order.isPromo && currentStep === 'BASE_RECIPE') {
+        nextIndex = STEPS_ORDER.indexOf('SUMMARY')
+      } else if (order.isPromo && currentStep === 'SUMMARY') {
         nextIndex = STEPS_ORDER.indexOf('TEMPERATURE')
       }
       setCurrentStep(STEPS_ORDER[nextIndex])
@@ -80,6 +92,10 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     if (currentIndex > 0) {
       let prevIndex = currentIndex - 1
       if (order.isPromo && currentStep === 'TEMPERATURE') {
+        prevIndex = STEPS_ORDER.indexOf('SUMMARY')
+      } else if (order.isPromo && currentStep === 'SUMMARY') {
+        prevIndex = STEPS_ORDER.indexOf('BASE_RECIPE')
+      } else if (order.isPromo && currentStep === 'BASE_RECIPE') {
         prevIndex = STEPS_ORDER.indexOf('SIZE')
       }
       setCurrentStep(STEPS_ORDER[prevIndex])
@@ -206,9 +222,9 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       case 'COMPLEMENT':
         return <ComplementPage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} appliedPromo={order.appliedPromo} />
       case 'BASE_RECIPE':
-        return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} />
+        return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} order={order} updateOrder={updateOrder} />
       case 'SUMMARY':
-        return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+        return <SummaryPage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
       case 'COPY_PLATE':
         return (
           <PlateCopyChoice
@@ -234,12 +250,12 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
     <div className="min-h-screen bg-ui-bg font-sans text-ui-text relative transition-colors duration-300">
       {currentStep === 'LOCATION' ? (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-24 sm:pt-4">
-          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
+          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} isClosed={isClosed} />
           {renderStep()}
         </div>
       ) : (
         <div className="pb-40 lg:pb-20 pt-20 sm:pt-24 lg:pt-32">
-          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} />
+          <Header onToggleTheme={onToggleTheme} currentTheme={currentTheme} availableCount={availablePlates} isClosed={isClosed} />
           <main className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             <div className="flex flex-col lg:flex-row items-start justify-center gap-4 sm:gap-8">
               <div className="flex-1 w-full max-w-3xl">

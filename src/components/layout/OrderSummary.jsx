@@ -22,6 +22,11 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
     : order.requestedCount === 'PROMO'
       ? (promoIsApplied ? promoPrice : 0)
       : calculateTotal(Math.max(Number(order.requestedCount) || 0, totalItems))
+  
+  const discountPercent = Number(order.couponDiscountPercent || 0)
+  const discountAmount = Math.round((grandTotal * (discountPercent / 100)) * 100) / 100
+  const finalTotal = Math.max(0, grandTotal - discountAmount)
+  
   const MAX_PLATES = 4
 
   const canContinue = () => {
@@ -154,16 +159,35 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
         )}
       </div>
 
-      <div className="pt-2 border-t border-gray-100 flex justify-between items-end">
-        <div>
-          <span className="text-gray-500 font-bold block">Total Final</span>
-          {promoIsApplied && (
-            <span className="inline-block bg-green-500/10 text-green-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-green-500/20 mt-1">
-              Promo: {order.appliedPromo.name}
-            </span>
-          )}
+      <div className="pt-2 border-t border-gray-100 space-y-2">
+        {discountPercent > 0 && (
+          <div className="flex justify-between text-sm font-bold text-ui-muted">
+            <span>Subtotal</span>
+            <span>Q{grandTotal}</span>
+          </div>
+        )}
+        {discountPercent > 0 && (
+          <div className="flex justify-between text-sm font-black text-green-600">
+            <span>Descuento ({discountPercent}%)</span>
+            <span>-Q{discountAmount}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-end">
+          <div>
+            <span className="text-gray-500 font-bold block">Total Final</span>
+            {promoIsApplied && (
+              <span className="inline-block bg-green-500/10 text-green-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-green-500/20 mt-1">
+                Promo: {order.appliedPromo.name}
+              </span>
+            )}
+            {order.couponCode && (
+              <span className="inline-block bg-blue-500/10 text-blue-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-blue-500/20 mt-1 ml-1">
+                Cupón: {order.couponCode}
+              </span>
+            )}
+          </div>
+          <span className="text-3xl font-black text-brand-blue">Q{finalTotal}</span>
         </div>
-        <span className="text-3xl font-black text-brand-blue">Q{grandTotal}</span>
       </div>
 
       <div className="lg:hidden">
@@ -192,7 +216,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
               <div onClick={() => setIsOpen(true)} className="flex flex-col cursor-pointer px-2 active:opacity-60 transition-opacity">
                 <span className="text-[10px] uppercase font-black text-ui-muted mb-0.5 tracking-widest">Total</span>
                 <div className="flex items-center text-brand-blue font-black text-2xl sm:text-3xl">
-                  Q{grandTotal}
+                  Q{finalTotal}
                   <div className="ml-1.5 bg-brand-blue/10 rounded-full p-1.5 animate-bounce">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={5} d="M5 15l7-7 7 7" />

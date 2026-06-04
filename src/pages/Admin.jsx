@@ -25,7 +25,9 @@ import {
   getInventoryLogs,
   getPortions,
   updatePortion,
-  createPackagingProduct
+  createPackagingProduct,
+  getCoupons,
+  updateCoupons
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, OPTIONS_BASE_RECIPE, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
@@ -207,6 +209,7 @@ const resetPromoFormState = () => ({
   id: null,
   name: '',
   description: '',
+  contentDescription: '',
   promoPrice: '',
   requestedCount: '2',
   isActive: true,
@@ -542,6 +545,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   })
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
   const [promotions, setPromotions] = useState([])
+  const [zoomedImage, setZoomedImage] = useState(null)
   const [promoForm, setPromoForm] = useState(resetPromoFormState())
   const [simulatedCosts, setSimulatedCosts] = useState({})
   const defaultCalcPlateConfig = () => ({
@@ -558,10 +562,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
   const [newPackagingName, setNewPackagingName] = useState('')
-  const [newPackagingQty, setNewPackagingQty] = useState('')
-  const [newPackagingPrice, setNewPackagingPrice] = useState('')
+  const [newPackagingCategory, setNewPackagingCategory] = useState('Empaque')
+  const [newPackagingUnit, setNewPackagingUnit] = useState('und')
+  const [newPackagingUsedPerPlate, setNewPackagingUsedPerPlate] = useState('1')
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
   const [recipeCategoryFilter, setRecipeCategoryFilter] = useState('ALL')
+  const [coupons, setCoupons] = useState([])
+  const [newCouponCode, setNewCouponCode] = useState('')
+  const [newCouponDiscountPercent, setNewCouponDiscountPercent] = useState('10')
+  const [newCouponMaxUses, setNewCouponMaxUses] = useState('10')
+  const [newCouponIsActive, setNewCouponIsActive] = useState(true)
+  const [isSavingCoupon, setIsSavingCoupon] = useState(false)
   
   const calcPlate = calcPlates[activeCalcPlateIndex] || defaultCalcPlateConfig()
   const calcSelectedBases = calcPlate.selectedBases || []
@@ -631,8 +642,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     let unit = ''
 
     if (isDivorciados) {
-      const rojaProduct = INVENTORY_PRODUCT_MAP['salsa roja']
-      const verdeProduct = INVENTORY_PRODUCT_MAP['salsa verde']
+      const rojaProduct = getProductPortionConfig('salsa roja')
+      const verdeProduct = getProductPortionConfig('salsa verde')
       if (rojaProduct && verdeProduct) {
         const rCost = getIngredientCost('salsa roja', rojaProduct.usedPerPlate / 2)
         const vCost = getIngredientCost('salsa verde', verdeProduct.usedPerPlate / 2)
@@ -641,7 +652,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         unit = rojaProduct.unit
       }
     } else if (name) {
-      const product = INVENTORY_PRODUCT_MAP[name]
+      const product = getProductPortionConfig(name)
       if (product) {
         cost = getIngredientCost(name)
         amount = product.usedPerPlate
@@ -711,16 +722,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setInventory(inventoryResponse.data)
         if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
-        const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse] = await Promise.all([
+        const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse, couponsResponse] = await Promise.all([
           getPromotions(),
           getInventory(),
           getLastPurchases().catch(() => ({ data: {} })),
-          getPortions().catch(() => ({ data: [] }))
+          getPortions().catch(() => ({ data: [] })),
+          getCoupons().catch(() => ({ data: [] }))
         ])
         setPromotions(promotionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
         setPortions(portionsResponse.data || [])
         setSimulatedCosts(lastPurchasesResponse.data || {})
+        setCoupons(couponsResponse.data || [])
       } else if (activeTab === 'recipe_book') {
         const [portionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
           getPortions().catch(() => ({ data: [] })),
@@ -1198,6 +1211,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const getPromoTotalCost = () => {
     return calcPlates.reduce((total, plate) => total + calculatePlateRecipeCost(plate), 0)
   }
+  const handlePromoImageChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La imagen es demasiado grande. Máximo 2MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPromoForm(prev => ({ ...prev, imageUrl: reader.result }))
+      toast.success('Imagen cargada con éxito')
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleSavePromotion = async (e) => {
     if (e) e.preventDefault()
@@ -1358,6 +1385,76 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const handleCreateCoupon = async (e) => {
+    if (e) e.preventDefault()
+    const code = String(newCouponCode || '').trim().toUpperCase()
+    if (!code) {
+      return toast.error('Ingresa el código del cupón')
+    }
+    const discount = Number(newCouponDiscountPercent)
+    if (Number.isNaN(discount) || discount < 0 || discount > 100) {
+      return toast.error('Ingresa un porcentaje de descuento válido (0-100)')
+    }
+    const maxUses = Number(newCouponMaxUses)
+    if (Number.isNaN(maxUses) || maxUses < 1) {
+      return toast.error('La cantidad de usos debe ser al menos 1')
+    }
+
+    setIsSavingCoupon(true)
+    try {
+      if (coupons.some(c => c.code === code)) {
+        setIsSavingCoupon(false)
+        return toast.error('Este código de cupón ya existe')
+      }
+
+      const nextCoupons = [
+        ...coupons,
+        {
+          code,
+          discountPercent: discount,
+          maxUses,
+          usedCount: 0,
+          isActive: newCouponIsActive
+        }
+      ]
+
+      const res = await updateCoupons(nextCoupons)
+      setCoupons(res.data || [])
+      toast.success('Cupón creado exitosamente')
+      setNewCouponCode('')
+      setNewCouponDiscountPercent('10')
+      setNewCouponMaxUses('10')
+      setNewCouponIsActive(true)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo guardar el cupón')
+    } finally {
+      setIsSavingCoupon(false)
+    }
+  }
+
+  const handleToggleCouponStatus = async (code, currentStatus) => {
+    try {
+      const nextCoupons = coupons.map(c => c.code === code ? { ...c, isActive: !currentStatus } : c)
+      const res = await updateCoupons(nextCoupons)
+      setCoupons(res.data || [])
+      toast.success(`Cupón ${code} ${!currentStatus ? 'activado' : 'desactivado'}`)
+    } catch (err) {
+      toast.error('No se pudo cambiar el estado del cupón')
+    }
+  }
+
+  const handleDeleteCoupon = async (code) => {
+    if (!window.confirm(`¿Seguro que deseas eliminar el cupón ${code}?`)) return
+    try {
+      const nextCoupons = coupons.filter(c => c.code !== code)
+      const res = await updateCoupons(nextCoupons)
+      setCoupons(res.data || [])
+      toast.success(`Cupón ${code} eliminado`)
+    } catch (err) {
+      toast.error('No se pudo eliminar el cupón')
+    }
+  }
+
   const openHistoryModal = async (type, user) => {
     setHistoryModal({
       isOpen: true,
@@ -1412,35 +1509,34 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const handleCreatePackaging = async (e) => {
     if (e) e.preventDefault()
-    if (!newPackagingName) {
-      return toast.error('Ingresa el nombre del producto de empaque')
+    if (!newPackagingName.trim()) {
+      return toast.error('Ingresa el nombre del insumo o ingrediente')
     }
 
-    const qty = newPackagingQty === '' ? 0 : Number(newPackagingQty)
-    const price = newPackagingPrice === '' ? 0 : Number(newPackagingPrice)
+    const usedPerPlateNum = Number(newPackagingUsedPerPlate)
+    if (Number.isNaN(usedPerPlateNum) || usedPerPlateNum < 0) {
+      return toast.error('Ingresa una porción por plato válida (mayor o igual a 0)')
+    }
 
-    if (newPackagingQty !== '' && (Number.isNaN(qty) || qty < 0)) {
-      return toast.error('Ingresa una cantidad inicial válida')
-    }
-    if (newPackagingPrice !== '' && (Number.isNaN(price) || price < 0)) {
-      return toast.error('Ingresa un costo total válido')
-    }
-    
     setIsCreatingPackaging(true)
     try {
       await createPackagingProduct({
-        name: newPackagingName,
-        amount: qty,
-        totalPrice: price
+        name: newPackagingName.trim(),
+        category: newPackagingCategory,
+        unit: newPackagingUnit,
+        usedPerPlate: usedPerPlateNum,
+        amount: 0,
+        totalPrice: 0
       })
-      toast.success('Producto de empaque creado y entrada registrada exitosamente')
+      toast.success('Insumo o ingrediente creado exitosamente')
       setNewPackagingName('')
-      setNewPackagingQty('')
-      setNewPackagingPrice('')
+      setNewPackagingCategory('Empaque')
+      setNewPackagingUnit('und')
+      setNewPackagingUsedPerPlate('1')
       setPackagingModalOpen(false)
       loadData()
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo crear el empaque')
+      toast.error(err.response?.data?.message || 'No se pudo crear el insumo o ingrediente')
     } finally {
       setIsCreatingPackaging(false)
     }
@@ -1556,51 +1652,80 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </div>
                 ) : (
                   <div className="space-y-10">
-                    {[
-                      { title: 'Hoy', data: financesSummary.daily },
-                      { title: 'Esta Semana', data: financesSummary.weekly },
-                      { title: 'Este Mes', data: financesSummary.monthly }
-                    ].map((period) => (
-                      <div key={period.title} className="space-y-5">
-                        <h3 className="text-xl font-black text-ui-text ml-2">{period.title}</h3>
-                        <div className="grid md:grid-cols-3 gap-6">
-                          <div className="rounded-[2.5rem] border border-ui-border bg-brand-blue/5 p-8 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-2 bg-brand-blue/10 rounded-xl text-brand-blue">
-                                <TrendingUp size={20} />
-                              </div>
-                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Ventas</p>
+                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+                      {[
+                        { title: 'Hoy', data: financesSummary.daily, color: 'brand-blue', bg: 'brand-blue/5' },
+                        { title: 'Esta Semana', data: financesSummary.weekly, color: 'brand-blue', bg: 'brand-blue/5' },
+                        { title: 'Este Mes', data: financesSummary.monthly, color: 'brand-blue', bg: 'brand-blue/5' },
+                        { title: 'Histórico Global', data: financesSummary.global, color: 'green-600', bg: 'green-500/5' }
+                      ].map((period) => (
+                        <div key={period.title} className="rounded-[2rem] border border-ui-border bg-white p-6 shadow-sm flex flex-col justify-between space-y-4">
+                          <div>
+                            <div className="flex items-center justify-between border-b border-ui-border/60 pb-3 mb-3">
+                              <h4 className="text-xs font-black uppercase tracking-wider text-ui-muted">{period.title}</h4>
+                              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                period.title.includes('Global') ? 'bg-green-500/10 text-green-700' : 'bg-brand-blue/10 text-brand-blue'
+                              }`}>
+                                {period.data?.orderCount || 0} pedidos
+                              </span>
                             </div>
-                            <p className="text-3xl font-black text-brand-blue">Q{period.data?.revenue?.toFixed(2) || '0.00'}</p>
-                            <p className="text-[10px] font-bold text-ui-muted mt-2">{period.data?.orderCount || 0} pedidos completados</p>
+                            
+                            <div className="space-y-2.5">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-ui-muted font-bold">Ventas:</span>
+                                <span className="font-black text-brand-blue">Q{period.data?.revenue?.toFixed(2) || '0.00'}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-ui-muted font-bold">Costos:</span>
+                                <span className="font-black text-brand-orange">Q{period.data?.costs?.toFixed(2) || '0.00'}</span>
+                              </div>
+                            </div>
                           </div>
-
-                          <div className="rounded-[2.5rem] border border-ui-border bg-brand-orange/5 p-8 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-2 bg-brand-orange/10 rounded-xl text-brand-orange">
-                                <DollarSign size={20} />
-                              </div>
-                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Costos (Entradas)</p>
-                            </div>
-                            <p className="text-3xl font-black text-brand-orange">Q{period.data?.costs?.toFixed(2) || '0.00'}</p>
-                            <p className="text-[10px] font-bold text-ui-muted mt-2">Inversión en ingredientes</p>
-                          </div>
-
-                          <div className="rounded-[2.5rem] border border-ui-border bg-green-500/5 p-8 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="p-2 bg-green-500/10 rounded-xl text-green-600">
-                                <Box size={20} />
-                              </div>
-                              <p className="text-xs font-black uppercase tracking-widest text-ui-muted">Utilidades</p>
-                            </div>
-                            <p className={`text-3xl font-black ${(period.data?.utilities || 0) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                          
+                          <div className="pt-3 border-t border-ui-border/60 flex justify-between items-center text-xs font-bold">
+                            <span className="text-ui-muted">Utilidad:</span>
+                            <span className={`text-base font-black ${(period.data?.utilities || 0) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
                               Q{period.data?.utilities?.toFixed(2) || '0.00'}
-                            </p>
-                            <p className="text-[10px] font-bold text-ui-muted mt-2">Ganancia neta aproximada</p>
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tabla de Historial por Mes */}
+                    {financesSummary.byMonth && financesSummary.byMonth.length > 0 && (
+                      <div className="space-y-5 mt-10">
+                        <h3 className="text-xl font-black text-ui-text ml-2">Historial Mensual</h3>
+                        <div className="rounded-[2.5rem] border border-ui-border bg-white overflow-hidden shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-ui-bg/60 border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
+                                  <th className="py-4 px-6">Mes</th>
+                                  <th className="py-4 px-6 text-right">Ventas</th>
+                                  <th className="py-4 px-6 text-right">Costos (Entradas)</th>
+                                  <th className="py-4 px-6 text-right">Utilidades</th>
+                                  <th className="py-4 px-6 text-right">Pedidos</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-ui-border/60 text-xs font-bold text-ui-text">
+                                {financesSummary.byMonth.map((m) => (
+                                  <tr key={m.month} className="hover:bg-ui-bg/10 transition-colors">
+                                    <td className="py-4 px-6 font-black text-sm text-ui-text">{m.label}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-brand-blue">Q{m.revenue.toFixed(2)}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-brand-orange">Q{m.costs.toFixed(2)}</td>
+                                    <td className={`py-4 px-6 text-right font-black text-sm ${m.utilities >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                                      Q{m.utilities.toFixed(2)}
+                                    </td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">{m.orderCount}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
@@ -2296,7 +2421,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       )}
 
       {activeTab === 'promotions' && (
-        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 animate-fade-in min-w-0">
+        <div className="space-y-8 animate-fade-in">
+          <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 min-w-0">
           
           {/* Left Column: Calculator & Form */}
           <div className="space-y-6 sm:space-y-8 min-w-0">
@@ -2709,6 +2835,42 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 />
               </div>
 
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Contenido (lo que contiene la promo, se muestra al cliente)</label>
+                <textarea
+                  className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
+                  rows={2}
+                  value={promoForm.contentDescription || ''}
+                  onChange={(e) => setPromoForm({ ...promoForm, contentDescription: e.target.value })}
+                  placeholder="Ej. El combo familiar contiene 4 platos con tales salsas..."
+                />
+              </div>
+
+              <div className="space-y-2 bg-white p-4 rounded-2xl border border-ui-border">
+                <label className="block text-[10px] font-black uppercase text-ui-muted tracking-widest">Banner / Imagen de Promoción (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePromoImageChange}
+                  className="block w-full text-xs text-ui-muted file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20 cursor-pointer"
+                />
+                {promoForm.imageUrl && (
+                  <div className="relative w-32 h-20 rounded-xl overflow-hidden border border-ui-border mt-2 group">
+                    <img src={promoForm.imageUrl} alt="Promo Banner" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPromoForm(prev => ({ ...prev, imageUrl: '' }))}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-sm"
+                      title="Eliminar imagen"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Fecha Inicio</label>
@@ -2785,10 +2947,24 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   <div key={promo.id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-4 shadow-sm min-w-0 flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start gap-4">
+                        {promo.imageUrl && (
+                          <div
+                            onClick={() => setZoomedImage(promo.imageUrl)}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border border-ui-border bg-ui-bg overflow-hidden flex-shrink-0 cursor-zoom-in relative group"
+                          >
+                            <img src={promo.imageUrl} alt={promo.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <span className="text-white text-[10px] font-black uppercase tracking-wide">🔍</span>
+                            </div>
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <h4 className="font-black text-base text-ui-text leading-tight break-words">{promo.name}</h4>
                           {promo.description && (
                             <p className="text-xs text-ui-muted font-medium leading-normal mt-1 break-words">{promo.description}</p>
+                          )}
+                          {promo.contentDescription && (
+                            <p className="text-[11px] text-[#2d3748] font-bold leading-normal mt-1 border-l-2 border-brand-orange pl-2 italic break-words">Contenido: {promo.contentDescription}</p>
                           )}
                           {(promo.startDate || promo.endDate) && (
                             <p className="text-[10px] text-ui-muted font-black uppercase tracking-wider mt-2 flex items-center gap-1.5">
@@ -2797,7 +2973,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           )}
 
                           {promo.plates && promo.plates.length > 0 ? (
-                            <div className="mt-3 space-y-1.5 border-t border-ui-border/60 pt-2.5">
+                            <div className="mt-3 space-y-2 border-t border-ui-border/60 pt-2.5">
                               <p className="text-[9px] font-black uppercase text-ui-muted tracking-widest">Platos incluidos ({promo.requestedCount || promo.plates.length}):</p>
                               {promo.plates.map((plate, pIdx) => {
                                 const sauceL = getOptionLabel(plate.sauce, OPTIONS_SAUCE)
@@ -2805,9 +2981,42 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                 const complementL = getOptionLabel(plate.complement, OPTIONS_COMPLEMENT)
                                 const basesL = formatBaseRecipe(plate.baseRecipe)
                                 return (
-                                  <div key={pIdx} className="text-[10px] font-bold text-ui-text bg-ui-bg/40 p-2 rounded-xl border border-ui-border/50">
-                                    <span className="text-brand-blue font-black">Plato {pIdx + 1}:</span> {sauceL} • {proteinL} • {complementL}
-                                    {basesL && <span className="text-ui-muted"> ({basesL})</span>}
+                                  <div key={pIdx} className="text-[10px] font-bold text-ui-text bg-ui-bg/40 p-2.5 rounded-xl border border-ui-border/50 flex flex-col gap-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-brand-blue font-black shrink-0">Plato {pIdx + 1}:</span>
+                                      <div className="flex -space-x-1 shrink-0">
+                                        <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={sauceL}>
+                                          {getIngredientSvg(plate.sauce)}
+                                        </div>
+                                        <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={proteinL}>
+                                          {getIngredientSvg(plate.protein)}
+                                        </div>
+                                        <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={complementL}>
+                                          {getIngredientSvg(plate.complement)}
+                                        </div>
+                                      </div>
+                                      <span className="text-ui-text font-bold uppercase">{sauceL} • {proteinL} • {complementL}</span>
+                                    </div>
+                                    {basesL && (
+                                      <div className="flex items-center gap-1.5 border-t border-ui-border/40 pt-1.5 pl-1 text-[9px] text-ui-muted uppercase flex-wrap">
+                                        <span className="font-black">Bases:</span>
+                                        {plate.baseRecipe?.cream !== false && (
+                                          <span className="flex items-center gap-0.5 font-bold">
+                                            <span className="w-4 h-4 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-75 shrink-0">{getIngredientSvg('crema')}</span> Crema
+                                          </span>
+                                        )}
+                                        {plate.baseRecipe?.onion !== false && (
+                                          <span className="flex items-center gap-0.5 font-bold">
+                                            <span className="w-4 h-4 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-75 shrink-0">{getIngredientSvg('cebolla')}</span> Cebolla
+                                          </span>
+                                        )}
+                                        {plate.baseRecipe?.cilantro !== false && (
+                                          <span className="flex items-center gap-0.5 font-bold">
+                                            <span className="w-4 h-4 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-75 shrink-0">{getIngredientSvg('cilantro')}</span> Cilantro
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               })}
@@ -2888,6 +3097,156 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   <p className="text-xs font-black uppercase tracking-widest text-ui-muted">No hay promociones registradas</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+          
+          {/* Coupon Management Panel */}
+          <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="border-b border-ui-border pb-4">
+              <h3 className="text-xl font-black text-ui-text">Códigos de Descuento (Cupones)</h3>
+              <p className="text-xs text-ui-muted font-bold mt-1 uppercase tracking-widest">Genera y administra los cupones que los clientes pueden ingresar en el resumen de su pedido</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[0.8fr,1.2fr] gap-6 sm:gap-8 items-start">
+              {/* Form to create coupon */}
+              <form onSubmit={handleCreateCoupon} className="space-y-4 rounded-[2rem] bg-ui-bg/40 border border-ui-border p-4 sm:p-6">
+                <div className="border-b border-ui-border pb-2 mb-4">
+                  <h4 className="text-sm font-black text-ui-text uppercase tracking-wider">Crear Nuevo Cupón</h4>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Código del Cupón</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: IAN123TOP"
+                    value={newCouponCode}
+                    onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-white outline-none font-bold text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">% Descuento</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      max="100"
+                      placeholder="10"
+                      value={newCouponDiscountPercent}
+                      onChange={(e) => setNewCouponDiscountPercent(e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-ui-border bg-white outline-none font-bold text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Límite de Usos</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="10"
+                      value={newCouponMaxUses}
+                      onChange={(e) => setNewCouponMaxUses(e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-ui-border bg-white outline-none font-bold text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 py-2 pl-1 select-none">
+                  <input
+                    type="checkbox"
+                    id="isActiveCouponCheckbox"
+                    checked={newCouponIsActive}
+                    onChange={(e) => setNewCouponIsActive(e.target.checked)}
+                    className="w-4 h-4 text-brand-blue border-ui-border rounded focus:ring-brand-blue"
+                  />
+                  <label htmlFor="isActiveCouponCheckbox" className="text-xs font-bold text-ui-text cursor-pointer">
+                    Activar cupón inmediatamente
+                  </label>
+                </div>
+
+                <Button type="submit" className="w-full !py-4 shadow-md active:scale-[0.98]" disabled={isSavingCoupon}>
+                  {isSavingCoupon ? 'Creando...' : 'Crear Cupón'}
+                </Button>
+              </form>
+
+              {/* Coupons List Table */}
+              <div className="rounded-[2rem] border border-ui-border bg-ui-bg/20 p-4 sm:p-6 space-y-4">
+                <div className="border-b border-ui-border pb-2">
+                  <h4 className="text-sm font-black text-ui-text uppercase tracking-wider">Cupones Registrados</h4>
+                </div>
+                
+                {coupons.length === 0 ? (
+                  <div className="py-12 text-center border border-dashed border-ui-border bg-white/50 rounded-2xl">
+                    <p className="text-xs font-black uppercase tracking-widest text-ui-muted">No hay cupones registrados</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-ui-border bg-white overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-ui-bg/60 border-b border-ui-border text-[9px] font-black uppercase tracking-wider text-ui-muted">
+                            <th className="py-3 px-4">Código</th>
+                            <th className="py-3 px-4 text-right">Descuento</th>
+                            <th className="py-3 px-4 text-center">Usos</th>
+                            <th className="py-3 px-4 text-center">Estado</th>
+                            <th className="py-3 px-4 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-ui-border/60 text-xs font-bold text-ui-text">
+                          {coupons.map((c) => {
+                            const isExpired = c.usedCount >= c.maxUses
+                            return (
+                              <tr key={c.code} className="hover:bg-ui-bg/10 transition-colors">
+                                <td className="py-3.5 px-4">
+                                  <span className="font-black text-sm uppercase text-brand-blue bg-brand-blue/5 border border-brand-blue/10 px-2 py-0.5 rounded-md">
+                                    {c.code}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-4 text-right font-black text-green-600">{c.discountPercent}%</td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <span className={`text-[10px] font-bold ${isExpired ? 'text-brand-red font-black' : 'text-ui-text'}`}>
+                                    {c.usedCount} / {c.maxUses}
+                                  </span>
+                                  {isExpired && (
+                                    <span className="block text-[8px] font-black uppercase text-brand-red tracking-wider mt-0.5">Agotado</span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCouponStatus(c.code, c.isActive)}
+                                    className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border transition-colors ${
+                                      c.isActive && !isExpired
+                                        ? 'bg-green-500/10 text-green-700 border-green-500/30'
+                                        : 'bg-ui-bg text-ui-muted border-ui-border'
+                                    }`}
+                                    disabled={isExpired}
+                                  >
+                                    {isExpired ? 'Invalido' : c.isActive ? 'Activo' : 'Inactivo'}
+                                  </button>
+                                </td>
+                                <td className="py-3.5 px-4 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCoupon(c.code)}
+                                    className="text-brand-red hover:underline font-black text-xs uppercase"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -3038,18 +3397,19 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         onSearchChange={updateHistorySearch}
       />
 
-      {/* Modal de Creación de Empaque */}
+      {/* Modal de Creación de Insumo o Ingrediente */}
       {packagingModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-2xl animate-scale-up">
             <div className="flex items-center justify-between border-b border-ui-border pb-4 mb-4">
-              <h3 className="text-lg font-black text-ui-text">Crear Producto de Empaque</h3>
+              <h3 className="text-lg font-black text-ui-text">Crear Insumo o Ingrediente</h3>
               <button
                 type="button"
                 onClick={() => {
                   setNewPackagingName('')
-                  setNewPackagingQty('')
-                  setNewPackagingPrice('')
+                  setNewPackagingCategory('Empaque')
+                  setNewPackagingUnit('und')
+                  setNewPackagingUsedPerPlate('1')
                   setPackagingModalOpen(false)
                 }}
                 className="rounded-full bg-ui-bg p-1.5 text-ui-muted hover:text-ui-text transition-colors"
@@ -3065,7 +3425,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Plato rectangular de 32 oz"
+                  placeholder="Ej. Salsa Habanera, Chorizo Copetón"
                   value={newPackagingName}
                   onChange={(e) => setNewPackagingName(e.target.value)}
                   className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
@@ -3075,68 +3435,68 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                    Cantidad Inicial
+                    Categoría
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Ej. 100"
-                    value={newPackagingQty}
-                    onChange={(e) => setNewPackagingQty(e.target.value)}
-                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
-                  />
+                  <select
+                    value={newPackagingCategory}
+                    onChange={(e) => setNewPackagingCategory(e.target.value)}
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-white outline-none transition-all font-bold text-sm"
+                  >
+                    <option value="Empaque">Empaque</option>
+                    <option value="Proteínas">Proteínas</option>
+                    <option value="Salsas">Salsas</option>
+                    <option value="Base">Base</option>
+                    <option value="Complementos">Complementos</option>
+                    <option value="Ingredientes fijos">Ingredientes fijos</option>
+                    <option value="Otros">Otros</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                    Costo Total (Q)
+                    Unidad de Medida
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Ej. 69.00"
-                    value={newPackagingPrice}
-                    onChange={(e) => setNewPackagingPrice(e.target.value)}
-                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
-                  />
+                  <select
+                    value={newPackagingUnit}
+                    onChange={(e) => setNewPackagingUnit(e.target.value)}
+                    className="w-full p-4 rounded-2xl border border-ui-border bg-white outline-none transition-all font-bold text-sm"
+                  >
+                    <option value="und">Unidad (und)</option>
+                    <option value="g">Gramos (g)</option>
+                    <option value="ml">Mililitros (ml)</option>
+                    <option value="oz">Onzas (oz)</option>
+                    <option value="lb">Libras (lb)</option>
+                    <option value="l">Litros (l)</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                    Categoría Fija
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value="EMPAQUE"
-                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
-                    Unidad de Entrada
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value="Unidad"
-                    className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg/50 outline-none font-bold text-sm text-ui-muted cursor-not-allowed"
-                  />
-                </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                  Porción por Plato (Cantidad consumida)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  placeholder="Ej. 60 para 60g, o 1 para 1 unidad"
+                  value={newPackagingUsedPerPlate}
+                  onChange={(e) => setNewPackagingUsedPerPlate(e.target.value)}
+                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold text-sm"
+                />
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button type="submit" className="flex-1 !py-4" disabled={isCreatingPackaging}>
-                  {isCreatingPackaging ? 'Creando...' : 'Crear Producto'}
+                <Button type="submit" className="flex-1 !py-4 animate-slide-up" disabled={isCreatingPackaging}>
+                  {isCreatingPackaging ? 'Creando...' : 'Crear Insumo/Ingrediente'}
                 </Button>
                 <button
                   type="button"
                   onClick={() => {
                     setNewPackagingName('')
-                    setNewPackagingQty('')
-                    setNewPackagingPrice('')
+                    setNewPackagingCategory('Empaque')
+                    setNewPackagingUnit('und')
+                    setNewPackagingUsedPerPlate('1')
                     setPackagingModalOpen(false)
                   }}
                   className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
@@ -3149,6 +3509,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         </div>
       )}
       
+      {zoomedImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in cursor-zoom-out" onClick={() => setZoomedImage(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
+            <img src={zoomedImage} alt="Zoomed Promo" className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute top-4 right-4 bg-white/80 hover:bg-white text-ui-text rounded-full p-2.5 transition-all shadow-md font-bold"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
       <footer className="py-10 text-center">
         <p className="text-[10px] font-black text-ui-muted uppercase tracking-[0.2em] opacity-40">
           Chilaquiles TOP · Sistema de Gestión Administrativa
