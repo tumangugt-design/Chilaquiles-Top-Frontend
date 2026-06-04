@@ -559,11 +559,11 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                         <stop offset="100%" stopColor="#B91C1C" />
                       </linearGradient>
                       <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-                        <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodOpacity="0.2" />
+                        <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodOpacity="0.25" />
                       </filter>
                     </defs>
 
-                    {/* TOTOPOS */}
+                    {/* TOTOPOS (Layered Golden Chips inside basin) */}
                     <g filter="url(#dropShadow)">
                       <polygon points="34,54 50,38 44,57" fill="url(#chipGrad2)" />
                       <polygon points="64,54 80,38 72,57" fill="url(#chipGrad2)" />
@@ -572,6 +572,11 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                       <polygon points="58,59 74,43 66,62" fill="url(#chipGrad1)" />
                       <polygon points="44,63 60,47 54,66" fill="url(#chipGrad2)" />
                       <polygon points="54,63 70,47 62,66" fill="url(#chipGrad2)" />
+                      
+                      <polygon points="30,58 46,42 40,60" fill="url(#chipGrad1)" />
+                      <polygon points="70,58 86,42 78,60" fill="url(#chipGrad2)" />
+                      <polygon points="40,68 56,52 50,71" fill="url(#chipGrad1)" />
+                      <polygon points="60,68 76,52 68,71" fill="url(#chipGrad2)" />
                     </g>
 
                     {/* RED/BROWN MEAT (Chorizo/Salsa) ON THE LEFT SIDE */}
@@ -583,6 +588,9 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                       <circle cx="29" cy="57" r="1.5" />
                       <circle cx="34" cy="60" r="2.0" />
                       <circle cx="40" cy="58" r="1.6" />
+                      <circle cx="26" cy="54" r="1.7" />
+                      <circle cx="32" cy="63" r="1.9" />
+                      <circle cx="37" cy="64" r="2.1" />
                     </g>
                     <path d="M 28,49 C 32,45 38,51 40,48 C 42,45 44,49 46,47 C 47,53 43,58 36,56 C 30,54 26,54 28,49 Z" fill="#991B1B" opacity="0.3" />
 
@@ -595,20 +603,32 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                       <rect x="72" y="60" width="3" height="3" rx="0.5" transform="rotate(10 72 60)" />
                       <rect x="78" y="61" width="4" height="2.2" rx="0.5" transform="rotate(-15 78 61)" />
                       <rect x="84" y="60" width="3.2" height="2.8" rx="0.5" transform="rotate(20 84 60)" />
+                      <rect x="70" y="64" width="3.5" height="3.5" rx="0.5" transform="rotate(40 70 64)" />
+                      <rect x="76" y="63" width="4" height="3" rx="0.5" transform="rotate(-10 76 63)" />
+                      <rect x="82" y="63" width="4.5" height="3.2" rx="0.5" transform="rotate(20 82 63)" />
                     </g>
 
-                    {/* DRIZZLED CREMA */}
-                    <path d="M 28,52 Q 40,44 54,55 T 84,53" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
-                    <path d="M 32,57 Q 44,49 58,60 T 86,57" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
+                    {/* DRIZZLED CREMA (White stripes across chilaquiles) */}
+                    <g stroke="#FFFFFF" strokeLinecap="round" fill="none" filter="url(#dropShadow)">
+                      <path d="M 28,52 Q 40,44 54,55 T 84,53" strokeWidth="2.5" />
+                      <path d="M 32,57 Q 44,49 58,60 T 86,57" strokeWidth="1.6" />
+                      <path d="M 30,62 Q 42,54 56,65 T 82,63" strokeWidth="1.2" />
+                    </g>
 
                     {/* AVOCADO SLICES (Aguacate) IN THE CENTER */}
                     <g filter="url(#dropShadow)">
-                      <path d="M 48,46 C 46,44 43,49 45,53 C 47,52 49,48 48,46 Z" fill="#14532d" />
-                      <path d="M 47.5,46.5 C 46.2,45.2 43.5,48.8 45,52 C 46.8,51.2 48,48.5 47.5,46.5 Z" fill="#a3e635" />
-                      <path d="M 52,48 C 50,46 47,51 49,55 C 51,54 53,50 52,48 Z" fill="#14532d" />
-                      <path d="M 51.5,48.5 C 50.2,47.2 47.5,50.8 49,54 C 50.8,53.2 52,50.5 51.5,48.5 Z" fill="#a3e635" />
-                      <path d="M 56,50 C 54,48 51,53 53,57 C 55,56 57,52 56,50 Z" fill="#14532d" />
-                      <path d="M 55.5,50.5 C 54.2,49.2 51.5,52.8 53,56 C 54.8,55.2 56,52.5 55.5,50.5 Z" fill="#a3e635" />
+                      {/* Avocado Slice 1 */}
+                      <path d="M 44,46 C 42,42 38,48 40,53 C 43,51 45,48 44,46 Z" fill="#14532d" />
+                      <path d="M 43.5,45.5 C 41.8,43.2 38.5,47.8 40.5,51.5 C 42.8,50.2 44,47.5 43.5,45.5 Z" fill="#a3e635" />
+                      {/* Avocado Slice 2 */}
+                      <path d="M 49,49 C 47,45 43,51 45,56 C 48,54 50,51 49,49 Z" fill="#14532d" />
+                      <path d="M 48.5,48.5 C 46.8,46.2 43.5,50.8 45.5,54.5 C 47.8,53.2 49,50.5 48.5,48.5 Z" fill="#a3e635" />
+                      {/* Avocado Slice 3 */}
+                      <path d="M 54,52 C 52,48 48,54 50,59 C 53,57 55,54 54,52 Z" fill="#14532d" />
+                      <path d="M 53.5,51.5 C 51.8,49.2 48.5,53.8 50.5,57.5 C 52.8,56.2 54,53.5 53.5,51.5 Z" fill="#a3e635" />
+                      {/* Avocado Slice 4 */}
+                      <path d="M 59,55 C 57,51 53,57 55,62 C 58,60 60,57 59,55 Z" fill="#14532d" />
+                      <path d="M 58.5,54.5 C 56.8,52.2 53.5,56.8 55.5,60.5 C 57.8,59.2 59,56.5 58.5,54.5 Z" fill="#a3e635" />
                     </g>
 
                     {/* FRESH CILANTRO LEAVES */}
@@ -619,6 +639,9 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                       <path d="M 43,62 Q 45,61 44,64 Q 42,63 43,62 Z" />
                       <path d="M 57,59 Q 59,58 58,61 Q 56,60 57,59 Z" />
                       <path d="M 70,55 Q 72,54 71,57 Q 69,56 70,55 Z" />
+                      <path d="M 48,48 Q 50,47 49,50 Q 47,49 48,48 Z" />
+                      <path d="M 53,46 Q 55,45 54,48 Q 52,47 53,46 Z" />
+                      <path d="M 58,48 Q 60,47 59,50 Q 57,49 58,48 Z" />
                     </g>
 
                     {/* SHREDDED QUESO FRESCO */}
@@ -631,6 +654,8 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                       <rect x="39" y="58" width="1.2" height="1.2" rx="0.2" transform="rotate(-15 39 58)" />
                       <rect x="52" y="61" width="1.0" height="1.4" rx="0.2" transform="rotate(25 52 61)" />
                       <rect x="62" y="56" width="1.4" height="1.2" rx="0.2" transform="rotate(-60 62 56)" />
+                      <rect x="48" y="55" width="1.2" height="1.2" rx="0.2" transform="rotate(10 48 55)" />
+                      <rect x="55" y="53" width="1.5" height="1.0" rx="0.2" transform="rotate(-25 55 53)" />
                     </g>
                   </svg>
                 </div>
