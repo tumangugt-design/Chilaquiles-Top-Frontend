@@ -531,19 +531,19 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
               <div className="flex justify-center py-1">
                 <div className="relative p-2 bg-brand-blue/5 rounded-3xl border border-brand-blue/10 flex items-center justify-center shrink-0 w-36 h-28">
                   <svg className="w-full h-full shrink-0" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* Shadow under the plate */}
-                    <ellipse cx="60" cy="74" rx="44" ry="12" fill="rgba(0, 0, 0, 0.06)" filter="blur(2px)" />
+                    {/* Shadow under the container */}
+                    <path d="M 22,62 C 16,56 22,50 32,46 L 62,34 C 70,31 82,34 94,40 L 98,54 C 104,60 98,66 88,72 L 58,82 C 48,85 32,82 22,74 Z" fill="rgba(0, 0, 0, 0.15)" filter="blur(4px)" />
 
-                    {/* Outer Plate (Porcelain Base) */}
-                    <ellipse cx="60" cy="65" rx="48" ry="22" fill="#FFFFFF" stroke="#F1F5F9" strokeWidth="1" />
-                    {/* Outer Rim Shadow */}
-                    <ellipse cx="60" cy="65" rx="47" ry="21" fill="none" stroke="#E2E8F0" strokeWidth="1" />
-                    {/* Brand Blue Rim Accent */}
-                    <ellipse cx="60" cy="65" rx="45" ry="19.5" fill="none" stroke="#0000ff" strokeWidth="1.2" opacity="0.6" />
-                    
-                    {/* Inner plate bottom shadow */}
-                    <ellipse cx="60" cy="63.5" rx="38" ry="15" fill="#F8FAFC" />
-                    <ellipse cx="60" cy="63" rx="37" ry="14.5" fill="none" stroke="#E2E8F0" strokeWidth="0.8" />
+                    {/* 3D Container Side Walls (charcoal black plastic depth) */}
+                    <path d="M 22,52 L 22,60 C 22,65 26,67 32,69 L 60,79 C 64,81 68,81 72,79 L 98,63 L 98,55 L 72,71 C 68,73 64,73 60,71 L 28,57 C 25,55 22,53 22,52 Z" fill="#090d16" />
+                    <path d="M 60,79 C 64,81 68,81 72,79 L 98,63 L 98,65 C 98,67 96,69 92,71 L 68,81 C 64,83 60,83 56,81 L 28,71 L 32,69 L 60,79 Z" fill="#020617" opacity="0.5" />
+
+                    {/* Container Rim Lip (black plastic top edge) */}
+                    <path d="M 22,52 C 20,49 23,46 27,44 L 52,33 C 55,32 59,33 62,35 L 95,47 C 98,49 98,53 95,55 L 72,71 C 69,73 65,73 62,71 L 27,57 C 24,55 22,54 22,52 Z" fill="#1e293b" stroke="#0f172a" strokeWidth="1" />
+                    <path d="M 24,51 C 23,49 25,47 28,45 L 53,35 C 55,34 58,35 60,36 L 93,48 C 96,50 96,53 93,54 L 70,69 C 67,71 64,71 61,69 L 29,56 C 26,54 24,53 24,51 Z" fill="none" stroke="#334155" strokeWidth="0.8" opacity="0.7" />
+
+                    {/* Container Inner Basin (dark charcoal base) */}
+                    <path d="M 25,51 C 24,49 26,47 29,45 L 53,35 C 55,34 58,35 60,37 L 92,49 C 94,50 94,53 92,54 L 69,68 C 67,70 64,70 61,68 L 30,56 C 27,54 25,53 25,51 Z" fill="#020617" />
 
                     <defs>
                       <linearGradient id="chipGrad1" x1="0" y1="0" x2="1" y2="1">
@@ -559,82 +559,78 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                         <stop offset="100%" stopColor="#B91C1C" />
                       </linearGradient>
                       <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-                        <feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.15" />
+                        <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodOpacity="0.2" />
                       </filter>
                     </defs>
 
-                    {/* Background Chips */}
-                    <polygon points="34,60 52,43 45,64" fill="url(#chipGrad2)" filter="url(#dropShadow)" />
-                    <polygon points="68,60 86,43 77,64" fill="url(#chipGrad2)" filter="url(#dropShadow)" />
-                    <polygon points="50,56 70,38 64,61" fill="url(#chipGrad1)" filter="url(#dropShadow)" />
-
-                    {/* Middle Chips */}
-                    <polygon points="40,65 58,48 52,69" fill="url(#chipGrad1)" filter="url(#dropShadow)" />
-                    <polygon points="62,65 80,48 72,69" fill="url(#chipGrad1)" filter="url(#dropShadow)" />
-                    <polygon points="48,60 66,42 60,64" fill="url(#chipGrad2)" filter="url(#dropShadow)" />
-
-                    {/* SALSA ROJA (Rich flowing paths on chips) */}
-                    <path d="M 38,58 Q 48,46 58,54 T 78,52 Q 80,62 72,65 T 46,63 Z" fill="url(#salsaGrad)" opacity="0.9" filter="url(#dropShadow)" />
-                    <path d="M 44,52 C 48,48 55,54 58,50 C 62,46 66,52 68,48 C 70,55 65,60 56,58 C 48,56 42,56 44,52 Z" fill="#991B1B" opacity="0.4" />
-
-                    {/* Foreground Chips */}
-                    <polygon points="44,71 62,54 55,75" fill="url(#chipGrad1)" filter="url(#dropShadow)" />
-                    <polygon points="56,71 74,54 66,75" fill="url(#chipGrad2)" filter="url(#dropShadow)" />
-
-                    {/* Additional Foreground Salsa drops */}
-                    <path d="M 42,67 Q 45,69 48,66 Q 47,72 41,70 Z" fill="url(#salsaGrad)" />
-                    <path d="M 68,64 Q 72,66 75,63 Q 73,69 67,67 Z" fill="url(#salsaGrad)" />
-
-                    {/* CHUNKS OF SHREDDED CHICKEN */}
+                    {/* TOTOPOS */}
                     <g filter="url(#dropShadow)">
-                      <path d="M 42,56 Q 45,55 48,57 Q 46,59 43,58 Z" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="0.3" />
-                      <path d="M 52,53 Q 55,51 58,54 Q 56,56 53,55 Z" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="0.3" />
-                      <path d="M 64,52 Q 68,53 71,51 Q 69,54 66,53 Z" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="0.3" />
-                      <path d="M 48,64 Q 52,65 55,63 Q 53,67 49,66 Z" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="0.3" />
-                      <path d="M 60,62 Q 64,60 67,63 Q 65,65 61,64 Z" fill="#FEF3C7" stroke="#F59E0B" strokeWidth="0.3" />
+                      <polygon points="34,54 50,38 44,57" fill="url(#chipGrad2)" />
+                      <polygon points="64,54 80,38 72,57" fill="url(#chipGrad2)" />
+                      <polygon points="48,50 64,34 58,53" fill="url(#chipGrad1)" />
+                      <polygon points="38,59 54,43 48,62" fill="url(#chipGrad1)" />
+                      <polygon points="58,59 74,43 66,62" fill="url(#chipGrad1)" />
+                      <polygon points="44,63 60,47 54,66" fill="url(#chipGrad2)" />
+                      <polygon points="54,63 70,47 62,66" fill="url(#chipGrad2)" />
+                    </g>
+
+                    {/* RED/BROWN MEAT (Chorizo/Salsa) ON THE LEFT SIDE */}
+                    <path d="M 27,51 Q 34,44 42,48 T 46,56 Q 40,66 30,62 Z" fill="#7f1d1d" opacity="0.95" />
+                    <g fill="#991b1b">
+                      <circle cx="30" cy="51" r="1.8" />
+                      <circle cx="35" cy="55" r="2.2" />
+                      <circle cx="41" cy="52" r="1.8" />
+                      <circle cx="29" cy="57" r="1.5" />
+                      <circle cx="34" cy="60" r="2.0" />
+                      <circle cx="40" cy="58" r="1.6" />
+                    </g>
+                    <path d="M 28,49 C 32,45 38,51 40,48 C 42,45 44,49 46,47 C 47,53 43,58 36,56 C 30,54 26,54 28,49 Z" fill="#991B1B" opacity="0.3" />
+
+                    {/* STEAK CHUNKS ON THE RIGHT SIDE */}
+                    <path d="M 64,56 Q 74,51 84,55 T 88,62 Q 78,69 66,64 Z" fill="#4a3728" />
+                    <g fill="#2b1d12">
+                      <rect x="68" y="56" width="3.2" height="2.8" rx="0.5" transform="rotate(15 68 56)" />
+                      <rect x="74" y="54" width="4" height="2.5" rx="0.5" transform="rotate(-30 74 54)" />
+                      <rect x="80" y="57" width="3.5" height="3" rx="0.5" transform="rotate(45 80 57)" />
+                      <rect x="72" y="60" width="3" height="3" rx="0.5" transform="rotate(10 72 60)" />
+                      <rect x="78" y="61" width="4" height="2.2" rx="0.5" transform="rotate(-15 78 61)" />
+                      <rect x="84" y="60" width="3.2" height="2.8" rx="0.5" transform="rotate(20 84 60)" />
+                    </g>
+
+                    {/* DRIZZLED CREMA */}
+                    <path d="M 28,52 Q 40,44 54,55 T 84,53" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
+                    <path d="M 32,57 Q 44,49 58,60 T 86,57" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
+
+                    {/* AVOCADO SLICES (Aguacate) IN THE CENTER */}
+                    <g filter="url(#dropShadow)">
+                      <path d="M 48,46 C 46,44 43,49 45,53 C 47,52 49,48 48,46 Z" fill="#14532d" />
+                      <path d="M 47.5,46.5 C 46.2,45.2 43.5,48.8 45,52 C 46.8,51.2 48,48.5 47.5,46.5 Z" fill="#a3e635" />
+                      <path d="M 52,48 C 50,46 47,51 49,55 C 51,54 53,50 52,48 Z" fill="#14532d" />
+                      <path d="M 51.5,48.5 C 50.2,47.2 47.5,50.8 49,54 C 50.8,53.2 52,50.5 51.5,48.5 Z" fill="#a3e635" />
+                      <path d="M 56,50 C 54,48 51,53 53,57 C 55,56 57,52 56,50 Z" fill="#14532d" />
+                      <path d="M 55.5,50.5 C 54.2,49.2 51.5,52.8 53,56 C 54.8,55.2 56,52.5 55.5,50.5 Z" fill="#a3e635" />
+                    </g>
+
+                    {/* FRESH CILANTRO LEAVES */}
+                    <g fill="#16A34A" stroke="#15803D" strokeWidth="0.2">
+                      <path d="M 37,53 Q 39,52 38,55 Q 36,54 37,53 Z" />
+                      <path d="M 50,43 Q 52,42 51,45 Q 49,44 50,43 Z" />
+                      <path d="M 64,41 Q 66,40 65,43 Q 63,42 64,41 Z" />
+                      <path d="M 43,62 Q 45,61 44,64 Q 42,63 43,62 Z" />
+                      <path d="M 57,59 Q 59,58 58,61 Q 56,60 57,59 Z" />
+                      <path d="M 70,55 Q 72,54 71,57 Q 69,56 70,55 Z" />
                     </g>
 
                     {/* SHREDDED QUESO FRESCO */}
                     <g fill="#FFFFFF">
-                      <rect x="42" y="52" width="1.5" height="1.5" rx="0.3" transform="rotate(12 42 52)" />
-                      <rect x="48" y="48" width="1.2" height="1.8" rx="0.3" transform="rotate(45 48 48)" />
-                      <rect x="56" y="47" width="1.6" height="1.2" rx="0.3" transform="rotate(-30 56 47)" />
-                      <rect x="66" y="49" width="1.5" height="1.5" rx="0.3" transform="rotate(15 66 49)" />
-                      <rect x="74" y="53" width="1.8" height="1.2" rx="0.3" transform="rotate(80 74 53)" />
-                      <rect x="45" y="62" width="1.5" height="1.5" rx="0.3" transform="rotate(-15 45 62)" />
-                      <rect x="58" y="65" width="1.2" height="1.6" rx="0.3" transform="rotate(25 58 65)" />
-                      <rect x="66" y="60" width="1.6" height="1.4" rx="0.3" transform="rotate(-60 66 60)" />
-                    </g>
-
-                    {/* RED ONION SLICES (Pink/Purple) */}
-                    <g stroke="#EC4899" strokeWidth="1.2" strokeLinecap="round" fill="none">
-                      <path d="M 38,55 A 6,5 0 0 1 47,51" />
-                      <path d="M 52,48 A 7,5 0 0 1 61,46" />
-                      <path d="M 66,48 A 6,5 0 0 1 75,52" />
-                      <path d="M 44,66 A 5,4 0 0 1 51,62" strokeWidth="1" />
-                      <path d="M 58,68 A 7,4 0 0 1 67,65" strokeWidth="1" />
-                    </g>
-
-                    {/* DRIZZLED CREMA */}
-                    <path d="M 36,61 Q 48,50 58,62 T 80,56" stroke="#FFFFFF" strokeWidth="2.8" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
-                    <path d="M 40,66 Q 52,56 64,68 T 84,60" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" fill="none" filter="url(#dropShadow)" />
-
-                    {/* FRESH CILANTRO LEAVES */}
-                    <g fill="#16A34A" stroke="#15803D" strokeWidth="0.2">
-                      <path d="M 39,59 Q 41,58 40,61 Q 38,60 39,59 Z" />
-                      <path d="M 54,49 Q 56,48 55,51 Q 53,50 54,49 Z" />
-                      <path d="M 68,46 Q 70,45 69,48 Q 67,47 68,46 Z" />
-                      <path d="M 49,69 Q 51,68 50,71 Q 48,70 49,69 Z" />
-                      <path d="M 63,66 Q 65,65 64,68 Q 62,67 63,66 Z" />
-                      <path d="M 75,59 Q 77,58 76,61 Q 74,60 75,59 Z" />
-                    </g>
-
-                    {/* AVOCADO SLICES */}
-                    <g filter="url(#dropShadow)">
-                      <path d="M 22,64 C 20,62 16,68 18,73 C 21,72 23,67 22,64 Z" fill="#15803D" />
-                      <path d="M 21.5,64.5 C 20.2,63.2 17,67.8 18.5,72 C 20.8,71 22.2,67 21.5,64.5 Z" fill="#84CC16" />
-                      <path d="M 25,66 C 23,64 19,70 21,75 C 24,74 26,69 25,66 Z" fill="#15803D" />
-                      <path d="M 24.5,66.5 C 23.2,65.2 20,69.8 21.5,74 C 23.8,73 25.2,69 24.5,66.5 Z" fill="#84CC16" />
+                      <rect x="36" y="49" width="1.2" height="1.2" rx="0.2" transform="rotate(12 36 49)" />
+                      <rect x="42" y="45" width="1.0" height="1.5" rx="0.2" transform="rotate(45 42 45)" />
+                      <rect x="52" y="42" width="1.5" height="1.0" rx="0.2" transform="rotate(-30 52 42)" />
+                      <rect x="62" y="44" width="1.2" height="1.2" rx="0.2" transform="rotate(15 62 44)" />
+                      <rect x="70" y="48" width="1.5" height="1.0" rx="0.2" transform="rotate(80 70 48)" />
+                      <rect x="39" y="58" width="1.2" height="1.2" rx="0.2" transform="rotate(-15 39 58)" />
+                      <rect x="52" y="61" width="1.0" height="1.4" rx="0.2" transform="rotate(25 52 61)" />
+                      <rect x="62" y="56" width="1.4" height="1.2" rx="0.2" transform="rotate(-60 62 56)" />
                     </g>
                   </svg>
                 </div>
