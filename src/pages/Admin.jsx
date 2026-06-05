@@ -538,6 +538,95 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
+
+  const getDbNameFromValue = (value, category) => {
+    if (!value) return null
+    const normalized = value.trim().toUpperCase().replace(/\s+/g, '_')
+    if (category === 'Proteínas') {
+      if (normalized === 'STEAK') return 'steak'
+      if (normalized === 'POLLO') return 'pollo'
+      if (normalized === 'CHORIZO') return 'chorizo'
+    } else if (category === 'Salsas') {
+      if (normalized === 'ROJA') return 'salsa roja'
+      if (normalized === 'VERDE') return 'salsa verde'
+    } else if (category === 'Complementos') {
+      if (normalized === 'AGUACATE') return 'aguacate'
+      if (normalized === 'CEBOLLA_CARAMELIZADA') return 'cebolla caramelizada'
+      if (normalized === 'QUESO_EXTRA') return 'queso extra'
+    }
+
+    const found = portions.find(p => {
+      const product = inventory.find(i => i.name === p.name)
+      const cat = product?.category || 'Otros'
+      if (cat !== category) return false
+      return p.name.toUpperCase().replace(/\s+/g, '_') === normalized
+    })
+    return found ? found.name : value.toLowerCase().replace(/_/g, ' ')
+  }
+
+  const dynamicSauceOptions = useMemo(() => {
+    const allSauces = [...OPTIONS_SAUCE]
+    const dynamicSauces = inventory.filter(item => item.category === 'Salsas')
+    dynamicSauces.forEach(item => {
+      if (item.name === 'salsa roja' || item.name === 'salsa verde') return
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      if (!allSauces.some(opt => opt.value === optionValue)) {
+        const capitalizedLabel = item.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        allSauces.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Salsa ${item.name} para tus chilaquiles.`,
+          illustration: React.createElement(IllustrationRoja),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+    return allSauces
+  }, [inventory])
+
+  const dynamicProteinOptions = useMemo(() => {
+    const allProteins = [...OPTIONS_PROTEIN]
+    const dynamicProteins = inventory.filter(item => item.category === 'Proteínas')
+    dynamicProteins.forEach(item => {
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      if (!allProteins.some(opt => opt.value === optionValue)) {
+        const capitalizedLabel = item.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        allProteins.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Porción de ${item.name} seleccionada para tu plato.`,
+          illustration: React.createElement(IllustrationSteak),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+    return allProteins
+  }, [inventory])
+
+  const dynamicComplementOptions = useMemo(() => {
+    const allComplements = [...OPTIONS_COMPLEMENT]
+    const dynamicComplements = inventory.filter(item => item.category === 'Complementos')
+    dynamicComplements.forEach(item => {
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      if (!allComplements.some(opt => opt.value === optionValue)) {
+        const capitalizedLabel = item.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        allComplements.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Porción de ${item.name} para tu plato.`,
+          illustration: React.createElement(IllustrationAguacate),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+    return allComplements
+  }, [inventory])
   const [newPackagingName, setNewPackagingName] = useState('')
   const [newPackagingCategory, setNewPackagingCategory] = useState('Empaque')
   const [newPackagingUnit, setNewPackagingUnit] = useState('und')
@@ -601,14 +690,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       if (opt.value === 'ROJA') name = 'salsa roja'
       else if (opt.value === 'VERDE') name = 'salsa verde'
       else if (opt.value === 'DIVORCIADOS') isDivorciados = true
+      else name = opt.dbName || opt.value.toLowerCase().replace(/_/g, ' ')
     } else if (type === 'protein') {
       if (opt.value === 'STEAK') name = 'steak'
       else if (opt.value === 'POLLO') name = 'pollo'
       else if (opt.value === 'CHORIZO') name = 'chorizo'
+      else name = opt.dbName || opt.value.toLowerCase().replace(/_/g, ' ')
     } else if (type === 'complement') {
       if (opt.value === 'AGUACATE') name = 'aguacate'
       else if (opt.value === 'CEBOLLA_CARAMELIZADA') name = 'cebolla caramelizada'
       else if (opt.value === 'QUESO_EXTRA') name = 'queso extra'
+      else name = opt.dbName || opt.value.toLowerCase().replace(/_/g, ' ')
     } else if (type === 'base') {
       const MAP = { cream: 'crema', onion: 'cebolla', cilantro: 'cilantro' }
       name = MAP[opt.id] || opt.id
@@ -1167,20 +1259,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const getSelectedRecipeRows = (plate = calcPlate) => {
     const rows = [...FIXED_RECIPE_INGREDIENT_NAMES.map((name) => ({ name, usedAmount: getProductPortionConfig(name).usedPerPlate }))]
 
-    if (plate.sauce === 'ROJA') rows.push({ name: 'salsa roja', usedAmount: getProductPortionConfig('salsa roja').usedPerPlate })
-    else if (plate.sauce === 'VERDE') rows.push({ name: 'salsa verde', usedAmount: getProductPortionConfig('salsa verde').usedPerPlate })
-    else if (plate.sauce === 'DIVORCIADOS') {
+    if (plate.sauce === 'ROJA') {
+      rows.push({ name: 'salsa roja', usedAmount: getProductPortionConfig('salsa roja').usedPerPlate })
+    } else if (plate.sauce === 'VERDE') {
+      rows.push({ name: 'salsa verde', usedAmount: getProductPortionConfig('salsa verde').usedPerPlate })
+    } else if (plate.sauce === 'DIVORCIADOS') {
       rows.push({ name: 'salsa roja', usedAmount: getProductPortionConfig('salsa roja').usedPerPlate / 2 })
       rows.push({ name: 'salsa verde', usedAmount: getProductPortionConfig('salsa verde').usedPerPlate / 2 })
+    } else if (plate.sauce) {
+      const dbSauceName = getDbNameFromValue(plate.sauce, 'Salsas')
+      rows.push({ name: dbSauceName, usedAmount: getProductPortionConfig(dbSauceName).usedPerPlate })
     }
 
-    if (plate.protein === 'STEAK') rows.push({ name: 'steak', usedAmount: getProductPortionConfig('steak').usedPerPlate })
-    if (plate.protein === 'POLLO') rows.push({ name: 'pollo', usedAmount: getProductPortionConfig('pollo').usedPerPlate })
-    if (plate.protein === 'CHORIZO') rows.push({ name: 'chorizo', usedAmount: getProductPortionConfig('chorizo').usedPerPlate })
+    if (plate.protein) {
+      const dbProteinName = getDbNameFromValue(plate.protein, 'Proteínas')
+      rows.push({ name: dbProteinName, usedAmount: getProductPortionConfig(dbProteinName).usedPerPlate })
+    }
 
-    if (plate.complement === 'AGUACATE') rows.push({ name: 'aguacate', usedAmount: getProductPortionConfig('aguacate').usedPerPlate })
-    if (plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA') rows.push({ name: 'cebolla caramelizada', usedAmount: getProductPortionConfig('cebolla caramelizada').usedPerPlate })
-    if (plate.complement === 'QUESO_EXTRA' || plate.complement === 'QUESO EXTRA') rows.push({ name: 'queso extra', usedAmount: getProductPortionConfig('queso extra').usedPerPlate })
+    if (plate.complement) {
+      const dbComplementName = getDbNameFromValue(plate.complement, 'Complementos')
+      rows.push({ name: dbComplementName, usedAmount: getProductPortionConfig(dbComplementName).usedPerPlate })
+    }
 
     const selectedBasesForPlate = plate.selectedBases || []
     BASE_INGREDIENT_NAMES.forEach((name) => {
@@ -2537,7 +2636,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Salsa</label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {OPTIONS_SAUCE.map((opt) => {
+                        {dynamicSauceOptions.map((opt) => {
                           const { priceLabel, portionLabel } = getOptionCostAndPortion(opt, 'sauce')
                           return (
                             <OptionCard
@@ -2559,7 +2658,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Proteína</label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {OPTIONS_PROTEIN.map((opt) => {
+                        {dynamicProteinOptions.map((opt) => {
                           const { priceLabel, portionLabel } = getOptionCostAndPortion(opt, 'protein')
                           return (
                             <OptionCard
@@ -2580,7 +2679,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-ui-muted tracking-widest ml-1">Complemento</label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {OPTIONS_COMPLEMENT.map((opt) => {
+                        {dynamicComplementOptions.map((opt) => {
                           const { priceLabel, portionLabel } = getOptionCostAndPortion(opt, 'complement')
                           return (
                             <OptionCard

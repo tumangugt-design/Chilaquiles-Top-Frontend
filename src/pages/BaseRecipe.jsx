@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_BASE_RECIPE, OPTIONS_SAUCE, OPTIONS_PROTEIN } from '../shared/constants/index.jsx'
+import { OPTIONS_BASE_RECIPE, getOptionObject } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -121,8 +121,8 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
 
           <div className="space-y-6">
             {[...order.cart, order.currentPlate].filter(Boolean).map((plateItem, pIdx) => {
-              const sauceOpt = OPTIONS_SAUCE.find(o => o.value === plateItem.sauce)
-              const proteinOpt = OPTIONS_PROTEIN.find(o => o.value === plateItem.protein)
+              const sauceOpt = getOptionObject(plateItem.sauce, 'Salsas', inventoryItems)
+              const proteinOpt = getOptionObject(plateItem.protein, 'Proteínas', inventoryItems)
               const sauceLabel = sauceOpt?.label || plateItem.sauce
               const proteinLabel = proteinOpt?.label || plateItem.protein
               

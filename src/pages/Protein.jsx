@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_PROTEIN, getPromoConstraint } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
+import { IllustrationSteak } from '../components/illustrations/IngredientIllustrations.jsx'
 
 const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false, appliedPromo }) => {
   const [inventoryItems, setInventoryItems] = useState([])
@@ -32,9 +33,35 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnav
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
-    return OPTIONS_PROTEIN
+
+    // Dynamically merge proteins from inventory database
+    const dynamicProteins = inventoryItems.filter(item => item.category === 'Proteínas')
+    const allProteins = [...OPTIONS_PROTEIN]
+
+    dynamicProteins.forEach(item => {
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      const exists = allProteins.some(opt => opt.value === optionValue)
+      if (!exists) {
+        const capitalizedLabel = item.name
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+
+        allProteins.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Porción de ${item.name} seleccionada para tu plato.`,
+          illustration: React.createElement(IllustrationSteak),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+
+    return allProteins
       .map((option) => {
-        const availability = getProductAvailability(statusMap, option.value.toLowerCase())
+        const availability = getProductAvailability(statusMap, option.dbName || option.value.toLowerCase())
         const isPromoMismatch = appliedPromo && promoProtein !== 'ALL' && option.value !== promoProtein
         return {
           ...option,

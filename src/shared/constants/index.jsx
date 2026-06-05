@@ -279,7 +279,85 @@ export const getOptionLabel = (value, options = []) => {
     const itemValue = String(item.value || item.id || '').trim().toUpperCase().replace(/\s+/g, '_')
     return itemValue === normalizedValue
   })
-  return option ? option.label : value
+  if (option) return option.label
+  
+  // Dynamic fallback: Format uppercase underscore ID nicely
+  return String(value)
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+export const getOptionObject = (value, category, inventoryItems = []) => {
+  if (!value) return null
+  const normalizedValue = String(value || '').trim().toUpperCase().replace(/\s+/g, '_')
+  
+  let baseOptions = []
+  let defaultIllustration = null
+  let fieldNameMap = {}
+
+  if (category === 'Proteínas') {
+    baseOptions = OPTIONS_PROTEIN
+    defaultIllustration = React.createElement(IllustrationSteak)
+  } else if (category === 'Salsas') {
+    baseOptions = OPTIONS_SAUCE
+    defaultIllustration = React.createElement(IllustrationRoja)
+  } else if (category === 'Complementos') {
+    baseOptions = OPTIONS_COMPLEMENT
+    defaultIllustration = React.createElement(IllustrationAguacate)
+    fieldNameMap = {
+      'aguacate': 'AGUACATE',
+      'cebolla caramelizada': 'CEBOLLA_CARAMELIZADA',
+      'queso extra': 'QUESO_EXTRA'
+    }
+  }
+
+  // Find in hardcoded first
+  const found = baseOptions.find(opt => {
+    const optValue = String(opt.value || opt.id || '').trim().toUpperCase().replace(/\s+/g, '_')
+    return optValue === normalizedValue
+  })
+  if (found) return found
+
+  // Otherwise, find in dynamic items
+  const dynamicItem = inventoryItems.find(item => {
+    if (item.category !== category) return false
+    const optValue = fieldNameMap[item.name] || item.name.toUpperCase().replace(/\s+/g, '_')
+    return optValue === normalizedValue
+  })
+
+  if (dynamicItem) {
+    const capitalizedLabel = dynamicItem.name
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
+    return {
+      id: normalizedValue,
+      label: capitalizedLabel,
+      value: normalizedValue,
+      description: `Porción de ${dynamicItem.name} para tu plato.`,
+      illustration: defaultIllustration,
+      isDynamic: true,
+      dbName: dynamicItem.name
+    }
+  }
+
+  // Fallback if not found anywhere (e.g. not loaded yet)
+  const capitalizedLabel = String(value)
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+  return {
+    id: normalizedValue,
+    label: capitalizedLabel,
+    value: normalizedValue,
+    description: `Porción de ${value} para tu plato.`,
+    illustration: defaultIllustration
+  }
 }
 
 export const getPromoConstraint = (promo, field) => {

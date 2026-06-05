@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_SAUCE, SAUCE_PORTIONS, getPromoConstraint } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, combineAvailabilities, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
+import { IllustrationRoja } from '../components/illustrations/SauceIllustrations.jsx'
 
 const getSauceAvailability = (statusMap, option) => {
   if (option.value === 'ROJA') return getProductAvailability(statusMap, 'salsa roja', SAUCE_PORTIONS.fullMl, { amount: SAUCE_PORTIONS.fullOz, unit: 'oz' })
@@ -17,7 +18,7 @@ const getSauceAvailability = (statusMap, option) => {
       'Requiere 4 oz de salsa roja y 4 oz de salsa verde.'
     )
   }
-  return { available: true, availabilityStatus: 'available' }
+  return getProductAvailability(statusMap, option.dbName || option.value.toLowerCase().replace(/_/g, ' '))
 }
 
 const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavailable = false, appliedPromo }) => {
@@ -47,7 +48,35 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavai
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
-    return OPTIONS_SAUCE
+
+    // Dynamically merge sauces from inventory database
+    const dynamicSauces = inventoryItems.filter(item => item.category === 'Salsas')
+    const allSauces = [...OPTIONS_SAUCE]
+
+    dynamicSauces.forEach(item => {
+      if (item.name === 'salsa roja' || item.name === 'salsa verde') return
+
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      const exists = allSauces.some(opt => opt.value === optionValue)
+      if (!exists) {
+        const capitalizedLabel = item.name
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+
+        allSauces.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Salsa ${item.name} para tus chilaquiles.`,
+          illustration: React.createElement(IllustrationRoja),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+
+    return allSauces
       .map((option) => {
         const availability = getSauceAvailability(statusMap, option)
         const isPromoMismatch = appliedPromo && promoSauce !== 'ALL' && option.value !== promoSauce

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { OPTIONS_COMPLEMENT, getPromoConstraint, normalizeComplementValue } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
+import { IllustrationAguacate } from '../components/illustrations/IngredientIllustrations.jsx'
 
 const complementNameById = {
   AGUACATE: 'aguacate',
@@ -38,9 +39,35 @@ const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
     const statusMap = buildInventoryStatusMap(inventoryItems)
-    return OPTIONS_COMPLEMENT
+
+    // Dynamically merge complements from inventory database
+    const dynamicComplements = inventoryItems.filter(item => item.category === 'Complementos')
+    const allComplements = [...OPTIONS_COMPLEMENT]
+
+    dynamicComplements.forEach(item => {
+      const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
+      const exists = allComplements.some(opt => opt.value === optionValue)
+      if (!exists) {
+        const capitalizedLabel = item.name
+          .split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+
+        allComplements.push({
+          id: optionValue,
+          label: capitalizedLabel,
+          value: optionValue,
+          description: `Porción de ${item.name} para tu plato.`,
+          illustration: React.createElement(IllustrationAguacate),
+          isDynamic: true,
+          dbName: item.name
+        })
+      }
+    })
+
+    return allComplements
       .map((option) => {
-        const availability = getProductAvailability(statusMap, complementNameById[option.id])
+        const availability = getProductAvailability(statusMap, complementNameById[option.id] || option.dbName || option.value.toLowerCase().replace(/_/g, ' '))
         const optionValue = normalizeComplementValue(option.value)
         const isPromoMismatch = appliedPromo && promoComplement !== 'ALL' && optionValue !== promoComplement
         return {
