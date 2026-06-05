@@ -237,6 +237,14 @@ export const OPTIONS_PROTEIN = [
     illustration: React.createElement(IllustrationChorizo),
     spicyLevel: 'MILD',
   },
+  {
+    id: 'PULLED_PORK',
+    label: 'Pulled Pork',
+    value: 'PULLED_PORK',
+    description: 'Cerdo desmenuzado estilo BBQ, tierno y jugoso.',
+    illustration: React.createElement(IllustrationPulledPork),
+    dbName: 'pulled pork',
+  },
 ]
 
 export const OPTIONS_COMPLEMENT = [
