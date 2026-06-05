@@ -108,11 +108,13 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavai
         <button onClick={onBack} className="text-ui-muted font-bold hover:text-ui-text transition-colors px-4 py-2 flex items-center">
           <span className="mr-2">←</span> <span className="hidden sm:inline">Atrás</span><span className="sm:hidden text-xs">Volver</span>
         </button>
-        <Button className="w-auto min-w-[120px] sm:min-w-[200px]" disabled={!plate.sauce} onClick={onNext}>
-          <span className="hidden sm:inline">Siguiente Paso</span>
-          <span className="sm:hidden">Siguiente</span>
-          <span className="ml-2">→</span>
-        </Button>
+        <div className="hidden lg:block">
+          <Button className="w-auto min-w-[120px] sm:min-w-[200px]" disabled={!plate.sauce} onClick={onNext}>
+            <span className="hidden sm:inline">Siguiente Paso</span>
+            <span className="sm:hidden">Siguiente</span>
+            <span className="ml-2">→</span>
+          </Button>
+        </div>
       </div>
     </div>
   )

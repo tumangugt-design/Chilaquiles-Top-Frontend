@@ -179,31 +179,7 @@ const mergeCostSources = (lastPurchases = {}, calculatorCosts = {}) => {
   return merged
 }
 
-const getPlatesByIngredient = (item) => {
-  const meta = INVENTORY_PRODUCT_MAP[item.name]
-  const required = Number(meta?.usedPerPlate || 0)
-  if (!required || required <= 0) return null
-  return Math.floor(Number(item.stock || 0) / required)
-}
-
-const getStockAlertItems = (items = []) => {
-  return items
-    .map((item) => {
-      const meta = INVENTORY_PRODUCT_MAP[item.name]
-      const required = Number(meta?.usedPerPlate || 0)
-      const stock = Number(item.stock || 0)
-      if (!meta || !required || required <= 0 || item.isActive === false || stock >= required) return null
-      return {
-        name: meta.label || item.name,
-        stock,
-        unit: meta.unit || item.unit || '',
-        required,
-        requiredUnit: meta.displayUnit || meta.unit || item.unit || '',
-        requiredLabel: `${formatInventoryAmount(meta.displayUsedPerPlate ?? required)} ${meta.displayUnit || meta.unit || item.unit || ''}`.trim(),
-      }
-    })
-    .filter(Boolean)
-}
+// Plates calculation and stock alert items functions moved inside AdminPage component to access portions config dynamically.
 
 
 const resetPromoFormState = () => ({
@@ -971,7 +947,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const handleStartStockEdit = (item) => {
-    const meta = INVENTORY_PRODUCT_MAP[item.name]
+    const meta = getProductPortionConfig(item.name)
     const allowedUnits = getAllowedInputUnits(meta)
     setStockEditForm({
       name: item.name,
@@ -986,7 +962,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
   const handleSaveStockEdit = async (item) => {
     const stock = Number(stockEditForm.stock)
-    const meta = INVENTORY_PRODUCT_MAP[item.name]
+    const meta = getProductPortionConfig(item.name)
 
     if (Number.isNaN(stock) || stock < 0) {
       return toast.error('Ingresa un stock válido mayor o igual a cero')
@@ -1066,11 +1042,37 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     return {
       name: normalized,
       usedPerPlate: portion ? portion.usedPerPlate : (catalogItem?.usedPerPlate || 1),
-      unit: portion ? portion.unit : (catalogItem?.unit || 'und'),
+      unit: product?.unit || portion?.unit || catalogItem?.unit || 'und',
       label: product?.label || catalogItem?.label || name,
       category: product?.category || catalogItem?.category || 'Otros',
       price: portion ? portion.price : (product?.lastPrice || 0)
     }
+  }
+
+  const getPlatesByIngredient = (item) => {
+    const meta = getProductPortionConfig(item.name)
+    const required = Number(meta?.usedPerPlate || 0)
+    if (!required || required <= 0) return null
+    return Math.floor(Number(item.stock || 0) / required)
+  }
+
+  const getStockAlertItems = (items = []) => {
+    return items
+      .map((item) => {
+        const meta = getProductPortionConfig(item.name)
+        const required = Number(meta?.usedPerPlate || 0)
+        const stock = Number(item.stock || 0)
+        if (!meta || !required || required <= 0 || item.isActive === false || stock >= required) return null
+        return {
+          name: meta.label || item.name,
+          stock,
+          unit: meta.unit || item.unit || '',
+          required,
+          requiredUnit: meta.displayUnit || meta.unit || item.unit || '',
+          requiredLabel: `${formatInventoryAmount(meta.displayUsedPerPlate ?? required)} ${meta.displayUnit || meta.unit || item.unit || ''}`.trim(),
+        }
+      })
+      .filter(Boolean)
   }
 
   const getDivorciadosPortion = () => {

@@ -59,14 +59,11 @@ const ConfirmationPage = ({ order, onReset }) => {
           fullWidth
           onClick={() => {
             onReset()
-            window.location.href = '/'
+            window.location.href = 'https://chilaquilestop.com'
           }}
           className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-black py-4 text-lg rounded-2xl shadow-xl shadow-green-500/30 border-0"
         >
           Continuar
-        </Button>
-        <Button fullWidth onClick={onReset} variant="secondary" className="border-2 border-ui-border">
-          Volver al inicio
         </Button>
       </div>
     </div>

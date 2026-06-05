@@ -112,8 +112,14 @@ export const convertInventoryAmountToBaseUnit = (amount, inputUnit, product) => 
     und: { und: 1 },
   }
 
-  const factor = conversions[product.unit]?.[inputUnit]
-  if (!factor) return 0
+  const baseUnit = String(product.unit || 'und').toLowerCase()
+  const inUnit = String(inputUnit || '').toLowerCase()
+
+  const factor = conversions[baseUnit]?.[inUnit]
+  if (!factor) {
+    if (baseUnit === inUnit) return numericAmount
+    return 0
+  }
   return Math.round(numericAmount * factor * 1000) / 1000
 }
 

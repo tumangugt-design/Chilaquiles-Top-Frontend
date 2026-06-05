@@ -167,15 +167,16 @@ const SummaryPage = ({ order, updateOrder, onNext, onBack, onEdit, onAddAnother 
                 value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                 placeholder="Ej: IAN123TOP"
-                className="flex-1 p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text font-black uppercase placeholder:normal-case outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all"
+                className="flex-1 min-w-0 p-3.5 border border-ui-border rounded-xl bg-ui-bg text-ui-text font-black uppercase placeholder:normal-case outline-none focus:ring-2 focus:ring-brand-blue/30 transition-all text-sm"
               />
-              <Button
+              <button
+                type="button"
                 onClick={handleApplyCoupon}
                 disabled={isValidating || !couponInput.trim()}
-                className="px-6 py-3.5 font-black rounded-xl"
+                className="bg-brand-orange text-white font-black text-xs uppercase px-5 py-3.5 rounded-xl hover:bg-brand-orange/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 transition-all shrink-0 flex items-center justify-center min-w-[90px]"
               >
-                {isValidating ? 'Validando...' : 'Aplicar'}
-              </Button>
+                {isValidating ? '...' : 'Aplicar'}
+              </button>
             </div>
           )}
         </div>
@@ -203,16 +204,18 @@ const SummaryPage = ({ order, updateOrder, onNext, onBack, onEdit, onAddAnother 
         >
           <span className="mr-2">←</span> Volver a editar
         </button>
-        <Button 
-          fullWidth 
-          onClick={onNext} 
-          disabled={!isComplete}
-          className="order-1 sm:order-2 py-4 shadow-xl shadow-brand-orange/20 flex-1"
-        >
-          <span className="hidden sm:inline">Finalizar Pedido y Continuar</span>
-          <span className="sm:hidden">Finalizar Pedido</span>
-          <span className="ml-2">→</span>
-        </Button>
+        <div className="hidden lg:block flex-1">
+          <Button 
+            fullWidth 
+            onClick={onNext} 
+            disabled={!isComplete}
+            className="order-1 sm:order-2 py-4 shadow-xl shadow-brand-orange/20 w-full"
+          >
+            <span className="hidden sm:inline">Finalizar Pedido y Continuar</span>
+            <span className="sm:hidden">Finalizar Pedido</span>
+            <span className="ml-2">→</span>
+          </Button>
+        </div>
       </div>
     </div>
   )

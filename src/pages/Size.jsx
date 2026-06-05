@@ -399,15 +399,17 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
           <span className="hidden sm:inline">Volver</span>
           <span className="sm:hidden text-xs">Atrás</span>
         </button>
-        <Button
-          className="w-auto min-w-[120px] sm:min-w-[200px]"
-          disabled={isNextDisabled}
-          onClick={onNext}
-        >
-          <span className="hidden sm:inline">Siguiente Paso</span>
-          <span className="sm:hidden">Siguiente</span>
-          <span className="ml-2">→</span>
-        </Button>
+        <div className="hidden lg:block">
+          <Button
+            className="w-auto min-w-[120px] sm:min-w-[200px]"
+            disabled={isNextDisabled}
+            onClick={onNext}
+          >
+            <span className="hidden sm:inline">Siguiente Paso</span>
+            <span className="sm:hidden">Siguiente</span>
+            <span className="ml-2">→</span>
+          </Button>
+        </div>
       </div>
     </div>
   )
