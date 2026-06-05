@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_SAUCE, SAUCE_PORTIONS, getPromoConstraint } from '../shared/constants/index.jsx'
+import { OPTIONS_SAUCE, SAUCE_PORTIONS, getPromoConstraint, getOptionObject } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, combineAvailabilities, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -59,17 +59,9 @@ const SaucePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnavai
       const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
       const exists = allSauces.some(opt => opt.value === optionValue)
       if (!exists) {
-        const capitalizedLabel = item.name
-          .split(' ')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-
+        const optionObj = getOptionObject(optionValue, 'Salsas', inventoryItems)
         allSauces.push({
-          id: optionValue,
-          label: capitalizedLabel,
-          value: optionValue,
-          description: `Salsa ${item.name} para tus chilaquiles.`,
-          illustration: React.createElement(IllustrationRoja),
+          ...optionObj,
           isDynamic: true,
           dbName: item.name
         })
