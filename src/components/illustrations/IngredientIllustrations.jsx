@@ -20,9 +20,11 @@ const CILANTRO_BASE = '#4ADE80'
 const CREAM_BASE = '#FFFFFF'
 const CREAM_SHADOW = '#DBEAFE'
 
-const PULLED_PORK_BASE = '#7C2D12'
-const PULLED_PORK_LIGHT = '#C2410C'
-const PULLED_PORK_HIGHLIGHT = '#EA580C'
+const PULLED_PORK_BASE = '#92400E'
+const PULLED_PORK_MID = '#B45309'
+const PULLED_PORK_LIGHT = '#D97706'
+const PULLED_PORK_HIGHLIGHT = '#F59E0B'
+const PULLED_PORK_GOLDEN = '#FBBF24'
 
 const BlackPorcelainBowl = ({ children }) => (
   <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
@@ -94,23 +96,22 @@ export const IllustrationChorizo = () => (
 
 export const IllustrationPulledPork = () => (
   <BlackPorcelainBowl>
-    <g transform="translate(25, 10)">
-      {/* Mound of pulled pork */}
-      <path d="M15 45 C 10 35, 25 15, 50 15 C 75 15, 90 20, 100 25 C 110 30, 115 35, 110 45 Z" fill={PULLED_PORK_BASE} />
-      
-      {/* Shredded meat details / strands */}
-      <path d="M20 40 Q 30 20, 50 25" stroke={PULLED_PORK_LIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
-      <path d="M35 38 Q 45 18, 65 22" stroke={PULLED_PORK_LIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <path d="M55 42 Q 60 22, 80 25" stroke={PULLED_PORK_LIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
-      <path d="M70 38 Q 80 15, 95 28" stroke={PULLED_PORK_LIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <path d="M40 30 Q 55 12, 75 18" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2" strokeLinecap="round" fill="none" />
-      <path d="M25 28 Q 40 22, 55 20" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <path d="M80 32 Q 90 20, 105 32" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2" strokeLinecap="round" fill="none" />
-      
-      {/* Droplets of BBQ sauce */}
-      <circle cx="30" cy="35" r="2" fill={PULLED_PORK_HIGHLIGHT} />
-      <circle cx="60" cy="28" r="1.5" fill={PULLED_PORK_HIGHLIGHT} />
-      <circle cx="85" cy="33" r="2" fill={PULLED_PORK_HIGHLIGHT} />
+    <g transform="translate(20, 8)">
+      {/* Base mound - golden brown */}
+      <ellipse cx="55" cy="38" rx="48" ry="18" fill={PULLED_PORK_BASE} />
+
+      {/* Thick shredded meat strands - wavy lines stacked */}
+      <path d="M12 40 Q 25 30, 38 38 Q 50 46, 65 35 Q 78 24, 95 32" stroke={PULLED_PORK_GOLDEN} strokeWidth="5" strokeLinecap="round" fill="none" />
+      <path d="M18 34 Q 32 24, 48 32 Q 60 40, 75 28 Q 88 18, 100 26" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="4.5" strokeLinecap="round" fill="none" />
+      <path d="M10 46 Q 22 38, 35 44 Q 48 50, 62 42 Q 75 34, 90 40" stroke={PULLED_PORK_LIGHT} strokeWidth="5" strokeLinecap="round" fill="none" />
+      <path d="M22 28 Q 38 18, 55 26 Q 68 33, 82 22 Q 92 16, 105 22" stroke={PULLED_PORK_GOLDEN} strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path d="M15 22 Q 30 14, 45 20 Q 58 26, 72 18 Q 85 10, 98 18" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="3.5" strokeLinecap="round" fill="none" />
+      <path d="M25 44 Q 40 36, 55 42 Q 68 48, 82 38" stroke={PULLED_PORK_MID} strokeWidth="4" strokeLinecap="round" fill="none" />
+
+      {/* Extra short strands for texture */}
+      <path d="M30 20 Q 38 15, 48 18" stroke={PULLED_PORK_GOLDEN} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M65 16 Q 75 12, 88 16" stroke={PULLED_PORK_LIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M42 46 Q 52 50, 60 46" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
     </g>
   </BlackPorcelainBowl>
 )
