@@ -4,7 +4,7 @@ import Button from '../components/ui/Button.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { getOrders, updateOrderStatus } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
-import { formatBaseRecipe } from '../shared/constants/index.jsx'
+import { formatBaseRecipe, getOptionLabel, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
 import toast from 'react-hot-toast'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import StaffNavbar from '../components/layout/StaffNavbar.jsx'
@@ -212,9 +212,9 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
                   <div key={idx} className="rounded-2xl border border-black/15 bg-white/60 p-4">
                     <p className="text-xs font-black text-brand-blue uppercase mb-2">Plato {idx + 1}</p>
                     <div className="space-y-1 font-bold text-black/80">
-                      <div>{item.sauce}</div>
-                      <div>{item.protein}</div>
-                      <div>{item.complement}</div>
+                      <div>{getOptionLabel(item.sauce, OPTIONS_SAUCE)}</div>
+                      <div>{getOptionLabel(item.protein, OPTIONS_PROTEIN)}</div>
+                      <div>{getOptionLabel(item.complement, OPTIONS_COMPLEMENT)}</div>
                       {baseText && (
                         <div className="pt-2 mt-2 border-t border-black/15 font-bold text-black/80 uppercase">
                           {baseText}

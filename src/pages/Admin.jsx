@@ -339,9 +339,9 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
           <div key={`${order._id}-item-${idx}`} className="rounded-2xl border border-black/15 bg-white/70 p-4">
             <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest mb-2">Plato {idx + 1}</p>
             <div className="space-y-1 text-sm font-bold text-black/80">
-              <div>{item.sauce}</div>
-              <div>{item.protein}</div>
-              <div>{item.complement}</div>
+              <div>{getOptionLabel(item.sauce, OPTIONS_SAUCE)}</div>
+              <div>{getOptionLabel(item.protein, OPTIONS_PROTEIN)}</div>
+              <div>{getOptionLabel(item.complement, OPTIONS_COMPLEMENT)}</div>
             </div>
             <div className="pt-2 mt-2 border-t border-black/15 space-y-1">
               {basesByPlate[idx] ? (
@@ -784,11 +784,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       } else if (activeTab === 'staff') {
         await Promise.all([loadRoleUsers('CHEF'), loadRoleUsers('REPARTIDOR')])
       } else if (['entries', 'inventory'].includes(activeTab)) {
-        const [inventoryResponse, logsResponse] = await Promise.all([
+        const [inventoryResponse, logsResponse, portionsResponse] = await Promise.all([
           getInventory(),
-          activeTab === 'entries' ? getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+          activeTab === 'entries' ? getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+          getPortions().catch(() => ({ data: [] }))
         ])
         setInventory(inventoryResponse.data)
+        setPortions(portionsResponse.data || [])
         if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
         const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse, couponsResponse] = await Promise.all([
@@ -2174,70 +2176,92 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </div>
 
               <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
-                {INVENTORY_PRODUCT_OPTIONS.map((product) => {
-                  const inventoryItem = inventory.find(i => i.name === product.value)
-                  const fixedPrice = Number(inventoryItem?.lastPrice || 0)
-                  const isEditingPrice = priceEditForm.name === product.value
-                  return (
-                    <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
-                        <div className="min-w-0">
-                          <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
-                          <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
-                            {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
-                          </p>
+                {(() => {
+                  const allProductNames = Array.from(new Set([
+                    ...INVENTORY_PRODUCT_OPTIONS.map(p => p.value),
+                    ...inventory.map(i => i.name)
+                  ]))
+                  const dynamicConsumoOptions = allProductNames.map(name => {
+                    const config = getProductPortionConfig(name)
+                    return {
+                      value: config.name,
+                      label: config.label,
+                      category: config.category,
+                      usedPerPlate: config.usedPerPlate,
+                      unit: config.unit
+                    }
+                  })
+                  const sortedConsumoOptions = dynamicConsumoOptions.sort((a, b) => {
+                    if (a.category !== b.category) {
+                      return a.category.localeCompare(b.category)
+                    }
+                    return a.label.localeCompare(b.label)
+                  })
+                  return sortedConsumoOptions.map((product) => {
+                    const inventoryItem = inventory.find(i => i.name === product.value)
+                    const fixedPrice = Number(inventoryItem?.lastPrice || 0)
+                    const isEditingPrice = priceEditForm.name === product.value
+                    return (
+                      <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
+                          <div className="min-w-0">
+                            <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
+                            <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
+                              {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="text-left sm:text-right shrink-0">
+                            <p className="text-sm font-black text-brand-blue break-words">
+                              {product.usedPerPlate} {product.unit}
+                            </p>
+                            <p className="text-[10px] font-black text-green-600 mt-0.5">
+                              Precio fijo Q{fixedPrice.toFixed(2)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-left sm:text-right shrink-0">
-                          <p className="text-sm font-black text-brand-blue break-words">
-                            {product.usedPerPlate} {product.unit}
-                          </p>
-                          <p className="text-[10px] font-black text-green-600 mt-0.5">
-                            Precio fijo Q{fixedPrice.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
 
-                      {isEditingPrice ? (
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
-                          <input
-                            className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={priceEditForm.price}
-                            onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
-                            placeholder="Precio fijo del producto"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveProductPrice(product)}
-                            disabled={isSaving}
-                            className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
-                          >
-                            Guardar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCancelPriceEdit}
-                            className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleStartPriceEdit(product, fixedPrice)}
-                            className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
-                          >
-                            Editar precio
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                        {isEditingPrice ? (
+                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
+                            <input
+                              className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={priceEditForm.price}
+                              onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
+                              placeholder="Precio fijo del producto"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveProductPrice(product)}
+                              disabled={isSaving}
+                              className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelPriceEdit}
+                              className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleStartPriceEdit(product, fixedPrice)}
+                              className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
+                            >
+                              Editar precio
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
           </div>
@@ -3108,13 +3132,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                       <span className="text-brand-blue font-black shrink-0">Plato {pIdx + 1}:</span>
                                       <div className="flex -space-x-1 shrink-0">
                                         <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={sauceL}>
-                                          {getIngredientSvg(plate.sauce)}
+                                          {getIngredientSvg(plate.sauce, 'Salsas')}
                                         </div>
                                         <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={proteinL}>
-                                          {getIngredientSvg(plate.protein)}
+                                          {getIngredientSvg(plate.protein, 'Proteínas')}
                                         </div>
                                         <div className="w-5 h-5 rounded-full border border-ui-border bg-white flex items-center justify-center overflow-hidden scale-90 shrink-0" title={complementL}>
-                                          {getIngredientSvg(plate.complement)}
+                                          {getIngredientSvg(plate.complement, 'Complementos')}
                                         </div>
                                       </div>
                                       <span className="text-ui-text font-bold uppercase">{sauceL} • {proteinL} • {complementL}</span>
@@ -3654,8 +3678,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   )
 }
 
-const getIngredientSvg = (name) => {
+const getIngredientSvg = (name, category = '') => {
   const n = String(name || '').toLowerCase().trim()
+  const c = String(category || '').toLowerCase().trim()
+
   if (n.includes('steak')) return <IllustrationSteak />
   if (n.includes('pollo')) return <IllustrationPollo />
   if (n.includes('chorizo')) return <IllustrationChorizo />
@@ -3671,6 +3697,11 @@ const getIngredientSvg = (name) => {
   if (n.includes('roja')) return <IllustrationRoja />
   if (n.includes('verde')) return <IllustrationVerde />
   
+  // Category-based fallbacks for dynamic items
+  if (c.includes('prote') || n.includes('prote')) return <IllustrationSteak />
+  if (c.includes('salsa') || n.includes('salsa')) return <IllustrationRoja />
+  if (c.includes('comple') || n.includes('comple')) return <IllustrationAguacate />
+
   return (
     <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
       <ellipse cx="100" cy="110" rx="65" ry="12" fill="#000000" fillOpacity="0.3" />
@@ -3733,7 +3764,7 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
         
         <div className="flex items-center gap-4 flex-1">
           <div className="w-20 h-20 rounded-2xl bg-ui-bg overflow-hidden flex items-center justify-center shrink-0 border border-ui-border/50">
-            {getIngredientSvg(portion.name)}
+            {getIngredientSvg(portion.name, category)}
           </div>
           
           <div className="space-y-1.5 flex-1 min-w-0">

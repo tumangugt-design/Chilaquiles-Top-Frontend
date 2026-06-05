@@ -1,4 +1,4 @@
-import { calculateTotal, formatBaseRecipe } from '../shared/constants/index.jsx'
+import { calculateTotal, formatBaseRecipe, getOptionLabel, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT } from '../shared/constants/index.jsx'
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 
@@ -36,7 +36,7 @@ const ConfirmationPage = ({ order, onReset }) => {
               return (
                 <div key={idx} className="py-3 border-b border-ui-border last:border-0">
                   <p className="text-xs font-black text-brand-blue uppercase mb-1">Plato {idx + 1}</p>
-                  <p className="text-sm font-bold text-ui-text">{plate.sauce} • {plate.protein} • {plate.complement}</p>
+                  <p className="text-sm font-bold text-ui-text">{getOptionLabel(plate.sauce, OPTIONS_SAUCE)} • {getOptionLabel(plate.protein, OPTIONS_PROTEIN)} • {getOptionLabel(plate.complement, OPTIONS_COMPLEMENT)}</p>
                   {baseStr && <p className="text-sm font-bold text-ui-text uppercase mt-1">{baseStr}</p>}
                 </div>
               )
