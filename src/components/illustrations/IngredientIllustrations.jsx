@@ -20,6 +20,10 @@ const CILANTRO_BASE = '#4ADE80'
 const CREAM_BASE = '#FFFFFF'
 const CREAM_SHADOW = '#DBEAFE'
 
+const PULLED_PORK_BASE = '#7C2D12'
+const PULLED_PORK_LIGHT = '#C2410C'
+const PULLED_PORK_HIGHLIGHT = '#EA580C'
+
 const BlackPorcelainBowl = ({ children }) => (
   <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
     <defs>
@@ -84,6 +88,29 @@ export const IllustrationChorizo = () => (
       <circle cx="38" cy="15" r="2" fill={CHORIZO_FAT} />
       <circle cx="62" cy="20" r="2" fill={CHORIZO_FAT} />
       <circle cx="82" cy="16" r="2" fill={CHORIZO_FAT} />
+    </g>
+  </BlackPorcelainBowl>
+)
+
+export const IllustrationPulledPork = () => (
+  <BlackPorcelainBowl>
+    <g transform="translate(25, 10)">
+      {/* Mound of pulled pork */}
+      <path d="M15 45 C 10 35, 25 15, 50 15 C 75 15, 90 20, 100 25 C 110 30, 115 35, 110 45 Z" fill={PULLED_PORK_BASE} />
+      
+      {/* Shredded meat details / strands */}
+      <path d="M20 40 Q 30 20, 50 25" stroke={PULLED_PORK_LIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M35 38 Q 45 18, 65 22" stroke={PULLED_PORK_LIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      <path d="M55 42 Q 60 22, 80 25" stroke={PULLED_PORK_LIGHT} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M70 38 Q 80 15, 95 28" stroke={PULLED_PORK_LIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      <path d="M40 30 Q 55 12, 75 18" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2" strokeLinecap="round" fill="none" />
+      <path d="M25 28 Q 40 22, 55 20" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      <path d="M80 32 Q 90 20, 105 32" stroke={PULLED_PORK_HIGHLIGHT} strokeWidth="2" strokeLinecap="round" fill="none" />
+      
+      {/* Droplets of BBQ sauce */}
+      <circle cx="30" cy="35" r="2" fill={PULLED_PORK_HIGHLIGHT} />
+      <circle cx="60" cy="28" r="1.5" fill={PULLED_PORK_HIGHLIGHT} />
+      <circle cx="85" cy="33" r="2" fill={PULLED_PORK_HIGHLIGHT} />
     </g>
   </BlackPorcelainBowl>
 )

@@ -13,6 +13,7 @@ import {
   IllustrationCebolla,
   IllustrationCilantro,
   IllustrationCrema,
+  IllustrationPulledPork
 } from '../../components/illustrations/IngredientIllustrations.jsx'
 
 export const calculateTotal = (platesCount) => {
@@ -333,12 +334,16 @@ export const getOptionObject = (value, category, inventoryItems = []) => {
       .split(' ')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ')
+    let customIllustration = defaultIllustration
+    if (normalizedValue === 'PULLED_PORK') {
+      customIllustration = React.createElement(IllustrationPulledPork)
+    }
     return {
       id: normalizedValue,
       label: capitalizedLabel,
       value: normalizedValue,
       description: `Porción de ${dynamicItem.name} para tu plato.`,
-      illustration: defaultIllustration,
+      illustration: customIllustration,
       isDynamic: true,
       dbName: dynamicItem.name
     }
@@ -351,12 +356,16 @@ export const getOptionObject = (value, category, inventoryItems = []) => {
     .split(' ')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
+  let customIllustration = defaultIllustration
+  if (normalizedValue === 'PULLED_PORK') {
+    customIllustration = React.createElement(IllustrationPulledPork)
+  }
   return {
     id: normalizedValue,
     label: capitalizedLabel,
     value: normalizedValue,
     description: `Porción de ${value} para tu plato.`,
-    illustration: defaultIllustration
+    illustration: customIllustration
   }
 }
 
