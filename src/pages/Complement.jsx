@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_COMPLEMENT, getPromoConstraint, normalizeComplementValue } from '../shared/constants/index.jsx'
+import { OPTIONS_COMPLEMENT, getPromoConstraint, normalizeComplementValue, getOptionObject } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -48,17 +48,9 @@ const ComplementPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
       const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
       const exists = allComplements.some(opt => opt.value === optionValue)
       if (!exists) {
-        const capitalizedLabel = item.name
-          .split(' ')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-
+        const optionObj = getOptionObject(optionValue, 'Complementos', inventoryItems)
         allComplements.push({
-          id: optionValue,
-          label: capitalizedLabel,
-          value: optionValue,
-          description: `Porción de ${item.name} para tu plato.`,
-          illustration: React.createElement(IllustrationAguacate),
+          ...optionObj,
           isDynamic: true,
           dbName: item.name
         })

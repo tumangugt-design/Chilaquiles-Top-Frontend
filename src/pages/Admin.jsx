@@ -69,7 +69,8 @@ import {
   IllustrationTotopos,
   IllustrationCebolla,
   IllustrationCilantro,
-  IllustrationCrema
+  IllustrationCrema,
+  IllustrationPulledPork
 } from '../components/illustrations/IngredientIllustrations.jsx'
 import {
   IllustrationRoja,
@@ -3685,6 +3686,7 @@ const getIngredientSvg = (name, category = '') => {
   if (n.includes('steak')) return <IllustrationSteak />
   if (n.includes('pollo')) return <IllustrationPollo />
   if (n.includes('chorizo')) return <IllustrationChorizo />
+  if (n.includes('pulled pork') || n.includes('pulled_pork')) return <IllustrationPulledPork />
   if (n.includes('aguacate')) return <IllustrationAguacate />
   if (n.includes('cebolla caramelizada')) return <IllustrationCebollaCaramel />
   if (n.includes('totopo')) return <IllustrationTotopos />

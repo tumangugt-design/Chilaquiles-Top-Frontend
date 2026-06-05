@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_PROTEIN, getPromoConstraint } from '../shared/constants/index.jsx'
+import { OPTIONS_PROTEIN, getPromoConstraint, getOptionObject } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -42,17 +42,9 @@ const ProteinPage = ({ plate, plateNumber, updatePlate, onNext, onBack, showUnav
       const optionValue = item.name.toUpperCase().replace(/\s+/g, '_')
       const exists = allProteins.some(opt => opt.value === optionValue)
       if (!exists) {
-        const capitalizedLabel = item.name
-          .split(' ')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-
+        const optionObj = getOptionObject(optionValue, 'Proteínas', inventoryItems)
         allProteins.push({
-          id: optionValue,
-          label: capitalizedLabel,
-          value: optionValue,
-          description: `Porción de ${item.name} seleccionada para tu plato.`,
-          illustration: React.createElement(IllustrationSteak),
+          ...optionObj,
           isDynamic: true,
           dbName: item.name
         })
