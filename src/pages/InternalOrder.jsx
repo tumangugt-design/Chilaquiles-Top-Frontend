@@ -233,7 +233,7 @@ const InternalOrder = ({ onSuccess }) => {
       case 'BASE_RECIPE':
         return <BaseRecipePage plate={order.currentPlate} plateNumber={order.cart.length + 1} updatePlate={updateCurrentPlate} onNext={nextStep} onBack={prevStep} showUnavailable />
       case 'SUMMARY':
-        return <SummaryPage order={order} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
+        return <SummaryPage order={order} updateOrder={updateOrder} onNext={nextStep} onBack={prevStep} onEdit={goToStep} onAddAnother={handleAddCurrentPlateToCart} />
       case 'COPY_PLATE':
         return (
           <PlateCopyChoice
