@@ -3461,18 +3461,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text font-bold"
                     value={blastForm.promotionId}
                     onChange={(e) => {
-                      const promo = promotions.find(p => p._id === e.target.value)
+                      const promo = promotions.find(p => p.id === e.target.value)
                       setBlastForm({ 
                         ...blastForm, 
                         promotionId: e.target.value,
-                        imageUrl: promo?.imageUrl || blastForm.imageUrl,
-                        description: promo?.description || blastForm.description
+                        description: promo?.contentDescription || promo?.description || blastForm.description
                       })
                     }}
                   >
                     <option value="">-- Seleccionar promoción --</option>
                     {promotions.filter(p => p.isActive).map(p => (
-                      <option key={p._id} value={p._id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>
