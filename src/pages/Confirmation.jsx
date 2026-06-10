@@ -2,7 +2,7 @@ import { calculateTotal, formatBaseRecipe, getOptionLabel, OPTIONS_SAUCE, OPTION
 import Button from '../components/ui/Button.jsx'
 import Logo from '../components/Logo.jsx'
 
-const ConfirmationPage = ({ order, onReset }) => {
+const ConfirmationPage = ({ order, onReset, isInternal }) => {
   const confirmedOrder = order?.lastOrder || null
   const allPlates = confirmedOrder?.items || order.cart || []
   const total = confirmedOrder?.total || calculateTotal(allPlates.length)
@@ -59,11 +59,13 @@ const ConfirmationPage = ({ order, onReset }) => {
           fullWidth
           onClick={() => {
             onReset()
-            window.location.href = 'https://chilaquilestop.com'
+            if (!isInternal) {
+              window.location.href = 'https://chilaquilestop.com'
+            }
           }}
           className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-black py-4 text-lg rounded-2xl shadow-xl shadow-green-500/30 border-0"
         >
-          Continuar
+          {isInternal ? 'Nuevo Pedido' : 'Continuar'}
         </Button>
       </div>
     </div>

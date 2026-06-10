@@ -27,7 +27,9 @@ import {
   updatePortion,
   createPackagingProduct,
   getCoupons,
-  updateCoupons
+  updateCoupons,
+  sendPromotionBlast,
+  getCampaignHistory
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
 import { formatBaseRecipe, INVENTORY_PRODUCT_OPTIONS, INVENTORY_PRODUCT_MAP, OPTIONS_SAUCE, OPTIONS_PROTEIN, OPTIONS_COMPLEMENT, OPTIONS_BASE_RECIPE, getAllowedInputUnits, convertInventoryAmountToBaseUnit, getOptionLabel, normalizeComplementValue } from '../shared/constants/index.jsx'
@@ -539,6 +541,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState([])
+  const [blastForm, setBlastForm] = useState({ promotionId: '', imageUrl: '', description: '' })
+  const [isSendingBlast, setIsSendingBlast] = useState(false)
 
   const getDbNameFromValue = (value, category) => {
     if (!value) return null
@@ -683,6 +688,39 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     setPlatesCountInput('2')
   }
 
+  const handleSendBlast = async (e) => {
+    e.preventDefault()
+    if (!blastForm.imageUrl || !blastForm.description) {
+      toast.error('La imagen y la descripción son obligatorias.')
+      return
+    }
+    
+    const confirm = await Swal.fire({
+      title: '¿Enviar a todos?',
+      text: 'Se enviará esta promoción a TODOS los clientes por WhatsApp.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, enviar masivamente',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#ef4444'
+    })
+
+    if (!confirm.isConfirmed) return
+
+    setIsSendingBlast(true)
+    try {
+      await sendPromotionBlast(blastForm)
+      toast.success('El envío masivo ha iniciado en segundo plano.')
+      setBlastForm({ promotionId: '', imageUrl: '', description: '' })
+      loadData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al enviar campañas')
+    } finally {
+      setIsSendingBlast(false)
+    }
+  }
+
   const getOptionCostAndPortion = (opt, type) => {
     let name = ''
     let isDivorciados = false
@@ -806,6 +844,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setPortions(portionsResponse.data || [])
         setSimulatedCosts(lastPurchasesResponse.data || {})
         setCoupons(couponsResponse.data || [])
+      } else if (activeTab === 'campaigns') {
+        const [campaignsResponse, promotionsResponse] = await Promise.all([
+          getCampaignHistory().catch(() => ({ data: [] })),
+          getPromotions().catch(() => ({ data: [] }))
+        ])
+        setCampaigns(campaignsResponse.data || [])
+        setPromotions(promotionsResponse.data || [])
       } else if (activeTab === 'recipe_book') {
         const [portionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
           getPortions().catch(() => ({ data: [] })),
@@ -3391,6 +3436,115 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'campaigns' && (
+        <div className="space-y-8 animate-fade-in">
+          <div className="border-b border-ui-border pb-4">
+            <h2 className="text-2xl font-black tracking-tight text-ui-text">Campañas de WhatsApp</h2>
+            <p className="text-sm text-ui-muted mt-1">Envía promociones masivas a todos los clientes registrados.</p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+              <h3 className="text-xl font-black text-ui-text">Nueva Campaña</h3>
+              <form onSubmit={handleSendBlast} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">Promoción (Opcional)</label>
+                  <select
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text font-bold"
+                    value={blastForm.promotionId}
+                    onChange={(e) => {
+                      const promo = promotions.find(p => p._id === e.target.value)
+                      setBlastForm({ 
+                        ...blastForm, 
+                        promotionId: e.target.value,
+                        imageUrl: promo?.imageUrl || blastForm.imageUrl,
+                        description: promo?.description || blastForm.description
+                      })
+                    }}
+                  >
+                    <option value="">-- Seleccionar promoción --</option>
+                    {promotions.filter(p => p.isActive).map(p => (
+                      <option key={p._id} value={p._id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">URL de Imagen</label>
+                  <input
+                    type="url"
+                    required
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
+                    value={blastForm.imageUrl}
+                    onChange={(e) => setBlastForm({ ...blastForm, imageUrl: e.target.value })}
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">Descripción {'{{1}}'}</label>
+                  <textarea
+                    required
+                    rows={4}
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
+                    value={blastForm.description}
+                    onChange={(e) => setBlastForm({ ...blastForm, description: e.target.value })}
+                    placeholder="Escribe el texto de la promoción..."
+                  />
+                </div>
+                <Button type="submit" disabled={isSendingBlast || !blastForm.imageUrl || !blastForm.description} className="w-full !py-4 !text-lg">
+                  {isSendingBlast ? 'Iniciando...' : 'Enviar Promoción Masiva'}
+                </Button>
+              </form>
+            </div>
+
+            <div className="space-y-8">
+              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
+                <h3 className="text-xl font-black text-ui-text">Vista Previa</h3>
+                <div className="rounded-2xl border border-[#d1d7db] bg-[#efeae2] p-4 font-sans text-sm shadow-inner max-w-sm mx-auto overflow-hidden relative">
+                  <div className="absolute inset-0 opacity-10 bg-[url('https://static.whatsapp.net/rsrc.php/v3/yO/r/Fs5XhLpYtEE.png')] bg-repeat" />
+                  <div className="bg-white rounded-xl p-2 shadow-sm rounded-tl-none relative z-10 w-11/12 ml-2">
+                    {blastForm.imageUrl ? (
+                      <img src={blastForm.imageUrl} alt="Promo" className="w-full h-auto rounded-lg mb-2 object-cover max-h-48" onError={(e) => e.target.src = 'https://placehold.co/400x300?text=Imagen+Inv%C3%A1lida'} />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-200 rounded-lg mb-2 flex items-center justify-center text-gray-400 font-bold">Imagen</div>
+                    )}
+                    <p className="font-bold text-gray-800 mb-1">*Chilaquiles Top*🧑🏻‍🍳</p>
+                    <p className="text-gray-800 whitespace-pre-wrap">{blastForm.description || '{{1}}'}</p>
+                    <p className="text-gray-800 mt-2">Haz tu pedido ahora:</p>
+                    <div className="mt-2 pt-2 border-t border-gray-100 flex justify-center">
+                      <span className="text-[#00a884] font-bold text-center w-full block">Ordenar ahora</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6 max-h-96 overflow-y-auto">
+                <h3 className="text-xl font-black text-ui-text">Historial de Campañas</h3>
+                {campaigns.length === 0 ? (
+                  <p className="text-ui-muted text-sm font-bold text-center">No hay campañas enviadas.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {campaigns.map(c => (
+                      <div key={c._id} className="p-4 rounded-xl bg-white border border-ui-border shadow-sm flex flex-col">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-xs font-black text-ui-muted uppercase tracking-widest">{formatDate(c.createdAt)}</span>
+                          <StatusBadge value={c.status} />
+                        </div>
+                        <p className="text-sm font-bold text-ui-text line-clamp-2">{c.description}</p>
+                        <div className="text-xs font-bold mt-2 flex gap-3 text-ui-muted">
+                          <span className="text-blue-600">Total: {c.totalTarget}</span>
+                          <span className="text-green-600">Enviados: {c.sentCount}</span>
+                          <span className="text-red-600">Fallidos: {c.failedCount}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

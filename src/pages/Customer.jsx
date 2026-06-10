@@ -130,6 +130,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     location: order.customer?.location || null,
     accessCode: order.customer?.accessCode || '',
   })
+  const [paymentMethod, setPaymentMethod] = useState(order.customer?.paymentMethod || 'efectivo')
   const [touched, setTouched] = useState({ name: false, address: false })
   const [loadingLoc, setLoadingLoc] = useState(false)
   const [coverageError, setCoverageError] = useState('')
@@ -307,6 +308,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         items: itemsToSend,
         appliedPromo: order.appliedPromo ? { id: order.appliedPromo.id } : null,
         couponCode: order.couponCode || null,
+        paymentMethod,
         ...(isInternal ? { isInternal: true } : {}),
       })
 
@@ -371,6 +373,26 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
             placeholder="Casa, calle, número, referencia"
             className={`w-full p-3 sm:p-4 border rounded-xl bg-ui-bg text-ui-text placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none resize-none transition-all shadow-sm ${touched.address && localData.address.trim().length <= 5 ? 'border-red-500' : 'border-ui-border'}`}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-ui-text mb-1.5 ml-1">Método de pago</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('efectivo')}
+              className={`p-4 rounded-xl border text-center transition-all ${paymentMethod === 'efectivo' ? 'bg-brand-blue border-brand-blue text-white shadow-lg shadow-brand-blue/30' : 'bg-ui-bg border-ui-border text-ui-text hover:border-brand-blue/50'}`}
+            >
+              <span className="font-bold">Efectivo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('tarjeta')}
+              className={`p-4 rounded-xl border text-center transition-all ${paymentMethod === 'tarjeta' ? 'bg-brand-blue border-brand-blue text-white shadow-lg shadow-brand-blue/30' : 'bg-ui-bg border-ui-border text-ui-text hover:border-brand-blue/50'}`}
+            >
+              <span className="font-bold">Tarjeta (Link de Pago)</span>
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">

@@ -80,3 +80,12 @@ export const getInventoryLogs = async () => {
 export const syncInventory = async () => {
   return await apiClient.post('/inventory/sync')
 }
+
+// Settings / Promotions
+export const sendPromotionBlast = async (data) => {
+  return await apiClient.post('/settings/promotions/send-blast', data)
+}
+
+export const getCampaignHistory = async () => {
+  return await apiClient.get('/settings/promotions/campaigns')
+}

@@ -249,7 +249,7 @@ const InternalOrder = ({ onSuccess }) => {
       case 'CUSTOMER':
         return <CustomerPage order={order} updateOrder={updateOrder} setLastOrder={setLastOrder} onNext={nextStep} onBack={prevStep} isInternal />
       case 'CONFIRMATION':
-        return <ConfirmationPage order={order} onReset={handleResetApp} />
+        return <ConfirmationPage order={order} onReset={handleResetApp} isInternal />
       default:
         return null
     }

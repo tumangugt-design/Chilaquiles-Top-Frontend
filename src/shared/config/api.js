@@ -75,7 +75,9 @@ export const createPackagingProduct = (payload) => api.post('/inventory/packagin
 
 export const getCoupons = () => api.get(`/settings/coupons?t=${Date.now()}`)
 export const updateCoupons = (payload) => api.patch('/settings/coupons', payload)
-export const validateCoupon = (code) => api.post('/settings/validate-coupon', { code })
+export const validateCoupon = (payload) => api.post('/settings/validate-coupon', payload)
+
+export const sendPromotionBlast = (payload) => api.post('/settings/promotions/send-blast', payload)
+export const getCampaignHistory = () => api.get(`/settings/promotions/campaigns?t=${Date.now()}`)
 
 export default api
-
