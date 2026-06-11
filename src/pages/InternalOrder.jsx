@@ -153,6 +153,10 @@ const InternalOrder = ({ onSuccess }) => {
     if (currentIndex >= 0 && currentIndex < flowSteps.length - 1) {
       let nextIndex = currentIndex + 1
       if (order.isPromo && currentStep === 'SIZE') {
+        nextIndex = flowSteps.indexOf('BASE_RECIPE')
+      } else if (order.isPromo && currentStep === 'BASE_RECIPE') {
+        nextIndex = flowSteps.indexOf('SUMMARY')
+      } else if (order.isPromo && currentStep === 'SUMMARY') {
         nextIndex = flowSteps.indexOf('TEMPERATURE')
       }
       const nextStepName = flowSteps[nextIndex]
@@ -191,6 +195,10 @@ const InternalOrder = ({ onSuccess }) => {
     if (currentIndex > 0) {
       let prevIndex = currentIndex - 1
       if (order.isPromo && currentStep === 'TEMPERATURE') {
+        prevIndex = flowSteps.indexOf('SUMMARY')
+      } else if (order.isPromo && currentStep === 'SUMMARY') {
+        prevIndex = flowSteps.indexOf('BASE_RECIPE')
+      } else if (order.isPromo && currentStep === 'BASE_RECIPE') {
         prevIndex = flowSteps.indexOf('SIZE')
       }
       setCurrentStep(flowSteps[prevIndex])

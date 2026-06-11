@@ -9,6 +9,8 @@ const Stepper = ({ currentStep, isPromo = false }) => {
   const milestones = isPromo
     ? [
         { label: 'Tamaño', step: 'SIZE' },
+        { label: 'Base', step: 'BASE_RECIPE' },
+        { label: 'Confirmar', step: 'SUMMARY' },
         { label: 'Temperatura', step: 'TEMPERATURE' },
         { label: 'Datos', step: 'CUSTOMER' },
       ]
