@@ -58,7 +58,7 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
       OPTIONS_BASE_RECIPE.forEach(opt => {
         const availability = getProductAvailability(statusMap, baseNameById[opt.id])
         const isHidden = isCebolaCaramelizada && opt.id === 'onion'
-        const isUnavailable = !showUnavailable && !availability.available
+        const isUnavailable = !availability.available
 
         if ((isHidden || isUnavailable) && updated[opt.id] !== false) {
           updated[opt.id] = false
@@ -200,24 +200,41 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
                       
                       return true
                     }).map((opt) => {
-                      const isSelected = plateItem.baseRecipe?.[opt.id] !== false
+                      const availability = getProductAvailability(statusMap, baseNameById[opt.id])
+                      const isUnavailable = !availability.available
+                      const isSelected = plateItem.baseRecipe?.[opt.id] !== false && !isUnavailable
                       return (
                         <div
                           key={opt.id}
-                          onClick={() => handleTogglePromoBase(pIdx, opt.id)}
-                          className={`cursor-pointer rounded-2xl border-2 p-4 transition-all duration-300 flex items-center gap-3 select-none ${
-                            isSelected
-                              ? 'border-brand-blue bg-brand-blue/5 shadow-sm'
-                              : 'border-ui-border bg-ui-bg hover:border-ui-border/80'
+                          onClick={() => {
+                            if (isUnavailable) return
+                            handleTogglePromoBase(pIdx, opt.id)
+                          }}
+                          className={`rounded-2xl border-2 p-4 transition-all duration-300 flex items-center gap-3 select-none ${
+                            isUnavailable
+                              ? 'border-slate-300 bg-slate-100/80 opacity-60 grayscale cursor-not-allowed'
+                              : isSelected
+                                ? 'cursor-pointer border-brand-blue bg-brand-blue/5 shadow-sm'
+                                : 'cursor-pointer border-ui-border bg-ui-bg hover:border-ui-border/80'
                           }`}
                         >
                           <div className="text-xl">{opt.illustration}</div>
                           <div className="flex-1 text-left">
-                            <p className="font-black text-xs text-ui-text">{opt.label}</p>
-                            <p className="text-[10px] text-ui-muted font-semibold mt-0.5">{opt.description}</p>
+                            <p className={`font-black text-xs ${isUnavailable ? 'text-slate-500' : 'text-ui-text'}`}>{opt.label}</p>
+                            {isUnavailable ? (
+                              <p className="text-[10px] text-red-600 font-extrabold uppercase mt-0.5">
+                                {availability.availabilityLabel || 'Agotado'}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-ui-muted font-semibold mt-0.5">{opt.description}</p>
+                            )}
                           </div>
                           <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                            isSelected ? 'bg-brand-blue border-brand-blue text-white' : 'bg-white border-ui-border text-transparent'
+                            isUnavailable
+                              ? 'bg-slate-200 border-slate-300 text-transparent'
+                              : isSelected 
+                                ? 'bg-brand-blue border-brand-blue text-white' 
+                                : 'bg-white border-ui-border text-transparent'
                           }`}>
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
