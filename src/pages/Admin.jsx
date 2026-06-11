@@ -1434,6 +1434,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
     const normalizedPromo = {
       ...promoForm,
+      description: promoForm.contentDescription || '',
       requestedCount,
       promoPrice: priceNum,
       plates: savedPlates,
@@ -1801,9 +1802,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         </div>
       )}
 
-      <div className="pt-16 md:pt-[72px] flex flex-col min-h-screen">
-        <main className="flex-1 w-full max-w-full overflow-x-hidden p-2 sm:p-6 lg:p-10">
-          <div className="bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-6 lg:p-12 shadow-2xl shadow-brand-blue/5 border border-ui-border min-h-full overflow-hidden">
+      <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64 flex flex-col min-h-screen transition-all duration-300">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden p-3 md:p-6 lg:p-8">
+          <div className="bg-white rounded-2xl md:rounded-[2rem] p-4 md:p-6 lg:p-8 shadow-xl border border-ui-border min-h-full overflow-hidden">
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
             ) : activeTab === 'finances' ? (
@@ -3017,17 +3018,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Descripción</label>
-                <textarea
-                  className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
-                  rows={2}
-                  value={promoForm.description || ''}
-                  onChange={(e) => setPromoForm({ ...promoForm, description: e.target.value })}
-                  placeholder="Ej. Combo especial de chilaquiles con ingredientes predefinidos."
-                />
-              </div>
-
-              <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Contenido (lo que contiene la promo, se muestra al cliente)</label>
                 <textarea
                   className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
@@ -3152,12 +3142,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         )}
                         <div className="min-w-0 flex-1">
                           <h4 className="font-black text-base text-ui-text leading-tight break-words">{promo.name}</h4>
-                          {promo.description && (
-                            <p className="text-xs text-ui-muted font-medium leading-normal mt-1 break-words">{promo.description}</p>
-                          )}
-                          {promo.contentDescription && (
+                          {promo.contentDescription ? (
                             <p className="text-[11px] text-[#2d3748] font-bold leading-normal mt-1 border-l-2 border-brand-orange pl-2 italic break-words">Contenido: {promo.contentDescription}</p>
-                          )}
+                          ) : promo.description ? (
+                            <p className="text-xs text-ui-muted font-medium leading-normal mt-1 break-words">{promo.description}</p>
+                          ) : null}
                           {(promo.startDate || promo.endDate) && (
                             <p className="text-[10px] text-ui-muted font-black uppercase tracking-wider mt-2 flex items-center gap-1.5">
                               <span>📅</span> {promo.startDate || 'Inicio'} al {promo.endDate || 'Fin'}

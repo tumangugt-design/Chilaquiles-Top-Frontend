@@ -109,7 +109,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
                     <span className="text-ui-muted mx-1.5">•</span>
                     <span className="text-ui-text">{getLabel(plate.complement, OPTIONS_COMPLEMENT)}</span>
                   </div>
-                  {!!formatBaseRecipe(plate.baseRecipe) && (
+                  {showBaseInSummary && !!formatBaseRecipe(plate.baseRecipe) && (
                     <div className="text-ui-muted text-[10px] font-medium uppercase tracking-wide mt-1">
                       Base: {formatBaseRecipe(plate.baseRecipe)}
                     </div>

@@ -82,7 +82,33 @@ function CustomerFlow({ onToggleTheme, currentTheme }) {
       } else if (order.isPromo && currentStep === 'SUMMARY') {
         nextIndex = STEPS_ORDER.indexOf('TEMPERATURE')
       }
-      setCurrentStep(STEPS_ORDER[nextIndex])
+      const nextStepName = STEPS_ORDER[nextIndex]
+
+      if (nextStepName === 'BASE_RECIPE') {
+        const updatedCurrentPlate = {
+          ...order.currentPlate,
+          baseRecipe: {
+            onion: true,
+            cilantro: true,
+            cream: true,
+          },
+        }
+        if (order.isPromo) {
+          const updatedCart = order.cart.map((plate) => ({
+            ...plate,
+            baseRecipe: {
+              onion: true,
+              cilantro: true,
+              cream: true,
+            },
+          }))
+          updateOrder({ cart: updatedCart, currentPlate: updatedCurrentPlate })
+        } else {
+          updateOrder({ currentPlate: updatedCurrentPlate })
+        }
+      }
+
+      setCurrentStep(nextStepName)
       window.scrollTo(0, 0)
     }
   }

@@ -228,7 +228,7 @@ const ChefPage = ({ authSession, onProfileClick }) => {
         actions={<StatusBadge value={session.status} />}
         compactTop
       >
-      <div className="grid xl:grid-cols-2 gap-6 sm:gap-8 animate-fade-in">
+      <div className="grid md:grid-cols-2 gap-6 sm:gap-8 animate-fade-in">
         <section className="space-y-5 scroll-mt-24">
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Activos</h2>

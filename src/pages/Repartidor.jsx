@@ -61,6 +61,7 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
   const { session, logout } = authSession
   const [activeOrders, setActiveOrders] = useState([])
   const [deliveredOrders, setDeliveredOrders] = useState([])
+  const [activeTab, setActiveTab] = useState('ACTIVOS')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const knownOrderIds = useRef(new Set())
 
@@ -240,29 +241,55 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
         actions={<StatusBadge value={session.status} />}
         compactTop
       >
-      <div className="grid xl:grid-cols-2 gap-6 sm:gap-8 animate-fade-in">
-        <section className="space-y-5 scroll-mt-24">
+      {/* Mobile Tab Swiper */}
+      <div className="flex md:hidden bg-ui-bg p-1.5 rounded-2xl border border-ui-border mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab('ACTIVOS')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 ${
+            activeTab === 'ACTIVOS'
+              ? 'bg-[#0c2461] text-white shadow-md'
+              : 'text-ui-muted hover:text-ui-text'
+          }`}
+        >
+          Activos ({activeOrders.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('ENTREGADOS')}
+          className={`flex-1 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 ${
+            activeTab === 'ENTREGADOS'
+              ? 'bg-[#0c2461] text-white shadow-md'
+              : 'text-ui-muted hover:text-ui-text'
+          }`}
+        >
+          Entregados ({deliveredOrders.length})
+        </button>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6 sm:gap-8 animate-fade-in">
+        <section className={`space-y-5 scroll-mt-24 ${activeTab === 'ACTIVOS' ? 'block' : 'hidden md:block'}`}>
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Activos</h2>
             <span className="text-xs font-black uppercase tracking-widest text-ui-muted">{activeOrders.length}</span>
           </div>
           <div className="space-y-5">
             {activeOrders.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold">No hay pedidos activos.</div>
+              <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold bg-white">No hay pedidos activos.</div>
             ) : (
               activeOrders.map(renderOrderCard)
             )}
           </div>
         </section>
 
-        <section className="space-y-5 scroll-mt-24">
+        <section className={`space-y-5 scroll-mt-24 ${activeTab === 'ENTREGADOS' ? 'block' : 'hidden md:block'}`}>
           <div className="flex items-center justify-between border-b border-ui-border pb-3">
             <h2 className="text-xl font-black text-ui-text">Pedidos Entregados</h2>
             <span className="text-xs font-black uppercase tracking-widest text-ui-muted">{deliveredOrders.length}</span>
           </div>
           <div className="space-y-5">
             {deliveredOrders.length === 0 ? (
-              <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold">No hay pedidos entregados.</div>
+              <div className="rounded-[2rem] border border-dashed border-ui-border p-10 text-center text-ui-muted font-bold bg-white">No hay pedidos entregados.</div>
             ) : (
               deliveredOrders.map(renderOrderCard)
             )}

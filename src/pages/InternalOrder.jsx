@@ -155,7 +155,33 @@ const InternalOrder = ({ onSuccess }) => {
       if (order.isPromo && currentStep === 'SIZE') {
         nextIndex = flowSteps.indexOf('TEMPERATURE')
       }
-      setCurrentStep(flowSteps[nextIndex])
+      const nextStepName = flowSteps[nextIndex]
+
+      if (nextStepName === 'BASE_RECIPE') {
+        const updatedCurrentPlate = {
+          ...order.currentPlate,
+          baseRecipe: {
+            onion: true,
+            cilantro: true,
+            cream: true,
+          },
+        }
+        if (order.isPromo) {
+          const updatedCart = order.cart.map((plate) => ({
+            ...plate,
+            baseRecipe: {
+              onion: true,
+              cilantro: true,
+              cream: true,
+            },
+          }))
+          updateOrder({ cart: updatedCart, currentPlate: updatedCurrentPlate })
+        } else {
+          updateOrder({ currentPlate: updatedCurrentPlate })
+        }
+      }
+
+      setCurrentStep(nextStepName)
       window.scrollTo(0, 0)
     }
   }

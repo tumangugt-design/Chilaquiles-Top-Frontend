@@ -366,6 +366,12 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                           {promo.name}
                         </h4>
                         
+                        {isSelected && promo.imageUrl && (
+                          <div className="w-full rounded-2xl overflow-hidden border border-brand-orange/20 shadow-sm mt-2 max-h-48 flex items-center justify-center bg-ui-bg">
+                            <img src={promo.imageUrl} alt={promo.name} className="w-full h-auto object-cover" />
+                          </div>
+                        )}
+                        
                         {(promo.contentDescription || promo.description) && (
                           <p className="text-xs text-[#2d3748] font-bold leading-relaxed bg-[#0c2461]/5 border border-[#0c2461]/10 p-3 rounded-xl whitespace-pre-line">
                             {promo.contentDescription || promo.description}
