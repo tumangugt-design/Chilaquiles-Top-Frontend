@@ -3629,6 +3629,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     <p className="text-gray-800 mt-2">💰 Solo por: {blastForm.price || '{{3}}'}</p>
                     <p className="text-gray-800">⏰ Válido hasta: {blastForm.validUntil || '{{4}}'}</p>
                     <p className="text-gray-800 mt-2">👉 Haz clic en el botón de abajo y ordena antes de que se terminen.</p>
+                    <div className="mt-2 pt-2 border-t border-gray-100 flex justify-center">
                       <span className="text-[#00a884] font-bold text-center w-full block">Ordenar ahora</span>
                     </div>
                   </div>
