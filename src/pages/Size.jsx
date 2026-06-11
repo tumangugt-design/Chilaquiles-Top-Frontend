@@ -367,8 +367,8 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                         </h4>
                         
                         {promo.imageUrl && (
-                          <div className="w-full rounded-2xl overflow-hidden border border-brand-orange/20 shadow-sm mt-2 max-h-48 flex items-center justify-center bg-ui-bg">
-                            <img src={promo.imageUrl} alt={promo.name} className="w-full h-auto object-cover" />
+                          <div className="w-full rounded-2xl overflow-hidden border border-brand-orange/20 shadow-sm mt-2 bg-ui-bg">
+                            <img src={promo.imageUrl} alt={promo.name} className="w-full h-auto object-contain" />
                           </div>
                         )}
                         
