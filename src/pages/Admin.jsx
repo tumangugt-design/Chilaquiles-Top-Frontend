@@ -1494,6 +1494,29 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       estimatedMargin: profitMargin === null ? null : Number(profitMargin.toFixed(2)),
     }
 
+    let finalMarketing = promoForm.marketing || ''
+
+    if (!finalMarketing && promoForm.name && promoForm.contentDescription && priceNum) {
+      setIsSaving(true)
+      try {
+        let validUntil = 'Hasta agotar existencias'
+        if (promoForm.endDate) {
+          validUntil = new Date(promoForm.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
+        }
+        
+        const res = await generateMarketingMessage({
+          promoName: promoForm.name,
+          description: promoForm.contentDescription,
+          price: `Q${priceNum}`,
+          validUntil
+        })
+        finalMarketing = res.data.marketingMessage
+        normalizedPromo.marketing = finalMarketing
+      } catch (error) {
+        toast.error('No se pudo autogenerar el mensaje de marketing, pero se guardará la promo.')
+      }
+    }
+
     setIsSaving(true)
     try {
       let updatedPromos = []

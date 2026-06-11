@@ -377,6 +377,12 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                             {promo.contentDescription || promo.description}
                           </p>
                         )}
+
+                        {promo.marketing && (
+                          <div className="mt-3 bg-gradient-to-r from-brand-orange/10 to-brand-orange/5 p-3 rounded-xl border border-brand-orange/20 shadow-sm">
+                            <p className="text-xs font-bold text-gray-800 whitespace-pre-wrap leading-relaxed">{promo.marketing}</p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-ui-border flex justify-between items-center">

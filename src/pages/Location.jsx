@@ -473,14 +473,22 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                 key={promo.id}
                 type="button"
                 onClick={() => applyPromotion(promo)}
-                className="block w-full border-t border-ui-border pt-4 text-left transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-ui-card rounded-2xl"
+                className="block w-full border-t border-ui-border pt-6 text-left transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-ui-card rounded-2xl group pb-2"
                 aria-label={`Pedir promoción ${promo.name || ''}`.trim()}
               >
-                <img
-                  src={promo.imageUrl}
-                  alt={promo.name || 'Promoción Chilaquiles TOP'}
-                  className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
-                />
+                <div className="relative">
+                  <img
+                    src={promo.imageUrl}
+                    alt={promo.name || 'Promoción Chilaquiles TOP'}
+                    className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
+                  />
+                  {promo.marketing && (
+                    <div className="mt-3 bg-gradient-to-r from-brand-orange/10 to-brand-orange/5 p-4 rounded-xl border border-brand-orange/20 shadow-sm">
+                      <p className="text-sm font-bold text-gray-800 whitespace-pre-wrap leading-relaxed">{promo.marketing}</p>
+                      <p className="text-brand-orange font-black text-xs uppercase mt-3 tracking-widest text-center">👉 ¡Ordenar Promo Ahora!</p>
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>
