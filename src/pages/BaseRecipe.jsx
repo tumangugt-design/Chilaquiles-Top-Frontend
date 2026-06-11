@@ -33,37 +33,65 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
     return () => { mounted = false }
   }, [])
 
+  const statusMap = useMemo(() => buildInventoryStatusMap(inventoryItems), [inventoryItems])
+
   const availableOptions = useMemo(() => {
     if (!optionsLoaded) return []
-    const statusMap = buildInventoryStatusMap(inventoryItems)
     const isCebolaCaramelizada = plate.complement === 'CEBOLLA_CARAMELIZADA' || plate.complement === 'CEBOLLA CARAMELIZADA'
     return OPTIONS_BASE_RECIPE
       .filter((option) => !(isCebolaCaramelizada && option.id === 'onion'))
       .map((option) => ({ ...option, availability: getProductAvailability(statusMap, baseNameById[option.id]) }))
       .filter((option) => showUnavailable || option.availability.available)
-  }, [inventoryItems, optionsLoaded, showUnavailable, plate.complement])
+  }, [statusMap, optionsLoaded, showUnavailable, plate.complement])
 
+  // Sanitiza las opciones no disponibles (inactivas en inventario o complementos excluyentes)
+  // tanto para el plato actual como para el carrito de la promoción.
   useEffect(() => {
     if (!optionsLoaded) return
-    const unavailableSelected = availableOptions
-      .filter((option) => !option.availability.available && plate.baseRecipe?.[option.id])
-      .map((option) => option.id)
 
-    const hiddenUnavailable = OPTIONS_BASE_RECIPE
-      .filter((option) => !availableOptions.some((available) => available.id === option.id))
-      .filter((option) => plate.baseRecipe?.[option.id])
-      .map((option) => option.id)
+    const sanitizeBaseRecipe = (baseRecipe, complement) => {
+      if (!baseRecipe) return baseRecipe
+      const isCebolaCaramelizada = complement === 'CEBOLLA_CARAMELIZADA' || complement === 'CEBOLLA CARAMELIZADA'
+      const updated = { ...baseRecipe }
+      let changed = false
 
-    const keysToDisable = [...new Set([...unavailableSelected, ...hiddenUnavailable])]
-    if (keysToDisable.length === 0) return
+      OPTIONS_BASE_RECIPE.forEach(opt => {
+        const availability = getProductAvailability(statusMap, baseNameById[opt.id])
+        const isHidden = isCebolaCaramelizada && opt.id === 'onion'
+        const isUnavailable = !showUnavailable && !availability.available
 
-    updatePlate({
-      baseRecipe: {
-        ...plate.baseRecipe,
-        ...Object.fromEntries(keysToDisable.map((key) => [key, false])),
-      },
-    })
-  }, [optionsLoaded, availableOptions, plate.baseRecipe, updatePlate])
+        if ((isHidden || isUnavailable) && updated[opt.id] !== false) {
+          updated[opt.id] = false
+          changed = true
+        }
+      })
+
+      return changed ? updated : null
+    }
+
+    // Sanear plato actual
+    const sanitizedCurrentBase = sanitizeBaseRecipe(plate.baseRecipe, plate.complement)
+    if (sanitizedCurrentBase) {
+      updatePlate({ baseRecipe: sanitizedCurrentBase })
+    }
+
+    // Sanear carrito de la promoción
+    if (order?.isPromo && Array.isArray(order.cart) && order.cart.length > 0) {
+      let cartChanged = false
+      const updatedCart = order.cart.map(cartPlate => {
+        const sanitizedBase = sanitizeBaseRecipe(cartPlate.baseRecipe, cartPlate.complement)
+        if (sanitizedBase) {
+          cartChanged = true
+          return { ...cartPlate, baseRecipe: sanitizedBase }
+        }
+        return cartPlate
+      })
+
+      if (cartChanged) {
+        updateOrder({ cart: updatedCart })
+      }
+    }
+  }, [optionsLoaded, statusMap, showUnavailable, order?.isPromo, plate.baseRecipe, plate.complement, order?.cart, updatePlate, updateOrder])
 
   // Cuando el complemento ya NO es Cebolla Caramelizada, vuelve a activar la cebolla cruda por defecto
   useEffect(() => {
@@ -148,6 +176,15 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {OPTIONS_BASE_RECIPE.filter((opt) => {
+                      // 1. Validar disponibilidad de inventario
+                      const availability = getProductAvailability(statusMap, baseNameById[opt.id])
+                      if (!showUnavailable && !availability.available) return false
+
+                      // 2. Ocultar cebolla cruda si el complemento de este plato es cebolla caramelizada
+                      const isCebolaCaramelizada = plateItem.complement === 'CEBOLLA_CARAMELIZADA' || plateItem.complement === 'CEBOLLA CARAMELIZADA'
+                      if (isCebolaCaramelizada && opt.id === 'onion') return false
+
+                      // 3. Validar restricciones de la promoción
                       if (!order?.appliedPromo) return true
                       
                       // For modern promotions with a plates array
