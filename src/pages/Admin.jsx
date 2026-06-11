@@ -543,8 +543,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
   const [campaigns, setCampaigns] = useState([])
-  const [blastForm, setBlastForm] = useState({ promotionId: '', imageUrl: '', description: '' })
+  const [blastForm, setBlastForm] = useState({ 
+    promotionId: '', 
+    promoName: '',
+    description: '', 
+    price: '',
+    validUntil: '',
+    marketingMessage: '',
+    imageUrl: '' 
+  })
   const [isSendingBlast, setIsSendingBlast] = useState(false)
+  const [isGeneratingMessage, setIsGeneratingMessage] = useState(false)
 
   const getDbNameFromValue = (value, category) => {
     if (!value) return null
@@ -689,10 +698,34 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     setPlatesCountInput('2')
   }
 
+  const handleGenerateMarketingMessage = async (e) => {
+    e.preventDefault()
+    if (!blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil) {
+      toast.error('Llena nombre, descripción, precio y vigencia antes de generar el mensaje.')
+      return
+    }
+
+    setIsGeneratingMessage(true)
+    try {
+      const res = await generateMarketingMessage({
+        promoName: blastForm.promoName,
+        description: blastForm.description,
+        price: blastForm.price,
+        validUntil: blastForm.validUntil
+      })
+      setBlastForm(prev => ({ ...prev, marketingMessage: res.data.marketingMessage }))
+      toast.success('Mensaje generado exitosamente ✨')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al generar el mensaje')
+    } finally {
+      setIsGeneratingMessage(false)
+    }
+  }
+
   const handleSendBlast = async (e) => {
     e.preventDefault()
-    if (!blastForm.imageUrl || !blastForm.description) {
-      toast.error('La imagen y la descripción son obligatorias.')
+    if (!blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil || !blastForm.marketingMessage || !blastForm.imageUrl) {
+      toast.error('Todos los campos son obligatorios.')
       return
     }
     
@@ -713,7 +746,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     try {
       await sendPromotionBlast(blastForm)
       toast.success('El envío masivo ha iniciado en segundo plano.')
-      setBlastForm({ promotionId: '', imageUrl: '', description: '' })
+      setBlastForm({ 
+        promotionId: '', 
+        promoName: '',
+        description: '', 
+        price: '',
+        validUntil: '',
+        marketingMessage: '',
+        imageUrl: '' 
+      })
       loadData()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al enviar campañas')
@@ -3463,10 +3504,19 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     value={blastForm.promotionId}
                     onChange={(e) => {
                       const promo = promotions.find(p => p.id === e.target.value)
+                      let formattedDate = ''
+                      if (promo?.endDate) {
+                        try {
+                          formattedDate = new Date(promo.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
+                        } catch(e){}
+                      }
                       setBlastForm({ 
                         ...blastForm, 
                         promotionId: e.target.value,
-                        description: promo?.contentDescription || promo?.description || blastForm.description
+                        promoName: promo?.name || '',
+                        description: promo?.contentDescription || promo?.description || '',
+                        price: promo?.promoPrice ? `Q${promo.promoPrice}` : '',
+                        validUntil: formattedDate
                       })
                     }}
                   >
@@ -3477,28 +3527,85 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">URL de Imagen</label>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">Nombre de la promoción {'{{1}}'}</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
+                    value={blastForm.promoName}
+                    onChange={(e) => setBlastForm({ ...blastForm, promoName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">Descripción (Ingredientes/Cantidades) {'{{2}}'}</label>
+                  <textarea
+                    required
+                    rows={2}
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
+                    value={blastForm.description}
+                    onChange={(e) => setBlastForm({ ...blastForm, description: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-ui-text mb-1.5">Precio {'{{3}}'}</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
+                      value={blastForm.price}
+                      onChange={(e) => setBlastForm({ ...blastForm, price: e.target.value })}
+                      placeholder="Ej. Q55"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-ui-text mb-1.5">Vigencia {'{{4}}'}</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
+                      value={blastForm.validUntil}
+                      onChange={(e) => setBlastForm({ ...blastForm, validUntil: e.target.value })}
+                      placeholder="Ej. 15 de Mayo"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-sm font-bold text-ui-text">Mensaje de Marketing {'{{5}}'}</label>
+                    <button 
+                      type="button" 
+                      onClick={handleGenerateMarketingMessage}
+                      disabled={isGeneratingMessage || !blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                    >
+                      {isGeneratingMessage ? 'Generando...' : '✨ Generar con IA'}
+                    </button>
+                  </div>
+                  <textarea
+                    required
+                    rows={3}
+                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
+                    value={blastForm.marketingMessage}
+                    onChange={(e) => setBlastForm({ ...blastForm, marketingMessage: e.target.value })}
+                    placeholder="Genera un mensaje atractivo usando el botón de arriba, o escríbelo tú mismo."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-ui-text mb-1.5">URL de Imagen (Para el Header)</label>
                   <input
                     type="url"
                     required
                     className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
                     value={blastForm.imageUrl}
                     onChange={(e) => setBlastForm({ ...blastForm, imageUrl: e.target.value })}
-                    placeholder="https://ejemplo.com/imagen.jpg"
+                    placeholder="https://ejemplo.com/imagen.jpg (Debe ser pública)"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">Descripción {'{{1}}'}</label>
-                  <textarea
-                    required
-                    rows={4}
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
-                    value={blastForm.description}
-                    onChange={(e) => setBlastForm({ ...blastForm, description: e.target.value })}
-                    placeholder="Escribe el texto de la promoción..."
-                  />
-                </div>
-                <Button type="submit" disabled={isSendingBlast || !blastForm.imageUrl || !blastForm.description} className="w-full !py-4 !text-lg">
+                
+                <Button type="submit" disabled={isSendingBlast || !blastForm.imageUrl || !blastForm.description || !blastForm.promoName || !blastForm.price || !blastForm.validUntil || !blastForm.marketingMessage} className="w-full !py-4 !text-lg mt-4">
                   {isSendingBlast ? 'Iniciando...' : 'Enviar Promoción Masiva'}
                 </Button>
               </form>
@@ -3515,10 +3622,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                     ) : (
                       <div className="w-full h-32 bg-gray-200 rounded-lg mb-2 flex items-center justify-center text-gray-400 font-bold">Imagen</div>
                     )}
-                    <p className="font-bold text-gray-800 mb-1">*Chilaquiles Top*🧑🏻‍🍳</p>
-                    <p className="text-gray-800 whitespace-pre-wrap">{blastForm.description || '{{1}}'}</p>
-                    <p className="text-gray-800 mt-2">Haz tu pedido ahora:</p>
-                    <div className="mt-2 pt-2 border-t border-gray-100 flex justify-center">
+                    <p className="font-bold text-gray-800 mb-1">*Chilaquiles Top* 🧑🏻‍🍳</p>
+                    <p className="text-gray-800 whitespace-pre-wrap mt-2">🔥 {blastForm.promoName || '{{1}}'}</p>
+                    <p className="text-gray-800 whitespace-pre-wrap mt-2">✨ {blastForm.marketingMessage || '{{5}}'}</p>
+                    <p className="text-gray-800 whitespace-pre-wrap mt-2">🍽️ {blastForm.description || '{{2}}'}</p>
+                    <p className="text-gray-800 mt-2">💰 Solo por: {blastForm.price || '{{3}}'}</p>
+                    <p className="text-gray-800">⏰ Válido hasta: {blastForm.validUntil || '{{4}}'}</p>
+                    <p className="text-gray-800 mt-2">👉 Haz clic en el botón de abajo y ordena antes de que se terminen.</p>
                       <span className="text-[#00a884] font-bold text-center w-full block">Ordenar ahora</span>
                     </div>
                   </div>

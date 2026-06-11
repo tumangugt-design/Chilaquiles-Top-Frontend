@@ -79,5 +79,6 @@ export const validateCoupon = (payload) => api.post('/settings/validate-coupon',
 
 export const sendPromotionBlast = (payload) => api.post('/settings/promotions/send-blast', payload)
 export const getCampaignHistory = () => api.get(`/settings/promotions/campaigns?t=${Date.now()}`)
+export const generateMarketingMessage = (payload) => api.post('/settings/promotions/generate-marketing', payload)
 
 export default api
