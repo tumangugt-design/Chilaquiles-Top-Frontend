@@ -190,6 +190,7 @@ const resetPromoFormState = () => ({
   name: '',
   description: '',
   contentDescription: '',
+  marketing: '',
   promoPrice: '',
   requestedCount: '2',
   isActive: true,
@@ -3025,6 +3026,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   value={promoForm.contentDescription || ''}
                   onChange={(e) => setPromoForm({ ...promoForm, contentDescription: e.target.value })}
                   placeholder="Ej. El combo familiar contiene 4 platos con tales salsas..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Marketing</label>
+                <textarea
+                  className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
+                  rows={2}
+                  value={promoForm.marketing || ''}
+                  onChange={(e) => setPromoForm({ ...promoForm, marketing: e.target.value })}
+                  placeholder="Ej. Notas de marketing (uso interno, no se muestra al cliente)..."
                 />
               </div>
 
