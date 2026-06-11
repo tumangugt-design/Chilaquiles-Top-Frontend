@@ -473,21 +473,45 @@ const LocationPage = ({ onConfirm, onApplyPromo }) => {
                 key={promo.id}
                 type="button"
                 onClick={() => applyPromotion(promo)}
-                className="block w-full border-t border-ui-border pt-6 text-left transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 focus:ring-offset-ui-card rounded-2xl group pb-2"
+                className="block w-full border-t border-ui-border pt-8 text-left focus:outline-none group pb-4"
                 aria-label={`Pedir promoción ${promo.name || ''}`.trim()}
               >
-                <div className="relative">
-                  <img
-                    src={promo.imageUrl}
-                    alt={promo.name || 'Promoción Chilaquiles TOP'}
-                    className="w-full h-auto rounded-2xl object-contain shadow-md border border-brand-orange/30"
-                  />
-                  {promo.marketing && (
-                    <div className="mt-3 bg-gradient-to-r from-brand-orange/10 to-brand-orange/5 p-4 rounded-xl border border-brand-orange/20 shadow-sm">
-                      <p className="text-sm font-bold text-gray-800 whitespace-pre-wrap leading-relaxed">{promo.marketing}</p>
-                      <p className="text-brand-orange font-black text-xs uppercase mt-3 tracking-widest text-center">👉 ¡Ordenar Promo Ahora!</p>
+                <div className="relative overflow-hidden rounded-[2.5rem] bg-white border border-ui-border shadow-lg transition-all duration-500 group-hover:shadow-2xl group-hover:-translate-y-2">
+                  
+                  {/* Image Container with Blur Effect for Aesthetic Fill */}
+                  <div className="w-full h-64 sm:h-80 relative overflow-hidden bg-[#0c2461]/5 flex items-center justify-center">
+                    <img
+                      src={promo.imageUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 scale-125 transition-transform duration-700 group-hover:scale-150"
+                      aria-hidden="true"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 z-0"></div>
+                    <img
+                      src={promo.imageUrl}
+                      alt={promo.name || 'Promoción Chilaquiles TOP'}
+                      className="relative z-10 w-full h-full object-contain p-4 drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  
+                  {/* Content Container */}
+                  <div className="p-6 sm:p-8 relative bg-white">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-orange to-[#ff6b35]"></div>
+                    
+                    <h3 className="font-black text-2xl sm:text-3xl text-brand-blue mb-4 tracking-tight">{promo.name}</h3>
+                    
+                    {promo.marketing && (
+                      <div className="bg-ui-bg/50 rounded-2xl p-5 border border-ui-border">
+                        <p className="text-sm sm:text-base font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {promo.marketing}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="mt-6 flex items-center justify-center bg-gradient-to-r from-brand-orange to-[#ff6b35] text-white py-4 px-6 rounded-2xl shadow-md group-hover:shadow-orange-500/30 transition-all duration-300">
+                      <span className="font-black text-sm sm:text-base tracking-widest uppercase">👉 ¡Lo Quiero!</span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </button>
             ))}

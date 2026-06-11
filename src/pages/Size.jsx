@@ -329,16 +329,16 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                     <div
                       key={promo.id}
                       onClick={() => handleSelectPromo(promo)}
-                      className={`cursor-pointer rounded-2xl border-2 p-5 bg-white transition-all duration-300 relative flex flex-col justify-between ${
+                      className={`group cursor-pointer rounded-3xl border-2 p-5 bg-white transition-all duration-300 relative flex flex-col justify-between overflow-hidden ${
                         isSelected
-                          ? 'border-[#0c2461] ring-4 ring-[#0c2461]/10 transform scale-[1.01] shadow-lg'
-                          : 'border-ui-border shadow-sm hover:shadow-md hover:border-ui-border/80'
+                          ? 'border-brand-blue ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-xl'
+                          : 'border-ui-border shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-brand-orange/30'
                       }`}
                     >
                       <div
-                        className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all z-20 ${
                           isSelected
-                            ? 'bg-[#0c2461] text-white scale-100'
+                            ? 'bg-brand-blue text-white scale-100 shadow-md'
                             : 'bg-ui-bg text-transparent border border-ui-border'
                         }`}
                       >
@@ -357,18 +357,25 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                         </svg>
                       </div>
 
-                      <div className="space-y-2">
-                        <span className="bg-brand-orange text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <div className="space-y-3 z-10">
+                        <span className="bg-gradient-to-r from-brand-orange to-[#ff6b35] text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm inline-block">
                           {promo.requestedCount || promo.plates?.length || 2}{' '}
                           Platos
                         </span>
-                        <h4 className="font-black text-lg text-ui-text leading-tight pt-1">
+                        <h4 className="font-black text-xl text-brand-blue leading-tight pt-1">
                           {promo.name}
                         </h4>
                         
                         {promo.imageUrl && (
-                          <div className="w-full rounded-2xl overflow-hidden border border-brand-orange/20 shadow-sm mt-2 bg-ui-bg">
-                            <img src={promo.imageUrl} alt={promo.name} className="w-full h-auto object-contain" />
+                          <div className="w-full h-32 sm:h-40 relative rounded-2xl overflow-hidden bg-brand-blue/5 flex items-center justify-center mt-2 border border-brand-orange/20 shadow-inner group-hover:border-brand-orange/40 transition-colors">
+                            <img
+                              src={promo.imageUrl}
+                              alt=""
+                              className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-125 transition-transform duration-700 group-hover:scale-150"
+                              aria-hidden="true"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/10 z-0"></div>
+                            <img src={promo.imageUrl} alt={promo.name} className="relative z-10 w-full h-full object-contain p-2 drop-shadow-lg transition-transform duration-500 group-hover:scale-110" />
                           </div>
                         )}
                         
