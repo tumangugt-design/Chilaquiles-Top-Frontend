@@ -555,6 +555,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   })
   const [isSendingBlast, setIsSendingBlast] = useState(false)
   const [isGeneratingMessage, setIsGeneratingMessage] = useState(false)
+  const [isGeneratingPromoMarketing, setIsGeneratingPromoMarketing] = useState(false)
 
   const getDbNameFromValue = (value, category) => {
     if (!value) return null
@@ -720,6 +721,37 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       toast.error(err.response?.data?.message || 'Error al generar el mensaje')
     } finally {
       setIsGeneratingMessage(false)
+    }
+  }
+
+  const handleAutoGeneratePromoMarketing = async (e) => {
+    e.preventDefault()
+    const rawPrice = promoForm.promoPrice || calcPromoPrice
+    const priceNum = Number(rawPrice)
+    if (!promoForm.name || !promoForm.contentDescription || !priceNum) {
+      toast.error('Llena nombre, precio promocional y contenido antes de generar el mensaje de marketing.')
+      return
+    }
+
+    setIsGeneratingPromoMarketing(true)
+    try {
+      let validUntil = 'Hasta agotar existencias'
+      if (promoForm.endDate) {
+        validUntil = new Date(promoForm.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
+      }
+      
+      const res = await generateMarketingMessage({
+        promoName: promoForm.name,
+        description: promoForm.contentDescription,
+        price: `Q${priceNum}`,
+        validUntil
+      })
+      setPromoForm(prev => ({ ...prev, marketing: res.data.marketingMessage }))
+      toast.success('Mensaje generado exitosamente ✨')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al generar el mensaje de marketing')
+    } finally {
+      setIsGeneratingPromoMarketing(false)
     }
   }
 
@@ -3095,7 +3127,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Marketing</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Marketing</label>
+                  <button
+                    type="button"
+                    onClick={handleAutoGeneratePromoMarketing}
+                    disabled={isGeneratingPromoMarketing || !promoForm.name || !promoForm.contentDescription || (!promoForm.promoPrice && !calcPromoPrice)}
+                    className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 transition-colors bg-gradient-to-r from-purple-600 to-brand-blue text-white shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>✨</span>
+                    {isGeneratingPromoMarketing ? 'Generando...' : 'Generar con IA'}
+                  </button>
+                </div>
                 <textarea
                   className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold resize-none"
                   rows={2}
