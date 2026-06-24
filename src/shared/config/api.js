@@ -81,4 +81,10 @@ export const sendPromotionBlast = (payload) => api.post('/settings/promotions/se
 export const getCampaignHistory = () => api.get(`/settings/promotions/campaigns?t=${Date.now()}`)
 export const generateMarketingMessage = (payload) => api.post('/settings/promotions/generate-marketing', payload)
 
+// Content Studio
+export const generateContentDraft = (payload) => api.post('/content/generate', payload)
+export const getContentDrafts = () => api.get('/content/drafts')
+export const approveContentDraft = (id) => api.post(`/content/drafts/${id}/approve`)
+export const scheduleContentDraft = (id, payload) => api.post(`/content/drafts/${id}/schedule`, payload)
+
 export default api
