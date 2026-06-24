@@ -86,6 +86,7 @@ export const generateContentDraft = (payload) => api.post('/content/generate', p
 export const getContentDrafts = () => api.get('/content/drafts')
 export const approveContentDraft = (id) => api.post(`/content/drafts/${id}/approve`)
 export const scheduleContentDraft = (id, payload) => api.post(`/content/drafts/${id}/schedule`, payload)
+export const deleteContentDraft = (id) => api.delete(`/content/drafts/${id}`)
 
 // Canva
 export const getCanvaStatus = () => api.get('/canva/status')

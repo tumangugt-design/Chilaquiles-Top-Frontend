@@ -9,6 +9,7 @@ export default function ContentStudio() {
   const [topic, setTopic] = useState('');
   const [promotions, setPromotions] = useState([]);
   const [selectedPromo, setSelectedPromo] = useState('');
+  const [selectedFormat, setSelectedFormat] = useState('instagram_feed');
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState(null);
@@ -50,8 +51,8 @@ export default function ContentStudio() {
       const res = await generateContentDraft({
         topic: topic || '', // Ya no forzamos nada si está vacío
         objective: 'sales',
-        platforms: ['instagram', 'facebook'],
-        formats: ['feed'],
+        platforms: ['instagram', 'facebook', 'whatsapp'],
+        formats: [selectedFormat],
         promotionData: promoData ? { id: promoData.id, name: promoData.name, description: promoData.contentDescription, price: promoData.promoPrice, imageUrl: promoData.imageUrl } : null
       });
       
@@ -60,7 +61,6 @@ export default function ContentStudio() {
       setSelectedPromo('');
       
       // Muestra la imagen directamente
-      // Simulamos buscar el último borrador si la API no lo devuelve completo
       if (res.data?.draft) {
         setGeneratedDraft(res.data.draft);
       } else {
@@ -89,6 +89,18 @@ export default function ContentStudio() {
       }
     } catch (e) {
       toast.error('Error al aprobar');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if(!window.confirm('¿Seguro que deseas eliminar este borrador permanentemente?')) return;
+    try {
+      await deleteContentDraft(id);
+      toast.success('Borrador eliminado');
+      if(generatedDraft?._id === id) setGeneratedDraft(null);
+      fetchData();
+    } catch(e) {
+      toast.error('Error al eliminar');
     }
   };
 
@@ -161,7 +173,20 @@ export default function ContentStudio() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 2: Instrucciones Adicionales (Opcional)</label>
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 2: Formato del Arte</label>
+                <select 
+                  className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
+                  value={selectedFormat}
+                  onChange={(e) => setSelectedFormat(e.target.value)}
+                >
+                  <option value="instagram_feed">Post de Instagram / Facebook (Cuadrado 1080x1080)</option>
+                  <option value="instagram_story">Historia de Instagram / Reels (Vertical 1080x1920)</option>
+                  <option value="whatsapp_image">Imagen para WhatsApp (Especial con CTA grande)</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 3: Instrucciones Adicionales (Opcional)</label>
                 <textarea 
                   className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
                   rows={4}
@@ -172,7 +197,7 @@ export default function ContentStudio() {
               </div>
 
               <Button size="lg" className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform" onClick={handleGenerate} disabled={loading}>
-                {loading ? 'Renderizando Arte Visual...' : 'Generar Arte con IA'}
+                {loading ? 'Generando e Ilustrando Arte...' : 'Generar Arte con IA'}
               </Button>
             </div>
 
@@ -181,7 +206,7 @@ export default function ContentStudio() {
               {loading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10">
                   <div className="w-16 h-16 border-4 border-brand-blue/30 border-t-brand-blue rounded-full animate-spin mb-4"></div>
-                  <p className="font-bold text-lg text-brand-blue animate-pulse">Ensamblando diseño con Puppeteer...</p>
+                  <p className="font-bold text-lg text-brand-blue animate-pulse">Ensamblando diseño y generando imagen...</p>
                 </div>
               )}
 
@@ -196,12 +221,15 @@ export default function ContentStudio() {
                 <div className="w-full flex flex-col h-full animate-fade-in">
                   <div className="flex justify-between items-center mb-4">
                     <span className="bg-brand-blue text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Resultado Exitoso</span>
-                    <StatusBadge value={generatedDraft.status} />
+                    <div className="flex gap-2">
+                      <StatusBadge value={generatedDraft.status} />
+                      <button onClick={() => handleDelete(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">BORRAR</button>
+                    </div>
                   </div>
                   
                   {generatedDraft.visual?.imageUrl ? (
-                    <div className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-6">
-                      <img src={generatedDraft.visual.imageUrl} alt="Arte Generado" className="w-full object-contain" />
+                    <div className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-6 flex items-center justify-center">
+                      <img src={generatedDraft.visual.imageUrl} alt="Arte Generado" className="max-w-full max-h-[400px] object-contain" />
                     </div>
                   ) : (
                     <div className="w-full h-64 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 border border-gray-200">
@@ -218,7 +246,7 @@ export default function ContentStudio() {
                   <div className="mt-auto grid grid-cols-2 gap-4">
                     {generatedDraft.status === 'draft' ? (
                       <>
-                        <Button variant="danger" onClick={() => setGeneratedDraft(null)}>Descartar</Button>
+                        <Button variant="danger" onClick={() => setGeneratedDraft(null)}>Descartar Vista</Button>
                         <Button variant="primary" onClick={() => handleApprove(generatedDraft._id, true)}>Aprobar Arte</Button>
                       </>
                     ) : (
@@ -242,10 +270,11 @@ export default function ContentStudio() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {drafts.map(draft => (
-                  <div key={draft._id} className="group rounded-3xl border border-ui-border bg-white shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden">
+                  <div key={draft._id} className="group rounded-3xl border border-ui-border bg-white shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
                     {/* Header flotante */}
-                    <div className="absolute z-10 m-3 flex gap-2">
+                    <div className="absolute z-10 m-3 flex justify-between w-full pr-6">
                       <StatusBadge value={draft.status} />
+                      <button onClick={() => handleDelete(draft._id)} className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:bg-red-600 hover:scale-110 transition-transform cursor-pointer">✕</button>
                     </div>
 
                     {/* Imagen principal */}
