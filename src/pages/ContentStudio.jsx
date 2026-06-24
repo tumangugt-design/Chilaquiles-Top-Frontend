@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
-import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft } from '../shared/config/api.js';
+import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, getCanvaStatus, getCanvaAuthUrl, testCanvaIntegration } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
 export default function ContentStudio() {
@@ -11,10 +11,25 @@ export default function ContentStudio() {
   const [selectedPromo, setSelectedPromo] = useState('');
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // Canva State
+  const [canvaConnected, setCanvaConnected] = useState(false);
+  const [testTemplateId, setTestTemplateId] = useState('');
+  const [testResult, setTestResult] = useState(null);
 
   useEffect(() => {
     fetchData();
+    checkCanvaStatus();
   }, [activeTab]);
+
+  const checkCanvaStatus = async () => {
+    try {
+      const res = await getCanvaStatus();
+      setCanvaConnected(res.data?.connected || false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -75,10 +90,81 @@ export default function ContentStudio() {
           <Button variant={activeTab === 'generador' ? 'primary' : 'secondary'} onClick={() => setActiveTab('generador')}>Generador</Button>
           <Button variant={activeTab === 'borradores' ? 'primary' : 'secondary'} onClick={() => setActiveTab('borradores')}>Borradores</Button>
           <Button variant={activeTab === 'calendario' ? 'primary' : 'secondary'} onClick={() => setActiveTab('calendario')}>Calendario</Button>
+          <Button variant={activeTab === 'integraciones' ? 'primary' : 'secondary'} onClick={() => setActiveTab('integraciones')}>Integraciones</Button>
         </div>
       </div>
 
       <div className="bg-ui-card rounded-2xl border border-ui-border p-6 shadow-sm min-h-[60vh]">
+        {activeTab === 'integraciones' && (
+          <div className="max-w-2xl">
+            <h3 className="text-xl font-bold mb-4">Integraciones</h3>
+            <div className="p-6 rounded-2xl border border-ui-border bg-ui-bg mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="font-black text-lg">Canva Connect API</h4>
+                  <p className="text-sm text-ui-muted">Permite generar artes visuales a partir de tus Brand Templates de Canva.</p>
+                </div>
+                <StatusBadge value={canvaConnected ? 'active' : 'inactive'} />
+              </div>
+
+              {!canvaConnected ? (
+                <Button onClick={async () => {
+                  try {
+                    const res = await getCanvaAuthUrl();
+                    window.location.href = res.data.url;
+                  } catch (e) {
+                    toast.error('Error al iniciar autorización');
+                  }
+                }}>Conectar con Canva</Button>
+              ) : (
+                <div className="border-t border-ui-border/50 pt-4 mt-4">
+                  <p className="text-sm font-bold text-green-600 mb-4">¡Canva está conectado exitosamente!</p>
+                  
+                  <div className="bg-white p-4 rounded-xl border border-ui-border">
+                    <h5 className="font-bold text-sm mb-2">Prueba Técnica Mínima</h5>
+                    <p className="text-xs text-ui-muted mb-4">Ingresa un Template ID válido (ej. DAFxxxx) que contenga los campos "headline" y "price".</p>
+                    <input 
+                      type="text" 
+                      className="w-full rounded-xl border border-ui-border bg-ui-bg px-3 py-2 font-medium text-sm outline-none mb-3"
+                      placeholder="Template ID"
+                      value={testTemplateId}
+                      onChange={(e) => setTestTemplateId(e.target.value)}
+                    />
+                    <Button 
+                      disabled={loading || !testTemplateId}
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const res = await testCanvaIntegration({
+                            templateId: testTemplateId,
+                            dataMap: { headline: "Prueba desde Node", price: "Q99" }
+                          });
+                          setTestResult(res.data);
+                          toast.success('Prueba finalizada');
+                        } catch(e) {
+                          toast.error('Fallo la prueba de Canva');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      {loading ? 'Ejecutando...' : 'Probar Autofill y Export'}
+                    </Button>
+
+                    {testResult && (
+                      <div className="mt-4 p-4 bg-ui-bg rounded-xl border border-ui-border text-xs break-all">
+                        <p><strong>Design ID:</strong> {testResult.designId}</p>
+                        <p><strong>Editable URL:</strong> <a href={testResult.designUrl} target="_blank" rel="noreferrer" className="text-brand-blue underline">Ver Diseño</a></p>
+                        <p><strong>Export URLs:</strong> {JSON.stringify(testResult.exports)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'generador' && (
           <div className="max-w-2xl">
             <h3 className="text-xl font-bold mb-4">Generar Contenido</h3>
