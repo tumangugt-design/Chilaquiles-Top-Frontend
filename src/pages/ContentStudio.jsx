@@ -97,7 +97,7 @@ export default function ContentStudio() {
     const now = new Date();
     // Default to current date and next hour
     setScheduleDate(now.toISOString().split('T')[0]);
-    setScheduleTime(\`\${String((now.getHours() + 1) % 24).padStart(2, '0')}:00\`);
+    setScheduleTime(`${String((now.getHours() + 1) % 24).padStart(2, '0')}:00`);
     setScheduleModalOpen(true);
   };
 
@@ -107,7 +107,7 @@ export default function ContentStudio() {
       return;
     }
     try {
-      const isoDateTime = new Date(\`\${scheduleDate}T\${scheduleTime}:00\`).toISOString();
+      const isoDateTime = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
       await scheduleContentDraft(scheduleDraftId, {
         scheduledAt: isoDateTime,
         platforms: ['instagram', 'facebook']
