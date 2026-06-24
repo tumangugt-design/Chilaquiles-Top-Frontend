@@ -40,7 +40,7 @@ export default function ContentStudio() {
 
   const handleGenerate = async () => {
     if (!topic && !selectedPromo) {
-      toast.error('Ingresa un tema o selecciona una promoción');
+      toast.error('Selecciona una promoción para empezar');
       return;
     }
     setLoading(true);
@@ -48,7 +48,7 @@ export default function ContentStudio() {
     try {
       const promoData = promotions.find(p => p.id === selectedPromo);
       const res = await generateContentDraft({
-        topic: topic || (promoData ? `Promoción: ${promoData.name}` : ''),
+        topic: topic || '', // Ya no forzamos nada si está vacío
         objective: 'sales',
         platforms: ['instagram', 'facebook'],
         formats: ['feed'],
@@ -161,11 +161,11 @@ export default function ContentStudio() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 2: Describe el arte (Instrucciones para IA)</label>
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 2: Instrucciones Adicionales (Opcional)</label>
                 <textarea 
                   className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
                   rows={4}
-                  placeholder="Ej: Haz un diseño vibrante anunciando 2x1 en desayunos. Usa un tono alegre y resalta el precio..."
+                  placeholder="Ej: Destaca que es una promo de fin de mes, usa un tono súper enérgico. (Si lo dejas en blanco, la IA hará todo el diseño y los textos por ti)."
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                 />
