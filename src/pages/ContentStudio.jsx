@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
-import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft } from '../shared/config/api.js';
+import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
 export default function ContentStudio() {
@@ -23,6 +23,9 @@ export default function ContentStudio() {
   // Delete Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteDraftId, setDeleteDraftId] = useState(null);
+
+  // Lightbox State
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -240,8 +243,15 @@ export default function ContentStudio() {
                   </div>
                   
                   {generatedDraft.visual?.imageUrl ? (
-                    <div className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-6 flex items-center justify-center">
+                    <div
+                      className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-6 flex items-center justify-center cursor-zoom-in"
+                      onClick={() => setLightboxUrl(generatedDraft.visual.imageUrl)}
+                      title="Clic para ampliar"
+                    >
                       <img src={generatedDraft.visual.imageUrl} alt="Arte Generado" className="max-w-full max-h-[400px] object-contain" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full">🔍 Ver en grande</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="w-full h-64 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 border border-gray-200">
@@ -290,11 +300,14 @@ export default function ContentStudio() {
                     </div>
 
                     {/* Imagen principal */}
-                    <div className="relative w-full aspect-square bg-gray-100 overflow-hidden border-b border-ui-border">
+                    <div
+                      className="relative w-full aspect-square bg-gray-100 overflow-hidden border-b border-ui-border cursor-zoom-in"
+                      onClick={() => draft.visual?.imageUrl && setLightboxUrl(draft.visual.imageUrl)}
+                    >
                       {draft.visual?.imageUrl ? (
                         <img src={draft.visual.imageUrl} alt="Draft Art" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold bg-gradient-to-br from-gray-100 to-gray-200">Solo Texto</div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold bg-gradient-to-br from-gray-100 to-gray-200">Sin imagen</div>
                       )}
                     </div>
                     
@@ -382,6 +395,27 @@ export default function ContentStudio() {
               <Button variant="secondary" className="w-full" onClick={() => { setDeleteModalOpen(false); setDeleteDraftId(null); }}>Cancelar</Button>
               <Button variant="danger" className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Eliminar</Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIGHTBOX */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fade-in"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute -top-12 right-0 text-white text-4xl font-light hover:text-gray-300 transition-colors leading-none"
+            >×</button>
+            <img
+              src={lightboxUrl}
+              alt="Arte en grande"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+            />
+            <p className="text-white/60 text-sm mt-4 font-medium">Clic fuera para cerrar</p>
           </div>
         </div>
       )}
