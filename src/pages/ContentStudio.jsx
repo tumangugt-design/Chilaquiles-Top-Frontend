@@ -20,6 +20,10 @@ export default function ContentStudio() {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
 
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteDraftId, setDeleteDraftId] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, [activeTab]);
@@ -92,15 +96,23 @@ export default function ContentStudio() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if(!window.confirm('¿Seguro que deseas eliminar este borrador permanentemente?')) return;
+  const handleDeleteClick = (id) => {
+    setDeleteDraftId(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if(!deleteDraftId) return;
     try {
-      await deleteContentDraft(id);
+      await deleteContentDraft(deleteDraftId);
       toast.success('Borrador eliminado');
-      if(generatedDraft?._id === id) setGeneratedDraft(null);
+      if(generatedDraft?._id === deleteDraftId) setGeneratedDraft(null);
       fetchData();
     } catch(e) {
       toast.error('Error al eliminar');
+    } finally {
+      setDeleteModalOpen(false);
+      setDeleteDraftId(null);
     }
   };
 
@@ -223,7 +235,7 @@ export default function ContentStudio() {
                     <span className="bg-brand-blue text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Resultado Exitoso</span>
                     <div className="flex gap-2">
                       <StatusBadge value={generatedDraft.status} />
-                      <button onClick={() => handleDelete(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">BORRAR</button>
+                      <button onClick={() => handleDeleteClick(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">BORRAR</button>
                     </div>
                   </div>
                   
@@ -274,7 +286,7 @@ export default function ContentStudio() {
                     {/* Header flotante */}
                     <div className="absolute z-10 m-3 flex justify-between w-full pr-6">
                       <StatusBadge value={draft.status} />
-                      <button onClick={() => handleDelete(draft._id)} className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:bg-red-600 hover:scale-110 transition-transform cursor-pointer">✕</button>
+                      <button onClick={() => handleDeleteClick(draft._id)} className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:bg-red-600 hover:scale-110 transition-transform cursor-pointer">✕</button>
                     </div>
 
                     {/* Imagen principal */}
@@ -356,6 +368,19 @@ export default function ContentStudio() {
             <div className="flex gap-3">
               <Button variant="secondary" className="w-full" onClick={() => setScheduleModalOpen(false)}>Cancelar</Button>
               <Button variant="primary" className="w-full" onClick={handleSchedule}>Confirmar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* DELETE MODAL */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ui-text/40 backdrop-blur-sm px-4 animate-fade-in">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative text-center">
+            <h3 className="text-2xl font-black mb-2 text-red-600">¿Eliminar Borrador?</h3>
+            <p className="text-sm text-ui-muted mb-6">Esta acción no se puede deshacer y el diseño se perderá para siempre.</p>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="w-full" onClick={() => { setDeleteModalOpen(false); setDeleteDraftId(null); }}>Cancelar</Button>
+              <Button variant="danger" className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Eliminar</Button>
             </div>
           </div>
         </div>
