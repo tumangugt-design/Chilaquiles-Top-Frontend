@@ -32,6 +32,7 @@ const navigationSections = [
       { id: 'clients', label: 'Clientes', icon: UserCircle },
       { id: 'promotions', label: 'Promociones', icon: Gift },
       { id: 'campaigns', label: 'Campañas', icon: Gift },
+      { id: 'content_studio', label: 'Estudio Contenido', icon: LayoutDashboard },
       { id: 'finances', label: 'Finanzas', icon: TrendingUp },
     ],
   },

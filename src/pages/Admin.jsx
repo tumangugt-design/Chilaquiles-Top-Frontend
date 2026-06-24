@@ -39,6 +39,7 @@ import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
 import StaffAccessCard from '../components/ui/StaffAccessCard.jsx'
 import InternalOrder from './InternalOrder.jsx'
+import ContentStudio from './ContentStudio.jsx'
 import { 
   Search,
   Settings,
@@ -1905,6 +1906,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           <div className="bg-white rounded-2xl md:rounded-[2rem] p-4 md:p-6 lg:p-8 shadow-xl border border-ui-border min-h-full overflow-hidden">
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
+            ) : activeTab === 'content_studio' ? (
+              <ContentStudio />
             ) : activeTab === 'finances' ? (
               <div className="space-y-8 animate-fade-in">
                 <div className="flex items-center justify-between border-b border-ui-border pb-6">
