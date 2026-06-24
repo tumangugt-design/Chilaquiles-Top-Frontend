@@ -209,16 +209,37 @@ export default function ContentStudio() {
                       <span className="text-[10px] font-black uppercase tracking-widest text-brand-blue bg-brand-blue/10 px-2 py-1 rounded-full">{draft.objective}</span>
                       <StatusBadge value={draft.status} />
                     </div>
+                    
+                    {draft.visual?.imageUrl && (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-ui-border/50 bg-ui-bg">
+                        <img src={draft.visual.imageUrl} alt="Draft Art" className="w-full h-auto object-cover max-h-48" />
+                      </div>
+                    )}
+                    
                     <h4 className="font-black text-lg mb-2">{draft.title}</h4>
                     <p className="text-sm text-ui-muted mb-4 line-clamp-4 bg-ui-bg p-3 rounded-xl border border-ui-border/50 font-medium">
                       {draft.copy?.main || draft.copy?.caption}
                     </p>
-                    <div className="mt-auto pt-4 border-t border-ui-border/60">
+                    <div className="mt-auto pt-4 border-t border-ui-border/60 flex flex-col gap-2">
                       {draft.status === 'draft' && (
                         <Button className="w-full" onClick={() => handleApprove(draft._id)}>Aprobar Borrador</Button>
                       )}
                       {draft.status === 'approved' && (
-                        <Button variant="secondary" className="w-full" onClick={() => toast('Programar en desarrollo')}>Programar</Button>
+                        <Button variant="secondary" className="w-full" onClick={async () => {
+                          const pubDate = window.prompt("Ingresa la fecha de publicación (YYYY-MM-DD HH:mm) o deja vacío para publicar AHORA:");
+                          if (pubDate !== null) {
+                            try {
+                              await scheduleContentDraft(draft._id, {
+                                scheduledAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+                                platforms: ['instagram', 'facebook']
+                              });
+                              toast.success(pubDate ? 'Programado exitosamente' : 'Publicación en proceso');
+                              fetchData();
+                            } catch (e) {
+                              toast.error('Error al programar');
+                            }
+                          }
+                        }}>Programar / Publicar</Button>
                       )}
                     </div>
                   </div>
