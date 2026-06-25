@@ -4,6 +4,7 @@ import OptionCard from '../components/ui/OptionCard.jsx'
 import Button from '../components/ui/Button.jsx'
 import { getPromotions } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
+import Swal from 'sweetalert2'
 
 const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   const [promotions, setPromotions] = useState([])
@@ -204,6 +205,16 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
     setActiveTab(tab)
   }
 
+  const handleShowMoreThanThreePeopleAlert = () => {
+    Swal.fire({
+      title: '¿Ordenar para más de 3 personas?',
+      text: 'Si quieres ordenar comida para más personas, deberás realizar dos pedidos y nuestro sistema lo unificará.',
+      icon: 'info',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#0c2461'
+    })
+  }
+
   const isNextDisabled =
     activeTab === 'NORMAL'
       ? !order.requestedCount || order.requestedCount === 'PROMO'
@@ -280,8 +291,18 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                 />
               ))}
             </div>
+            <div className="text-center mt-6">
+              <button
+                type="button"
+                onClick={handleShowMoreThanThreePeopleAlert}
+                className="text-xs sm:text-sm font-black uppercase tracking-wider text-brand-orange hover:text-[#ff6b35] hover:underline cursor-pointer transition-all duration-300 py-2 px-4 rounded-xl hover:bg-brand-orange/5"
+              >
+                Quiero ordenar para más de 3 personas
+              </button>
+            </div>
           </div>
         ) : (
+
           <div className="space-y-4 animate-fade-in">
             <div className="text-center sm:text-left">
               <h3 className="text-base font-black uppercase text-brand-blue tracking-widest mb-1">
