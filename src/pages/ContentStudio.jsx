@@ -4,31 +4,46 @@ import toast from 'react-hot-toast';
 import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
+// Tipos de publicación disponibles
+const PUBLICATION_TYPES = [
+  { value: 'promocion', label: 'Promoción' },
+  { value: 'comunicado', label: 'Comunicado' },
+  { value: 'educativo', label: 'Educativo — Cómo funciona' },
+  { value: 'como_pedir', label: 'Cómo pedir' },
+  { value: 'como_calentar', label: 'Cómo calentar los chilaquiles' },
+  { value: 'frescura', label: 'Frescura de ingredientes' },
+  { value: 'entrega_en_frio', label: 'Entrega en frío' },
+  { value: 'recordatorio', label: 'Recordatorio de pedido' },
+  { value: 'topia', label: 'Contenido con TopIA' },
+  { value: 'marca', label: 'Branding / Identidad' },
+  { value: 'venta_general', label: 'Venta general' },
+  { value: 'idea_libre', label: 'Idea libre (describe abajo)' },
+];
+
 export default function ContentStudio() {
   const [activeTab, setActiveTab] = useState('generador');
-  const [topic, setTopic] = useState('');
-  const [promotions, setPromotions] = useState([]);
+
+  // ---- Estado del Generador ----
+  const [publicationType, setPublicationType] = useState('promocion'); // tipo de publicación
+  const [freeIdea, setFreeIdea] = useState(''); // instrucción adicional libre
   const [selectedPromo, setSelectedPromo] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('post');
+  const [includePlate, setIncludePlate] = useState(false);
+  const [includeTopIA, setIncludeTopIA] = useState(false);
+
+  // ---- Datos ----
+  const [promotions, setPromotions] = useState([]);
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState(null);
 
-  // New visual elements selectors
-  const [includePlate, setIncludePlate] = useState(false);
-  const [includeTopIA, setIncludeTopIA] = useState(false);
-
-  // Schedule Modal State
+  // ---- Modales ----
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleDraftId, setScheduleDraftId] = useState(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
-
-  // Delete Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteDraftId, setDeleteDraftId] = useState(null);
-
-  // Lightbox State
   const [lightboxUrl, setLightboxUrl] = useState(null);
 
   useEffect(() => {
@@ -51,29 +66,44 @@ export default function ContentStudio() {
   };
 
   const handleGenerate = async () => {
-    if (!topic && !selectedPromo) {
-      toast.error('Selecciona una opción para empezar');
+    // Validación: si es promoción, debe haber una promo seleccionada
+    if (publicationType === 'promocion' && !selectedPromo) {
+      toast.error('Selecciona una promoción de la lista para continuar');
       return;
     }
+
     setLoading(true);
     setGeneratedDraft(null);
+
     try {
       const promoData = promotions.find(p => p.id === selectedPromo);
-      const res = await generateContentDraft({
-        topic: topic || '', 
+
+      // El "topic" que se manda al backend es el tipo de publicación + la idea libre
+      const topicText = freeIdea
+        ? `${publicationType}: ${freeIdea}`
+        : publicationType;
+
+      const payload = {
+        topic: topicText,
+        format: selectedFormat,
+        formats: [selectedFormat],
         objective: 'sales',
         platforms: ['instagram', 'facebook', 'whatsapp'],
-        formats: [selectedFormat],
         includePlate,
         includeTopIA,
-        promotionData: promoData ? { id: promoData.id, name: promoData.name, description: promoData.contentDescription, price: promoData.promoPrice, imageUrl: promoData.imageUrl } : null
-      });
-      
-      toast.success('Borrador visual generado exitosamente.');
-      setTopic('');
-      setSelectedPromo('');
-      
-      // Muestra la imagen directamente
+        promotionData: promoData ? {
+          id: promoData.id,
+          name: promoData.name,
+          description: promoData.contentDescription || promoData.description || '',
+          price: promoData.promoPrice || promoData.price || '',
+          imageUrl: promoData.imageUrl || ''
+        } : null
+      };
+
+      const res = await generateContentDraft(payload);
+
+      toast.success('¡Arte generado exitosamente!');
+
       if (res.data?.draft) {
         setGeneratedDraft(res.data.draft);
       } else {
@@ -85,7 +115,7 @@ export default function ContentStudio() {
 
     } catch (e) {
       console.error(e);
-      toast.error('Error al generar arte');
+      toast.error('Error al generar el arte. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -96,12 +126,33 @@ export default function ContentStudio() {
       await approveContentDraft(id);
       toast.success('Arte aprobado exitosamente');
       if (isFromGenerator) {
-        setGeneratedDraft(prev => ({...prev, status: 'approved'}));
+        setGeneratedDraft(prev => ({ ...prev, status: 'approved' }));
       } else {
         fetchData();
       }
     } catch (e) {
       toast.error('Error al aprobar');
+    }
+  };
+
+  const openScheduleModal = (draftId) => {
+    setScheduleDraftId(draftId);
+    setScheduleModalOpen(true);
+  };
+
+  const handleSchedule = async () => {
+    if (!scheduleDate || !scheduleTime) {
+      toast.error('Selecciona fecha y hora');
+      return;
+    }
+    try {
+      const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+      await scheduleContentDraft(scheduleDraftId, { scheduledAt });
+      toast.success('Publicación programada');
+      setScheduleModalOpen(false);
+      fetchData();
+    } catch (e) {
+      toast.error('Error al programar publicación');
     }
   };
 
@@ -111,52 +162,19 @@ export default function ContentStudio() {
   };
 
   const confirmDelete = async () => {
-    if(!deleteDraftId) return;
     try {
       await deleteContentDraft(deleteDraftId);
       toast.success('Borrador eliminado');
-      if(generatedDraft?._id === deleteDraftId) setGeneratedDraft(null);
-      fetchData();
-    } catch(e) {
-      toast.error('Error al eliminar');
-    } finally {
       setDeleteModalOpen(false);
       setDeleteDraftId(null);
-    }
-  };
-
-  const openScheduleModal = (id) => {
-    setScheduleDraftId(id);
-    const now = new Date();
-    // Default to current date and next hour
-    setScheduleDate(now.toISOString().split('T')[0]);
-    setScheduleTime(`${String((now.getHours() + 1) % 24).padStart(2, '0')}:00`);
-    setScheduleModalOpen(true);
-  };
-
-  const handleSchedule = async () => {
-    if (!scheduleDate || !scheduleTime) {
-      toast.error('Completa la fecha y hora');
-      return;
-    }
-    try {
-      const isoDateTime = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
-      await scheduleContentDraft(scheduleDraftId, {
-        scheduledAt: isoDateTime,
-        platforms: ['instagram', 'facebook']
-      });
-      toast.success('Publicación programada exitosamente');
-      setScheduleModalOpen(false);
-      
-      if (generatedDraft && generatedDraft._id === scheduleDraftId) {
-        setGeneratedDraft(null); // Clear preview after scheduling
-      }
-      if (activeTab === 'borradores') fetchData();
-      
+      if (generatedDraft?._id === deleteDraftId) setGeneratedDraft(null);
+      fetchData();
     } catch (e) {
-      toast.error('Error al programar publicación');
+      toast.error('Error al eliminar');
     }
   };
+
+  const isPromo = publicationType === 'promocion';
 
   return (
     <div className="p-6 relative min-h-screen">
@@ -170,159 +188,217 @@ export default function ContentStudio() {
       </div>
 
       <div className="bg-ui-card rounded-3xl border border-ui-border p-8 shadow-sm min-h-[70vh]">
-        
-        {/* TAB GENERADOR */}
+
+        {/* ======== TAB GENERADOR ======== */}
         {activeTab === 'generador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
+
             {/* Columna Izquierda: Formulario */}
-            <div className="flex flex-col">
-              <h3 className="text-2xl font-black mb-6">Diseñar Nueva Publicación</h3>
-              
-              <div className="mb-4 p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Tipo de Publicación</label>
-                <select 
+            <div className="flex flex-col gap-5">
+              <h3 className="text-2xl font-black">Diseñar Nueva Publicación</h3>
+
+              {/* PASO 1: Tipo de publicación */}
+              <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
+                  Paso 1 — Tipo de Publicación
+                </label>
+                <select
                   className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                  value={topic}
+                  value={publicationType}
                   onChange={(e) => {
-                    setTopic(e.target.value);
-                    if (e.target.value !== 'promocion') setSelectedPromo('');
+                    setPublicationType(e.target.value);
+                    setSelectedPromo('');
                   }}
                 >
-                  <option value="promocion">Promoción</option>
-                  <option value="comunicado">Comunicado</option>
-                  <option value="educativo">Educativo</option>
-                  <option value="como_pedir">Cómo pedir</option>
-                  <option value="como_calentar">Cómo calentar</option>
-                  <option value="frescura">Frescura</option>
-                  <option value="entrega_en_frio">Entrega en frío</option>
-                  <option value="recordatorio">Recordatorio</option>
-                  <option value="topia">TopIA</option>
-                  <option value="marca">Marca</option>
-                  <option value="venta_general">Venta general</option>
-                  <option value="idea_libre">Idea libre</option>
-                </select>
-              </div>
-
-              {topic === 'promocion' && (
-              <div className="mb-4 p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Selecciona una promoción base</label>
-                <select 
-                  className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                  value={selectedPromo}
-                  onChange={(e) => setSelectedPromo(e.target.value)}
-                >
-                  <option value="">(Seleccionar)</option>
-                  {promotions.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - Q{p.promoPrice}</option>
+                  {PUBLICATION_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
-            )}
 
-            <div className="mb-4">
-              <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Instrucción / Idea (Opcional)</label>
-              <textarea 
-                className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
-                rows={3}
-                placeholder="Escribe la idea principal o instrucción que le darás al Director de Arte IA..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
+              {/* PASO 2 (condicional): Seleccionar promoción */}
+              {isPromo && (
+                <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                  <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
+                    Paso 2 — Selecciona la Promoción
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
+                    value={selectedPromo}
+                    onChange={(e) => setSelectedPromo(e.target.value)}
+                  >
+                    <option value="">(Seleccionar una promoción)</option>
+                    {promotions.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} — Q{p.promoPrice}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-            <div className="mb-4 flex flex-col gap-3">
-              <label className="block text-sm font-bold text-ui-text mb-1 tracking-wide">Elementos de Marca Opcionales</label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" 
-                  checked={includePlate}
-                  onChange={(e) => setIncludePlate(e.target.checked)}
+              {/* Instrucción adicional */}
+              <div>
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
+                  {isPromo ? 'Instrucción adicional (Opcional)' : 'Describe tu idea (Opcional)'}
+                </label>
+                <textarea
+                  className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
+                  rows={3}
+                  placeholder={isPromo
+                    ? 'Ej: Destaca que es fin de mes, usa tono urgente...'
+                    : 'Ej: Habla sobre cómo los chilaquiles se mantienen calientes hasta 2 horas...'
+                  }
+                  value={freeIdea}
+                  onChange={(e) => setFreeIdea(e.target.value)}
                 />
-                <span className="font-medium">Incluir foto de producto/plato</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" 
-                  checked={includeTopIA}
-                  onChange={(e) => setIncludeTopIA(e.target.checked)}
-                />
-                <span className="font-medium">Incluir mascota TopIA</span>
-              </label>
-            </div>
+              </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Formato del Arte</label>
-              <select 
-                className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                value={selectedFormat}
-                onChange={(e) => setSelectedFormat(e.target.value)}
+              {/* Elementos visuales opcionales */}
+              <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                <label className="block text-sm font-bold text-ui-text mb-3 tracking-wide">
+                  Elementos de Marca (Opcionales)
+                </label>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
+                      checked={includePlate}
+                      onChange={(e) => setIncludePlate(e.target.checked)}
+                    />
+                    <div>
+                      <span className="font-semibold block">Foto real de plato</span>
+                      <span className="text-xs text-ui-muted">Incluye una foto real de chilaquiles sin fondo</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
+                      checked={includeTopIA}
+                      onChange={(e) => setIncludeTopIA(e.target.checked)}
+                    />
+                    <div>
+                      <span className="font-semibold block">Mascota TopIA</span>
+                      <span className="text-xs text-ui-muted">Incluye el avatar oficial de TopIA</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Formato */}
+              <div>
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
+                  Formato del Arte
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { val: 'post', label: 'Post', desc: '1080 × 1080 px', icon: '⬛' },
+                    { val: 'historia', label: 'Historia', desc: '1080 × 1920 px', icon: '📱' },
+                  ].map(f => (
+                    <button
+                      key={f.val}
+                      onClick={() => setSelectedFormat(f.val)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${selectedFormat === f.val
+                        ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                        : 'border-ui-border bg-white text-ui-text hover:border-brand-blue/50'
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{f.icon}</div>
+                      <div className="font-bold">{f.label}</div>
+                      <div className="text-xs opacity-70">{f.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform"
+                onClick={handleGenerate}
+                disabled={loading}
               >
-                <option value="post">Post (Cuadrado 1080x1080)</option>
-                <option value="historia">Historia (Vertical 1080x1920)</option>
-              </select>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generando Arte...
+                  </span>
+                ) : '✨ Generar Arte con IA'}
+              </Button>
             </div>
-
-            <Button size="lg" className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform" onClick={handleGenerate} disabled={loading}>
-              {loading ? 'Generando Arte...' : 'Generar Arte con IA'}
-            </Button>
-          </div>
 
             {/* Columna Derecha: Vista Previa */}
             <div className="flex flex-col items-center justify-center bg-ui-bg rounded-3xl border border-ui-border/30 p-8 min-h-[500px] relative overflow-hidden">
               {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10">
-                  <div className="w-16 h-16 border-4 border-brand-blue/30 border-t-brand-blue rounded-full animate-spin mb-4"></div>
-                  <p className="font-bold text-lg text-brand-blue animate-pulse">Ensamblando diseño y generando imagen...</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10 gap-4">
+                  <div className="w-16 h-16 border-4 border-brand-blue/30 border-t-brand-blue rounded-full animate-spin" />
+                  <p className="font-bold text-lg text-brand-blue animate-pulse text-center px-4">
+                    La IA está diseñando tu arte...
+                    <br />
+                    <span className="text-sm font-normal text-ui-muted">Esto puede tardar 20–40 segundos</span>
+                  </p>
                 </div>
               )}
 
               {!generatedDraft && !loading && (
                 <div className="text-center opacity-50">
-                  <div className="w-32 h-32 bg-gray-200 rounded-2xl mx-auto mb-4 border-2 border-dashed border-gray-400"></div>
-                  <p className="font-bold text-lg">El arte generado aparecerá aquí</p>
+                  <div className="w-40 h-40 bg-gray-200 rounded-3xl mx-auto mb-4 border-2 border-dashed border-gray-300 flex items-center justify-center text-5xl">🎨</div>
+                  <p className="font-bold text-lg">El arte aparecerá aquí</p>
+                  <p className="text-sm text-ui-muted mt-1">Completa el formulario y genera tu arte</p>
                 </div>
               )}
 
               {generatedDraft && !loading && (
                 <div className="w-full flex flex-col h-full animate-fade-in">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="bg-brand-blue text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Resultado Exitoso</span>
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">✓ Arte Generado</span>
                     <div className="flex gap-2">
                       <StatusBadge value={generatedDraft.status} />
-                      <button onClick={() => handleDeleteClick(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">BORRAR</button>
+                      <button onClick={() => handleDeleteClick(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">Borrar</button>
                     </div>
                   </div>
-                  
+
                   {generatedDraft.visual?.imageUrl ? (
                     <div
-                      className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-6 flex items-center justify-center cursor-zoom-in"
+                      className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-4 flex items-center justify-center cursor-zoom-in"
                       onClick={() => setLightboxUrl(generatedDraft.visual.imageUrl)}
                       title="Clic para ampliar"
                     >
-                      <img src={generatedDraft.visual.imageUrl} alt="Arte Generado" className="max-w-full max-h-[400px] object-contain" />
+                      <img src={generatedDraft.visual.imageUrl} alt="Arte Generado" className="max-w-full max-h-[420px] object-contain" />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full">🔍 Ver en grande</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-64 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 border border-gray-200">
-                      <p className="text-gray-400 font-bold">Sin imagen visual</p>
+                    <div className="w-full h-48 bg-amber-50 rounded-2xl flex flex-col items-center justify-center mb-4 border border-amber-200">
+                      <span className="text-2xl mb-2">⚠️</span>
+                      <p className="text-amber-700 font-bold text-sm">Imagen no generada</p>
+                      <p className="text-amber-600 text-xs mt-1">El contenido se guardó pero la imagen falló</p>
                     </div>
                   )}
 
-                  <div className="bg-white p-4 rounded-xl border border-ui-border mb-6">
-                    <p className="text-sm font-medium text-ui-text line-clamp-3 italic">
-                      "{generatedDraft.copy?.main || generatedDraft.copy?.caption}"
-                    </p>
-                  </div>
+                  {/* Botón descargar */}
+                  {generatedDraft.visual?.imageUrl && (
+                    <a
+                      href={generatedDraft.visual.imageUrl}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full text-center bg-brand-blue/10 text-brand-blue font-bold py-2 px-4 rounded-xl hover:bg-brand-blue/20 transition-colors text-sm mb-3"
+                    >
+                      ⬇ Descargar imagen
+                    </a>
+                  )}
 
-                  <div className="mt-auto grid grid-cols-2 gap-4">
+                  {generatedDraft.copy?.caption && (
+                    <div className="bg-white p-3 rounded-xl border border-ui-border mb-4 text-sm text-ui-muted italic line-clamp-3">
+                      "{generatedDraft.copy.caption}"
+                    </div>
+                  )}
+
+                  <div className="mt-auto grid grid-cols-2 gap-3">
                     {generatedDraft.status === 'draft' ? (
                       <>
-                        <Button variant="danger" onClick={() => setGeneratedDraft(null)}>Descartar Vista</Button>
+                        <Button variant="danger" onClick={() => setGeneratedDraft(null)}>Descartar</Button>
                         <Button variant="primary" onClick={() => handleApprove(generatedDraft._id, true)}>Aprobar Arte</Button>
                       </>
                     ) : (
@@ -334,44 +410,52 @@ export default function ContentStudio() {
             </div>
           </div>
         )}
-        
-        {/* TAB BORRADORES (GALERIA) */}
+
+        {/* ======== TAB BORRADORES ======== */}
         {activeTab === 'borradores' && (
           <div>
             <h3 className="text-2xl font-black mb-8">Galería de Artes Generados</h3>
             {drafts.length === 0 ? (
               <div className="text-center py-20 text-ui-muted font-medium bg-ui-bg rounded-3xl border border-dashed border-ui-border">
-                No hay artes pendientes en tu galería.
+                No hay artes en tu galería.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {drafts.map(draft => (
                   <div key={draft._id} className="group rounded-3xl border border-ui-border bg-white shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
-                    {/* Header flotante */}
                     <div className="absolute z-10 m-3 flex justify-between w-full pr-6">
                       <StatusBadge value={draft.status} />
                       <button onClick={() => handleDeleteClick(draft._id)} className="bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shadow-lg hover:bg-red-600 hover:scale-110 transition-transform cursor-pointer">✕</button>
                     </div>
 
-                    {/* Imagen principal */}
                     <div
                       className="relative w-full aspect-square bg-gray-100 overflow-hidden border-b border-ui-border cursor-zoom-in"
                       onClick={() => draft.visual?.imageUrl && setLightboxUrl(draft.visual.imageUrl)}
                     >
                       {draft.visual?.imageUrl ? (
-                        <img src={draft.visual.imageUrl} alt="Draft Art" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img src={draft.visual.imageUrl} alt="Arte" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold bg-gradient-to-br from-gray-100 to-gray-200">Sin imagen</div>
                       )}
                     </div>
-                    
-                    {/* Detalles */}
+
                     <div className="p-5 flex flex-col flex-1">
-                      <h4 className="font-bold text-md mb-2 truncate" title={draft.title}>{draft.title}</h4>
-                      <p className="text-xs text-ui-muted mb-4 line-clamp-2">
-                        {draft.copy?.main || draft.copy?.caption}
-                      </p>
-                      <div className="mt-auto pt-4 flex gap-2">
+                      <h4 className="font-bold text-md mb-1 truncate" title={draft.title}>{draft.title}</h4>
+                      <p className="text-xs text-ui-muted mb-3 line-clamp-2">{draft.copy?.caption || draft.copy?.main}</p>
+
+                      {draft.visual?.imageUrl && (
+                        <a
+                          href={draft.visual.imageUrl}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-center text-xs font-bold text-brand-blue bg-brand-blue/5 py-1.5 px-3 rounded-lg mb-3 hover:bg-brand-blue/10 transition-colors"
+                        >
+                          ⬇ Descargar
+                        </a>
+                      )}
+
+                      <div className="mt-auto pt-2 flex gap-2">
                         {draft.status === 'draft' && (
                           <Button size="sm" className="w-full py-2" onClick={() => handleApprove(draft._id)}>Aprobar</Button>
                         )}
@@ -386,8 +470,8 @@ export default function ContentStudio() {
             )}
           </div>
         )}
-        
-        {/* TAB CALENDARIO */}
+
+        {/* ======== TAB CALENDARIO ======== */}
         {activeTab === 'calendario' && (
           <div className="flex flex-col items-center justify-center min-h-[400px]">
             <h3 className="text-2xl font-black mb-4">Calendario de Publicaciones</h3>
@@ -399,39 +483,23 @@ export default function ContentStudio() {
         )}
       </div>
 
-      {/* SCHEDULE MODAL */}
+      {/* ======== MODAL PROGRAMAR ======== */}
       {scheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ui-text/40 backdrop-blur-sm px-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
-            <button 
-              onClick={() => setScheduleModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl"
-            >×</button>
-            
+            <button onClick={() => setScheduleModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl">×</button>
             <h3 className="text-2xl font-black mb-2">Programar Publicación</h3>
-            <p className="text-sm text-ui-muted mb-6">Selecciona el momento exacto en que la automatización publicará este arte en tus redes.</p>
-
+            <p className="text-sm text-ui-muted mb-6">Selecciona el momento exacto para publicar este arte.</p>
             <div className="space-y-4 mb-8">
               <div>
                 <label className="block text-sm font-bold text-ui-text mb-2">Día de publicación</label>
-                <input 
-                  type="date" 
-                  className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue"
-                  value={scheduleDate}
-                  onChange={e => setScheduleDate(e.target.value)}
-                />
+                <input type="date" className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
               </div>
               <div>
                 <label className="block text-sm font-bold text-ui-text mb-2">Hora (Formato 24h)</label>
-                <input 
-                  type="time" 
-                  className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue"
-                  value={scheduleTime}
-                  onChange={e => setScheduleTime(e.target.value)}
-                />
+                <input type="time" className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
               </div>
             </div>
-
             <div className="flex gap-3">
               <Button variant="secondary" className="w-full" onClick={() => setScheduleModalOpen(false)}>Cancelar</Button>
               <Button variant="primary" className="w-full" onClick={handleSchedule}>Confirmar</Button>
@@ -439,12 +507,13 @@ export default function ContentStudio() {
           </div>
         </div>
       )}
-      {/* DELETE MODAL */}
+
+      {/* ======== MODAL ELIMINAR ======== */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ui-text/40 backdrop-blur-sm px-4 animate-fade-in">
           <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative text-center">
             <h3 className="text-2xl font-black mb-2 text-red-600">¿Eliminar Borrador?</h3>
-            <p className="text-sm text-ui-muted mb-6">Esta acción no se puede deshacer y el diseño se perderá para siempre.</p>
+            <p className="text-sm text-ui-muted mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex gap-3">
               <Button variant="secondary" className="w-full" onClick={() => { setDeleteModalOpen(false); setDeleteDraftId(null); }}>Cancelar</Button>
               <Button variant="danger" className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Eliminar</Button>
@@ -453,23 +522,16 @@ export default function ContentStudio() {
         </div>
       )}
 
-      {/* LIGHTBOX */}
+      {/* ======== LIGHTBOX ======== */}
       {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fade-in"
-          onClick={() => setLightboxUrl(null)}
-        >
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fade-in" onClick={() => setLightboxUrl(null)}>
           <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute -top-12 right-0 text-white text-4xl font-light hover:text-gray-300 transition-colors leading-none"
-            >×</button>
-            <img
-              src={lightboxUrl}
-              alt="Arte en grande"
-              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
-            />
-            <p className="text-white/60 text-sm mt-4 font-medium">Clic fuera para cerrar</p>
+            <button onClick={() => setLightboxUrl(null)} className="absolute -top-12 right-0 text-white text-4xl font-light hover:text-gray-300 transition-colors leading-none">×</button>
+            <img src={lightboxUrl} alt="Arte en grande" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl" />
+            <div className="flex gap-4 mt-4">
+              <a href={lightboxUrl} download target="_blank" rel="noreferrer" className="bg-white text-brand-blue font-bold px-6 py-2 rounded-full hover:bg-blue-50 transition-colors text-sm">⬇ Descargar imagen</a>
+              <p className="text-white/60 text-sm flex items-center">Clic fuera para cerrar</p>
+            </div>
           </div>
         </div>
       )}
