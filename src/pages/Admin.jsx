@@ -253,13 +253,16 @@ const formatUserSubtitle = (user) => {
 
 
 const getPromoInfo = (order) => {
-  const promo = order?.appliedPromo
-  if (!promo) return null
-  const name = promo.name || 'PROMO'
-  const plates = promo.plates || promo.requestedCount || order?.items?.length || 0
-  const price = promo.price ?? promo.promoPrice ?? order?.total
-  const priceLabel = Number(price) > 0 ? `Q${Number(price).toFixed(0)}` : ''
-  return { name, plates, priceLabel, manualCorrection: Boolean(promo.manualCorrection) }
+  const promos = order?.appliedPromos && order.appliedPromos.length > 0
+    ? order.appliedPromos
+    : (order?.appliedPromo ? [order.appliedPromo] : [])
+  if (promos.length === 0) return null
+  const name = promos.map(p => p.name || 'PROMO').join(', ')
+  const plates = promos.reduce((sum, p) => sum + (p.plates?.length || p.requestedCount || 0), 0) || order?.items?.length || 0
+  const price = promos.reduce((sum, p) => sum + Number(p.promoPrice ?? p.price ?? 0), 0)
+  const priceLabel = price > 0 ? `Q${price.toFixed(0)}` : ''
+  const manualCorrection = promos.some(p => p.manualCorrection)
+  return { name, plates, priceLabel, manualCorrection }
 }
 
 const getHistoryMeta = (type) => {

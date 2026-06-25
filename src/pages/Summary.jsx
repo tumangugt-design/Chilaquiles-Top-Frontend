@@ -115,10 +115,14 @@ const SummaryPage = ({ order, updateOrder, onNext, onBack, onEdit, onAddAnother 
       <div className="mb-4">
         <h2 className="text-2xl font-extrabold mb-2 text-ui-text">Resumen del Pedido</h2>
         <p className="text-ui-muted text-sm">Revisa que todo esté delicioso antes de confirmar.</p>
-        {order.appliedPromo && (
-          <p className="mt-2 inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-green-700">
-            Promo aplicada: {order.appliedPromo.name} · {order.appliedPromo.requestedCount} platos por Q{Number(order.appliedPromo.promoPrice || 0).toFixed(2)}
-          </p>
+        {order.isPromo && order.appliedPromos && order.appliedPromos.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
+            {order.appliedPromos.map((promo, idx) => (
+              <span key={promo.id + '-' + idx} className="rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-green-700">
+                Promo: {promo.name} · {promo.requestedCount || 2} platos por Q{Number(promo.promoPrice || 0).toFixed(2)}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 

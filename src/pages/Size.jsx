@@ -38,20 +38,22 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
             updateOrder({
               requestedCount: null,
               appliedPromo: null,
+              appliedPromos: [],
               isPromo: false,
               cart: [],
               currentPlate: freshPlate,
             })
             toast.error('No hay promociones activas disponibles en este momento.')
-          } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
-            const stillActive = activePromos.some((p) => p.id === currentOrder.appliedPromo.id)
-            if (!stillActive) {
+          } else if (currentOrder.requestedCount === 'PROMO' && (currentOrder.appliedPromo || (currentOrder.appliedPromos && currentOrder.appliedPromos.length > 0))) {
+            const stillActivePromos = (currentOrder.appliedPromos || []).filter(ap => activePromos.some(p => p.id === ap.id))
+            if (stillActivePromos.length !== (currentOrder.appliedPromos || []).length) {
               updateOrder({
-                appliedPromo: null,
+                appliedPromo: stillActivePromos[0] || null,
+                appliedPromos: stillActivePromos,
                 cart: [],
                 currentPlate: freshPlate,
               })
-              toast.error('La promoción seleccionada ya no está disponible.')
+              toast.error('Alguna de las promociones seleccionadas ya no está disponible.')
             }
           }
         })
@@ -78,15 +80,17 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
           updateOrder({
             requestedCount: null,
             appliedPromo: null,
+            appliedPromos: [],
             isPromo: false,
             cart: [],
             currentPlate: freshPlate,
           })
-        } else if (currentOrder.requestedCount === 'PROMO' && currentOrder.appliedPromo) {
-          const stillActive = activePromos.some((p) => p.id === currentOrder.appliedPromo.id)
-          if (!stillActive) {
+        } else if (currentOrder.requestedCount === 'PROMO' && (currentOrder.appliedPromo || (currentOrder.appliedPromos && currentOrder.appliedPromos.length > 0))) {
+          const stillActivePromos = (currentOrder.appliedPromos || []).filter(ap => activePromos.some(p => p.id === ap.id))
+          if (stillActivePromos.length !== (currentOrder.appliedPromos || []).length) {
             updateOrder({
-              appliedPromo: null,
+              appliedPromo: stillActivePromos[0] || null,
+              appliedPromos: stillActivePromos,
               cart: [],
               currentPlate: freshPlate,
             })
@@ -104,62 +108,35 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
     return () => clearInterval(interval)
   }, [])
 
-  const handleSelectPromo = (promo) => {
-    const plates = promo.plates || []
-    if (plates.length > 0) {
-      const formattedPlates = plates.map((p) => ({
-        id: Math.random().toString(36).slice(2, 11),
-        sauce: p.sauce,
-        protein: p.protein,
-        complement: p.complement,
-        baseRecipe: {
-          cream: p.baseRecipe?.cream !== false,
-          onion: p.baseRecipe?.onion !== false,
-          cilantro: p.baseRecipe?.cilantro !== false,
-        },
-      }))
+  const handleAddPromo = (promo) => {
+    const currentPromos = order.appliedPromos || []
+    const updatedPromos = [...currentPromos, promo]
+    updateOrder({
+      requestedCount: 'PROMO',
+      appliedPromos: updatedPromos,
+      appliedPromo: updatedPromos[0] || null,
+      isPromo: true
+    })
+  }
 
-      const cart = formattedPlates.slice(0, -1)
-      const currentPlate = formattedPlates[formattedPlates.length - 1]
-
+  const handleRemovePromo = (promo) => {
+    const currentPromos = order.appliedPromos || []
+    const idx = currentPromos.findIndex(p => p.id === promo.id)
+    if (idx > -1) {
+      const updatedPromos = [...currentPromos]
+      updatedPromos.splice(idx, 1)
+      const hasPromos = updatedPromos.length > 0
       updateOrder({
-        requestedCount: 'PROMO',
-        appliedPromo: promo,
-        isPromo: true,
-        cart,
-        currentPlate,
-      })
-    } else {
-      // Legacy fallback
-      const count = Number(promo.requestedCount || promo.platesCount || 2)
-      const singleRecipe = {
-        id: Math.random().toString(36).slice(2, 11),
-        sauce: promo.recipe?.sauce || 'ROJA',
-        protein: promo.recipe?.protein || 'POLLO',
-        complement: promo.recipe?.complement || 'CEBOLLA_CARAMELIZADA',
-        baseRecipe: {
-          cream: promo.recipe?.baseRecipe?.cream !== false,
-          onion: promo.recipe?.baseRecipe?.onion !== false,
-          cilantro: promo.recipe?.baseRecipe?.cilantro !== false,
-        },
-      }
-      const formattedPlates = Array(count)
-        .fill(null)
-        .map(() => ({
-          ...singleRecipe,
-          id: Math.random().toString(36).slice(2, 11),
-        }))
-      const cart = formattedPlates.slice(0, -1)
-      const currentPlate = formattedPlates[formattedPlates.length - 1]
-
-      updateOrder({
-        requestedCount: 'PROMO',
-        appliedPromo: promo,
-        isPromo: true,
-        cart,
-        currentPlate,
+        requestedCount: hasPromos ? 'PROMO' : null,
+        appliedPromos: updatedPromos,
+        appliedPromo: updatedPromos[0] || null,
+        isPromo: hasPromos
       })
     }
+  }
+
+  const handleSelectPromo = (promo) => {
+    handleAddPromo(promo)
   }
 
   const handleSelectSize = (sizeVal) => {
@@ -228,8 +205,9 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
   }
 
   const isNextDisabled =
-    !order.requestedCount ||
-    (order.requestedCount === 'PROMO' && !order.appliedPromo)
+    activeTab === 'NORMAL'
+      ? !order.requestedCount || order.requestedCount === 'PROMO'
+      : !order.appliedPromos || order.appliedPromos.length === 0
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in select-none">
@@ -323,38 +301,45 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {promotions.map((promo) => {
-                  const isSelected = order.appliedPromo?.id === promo.id
+                  const selectedQty = (order.appliedPromos || []).filter((p) => p.id === promo.id).length
+                  const isSelected = selectedQty > 0
 
                   return (
                     <div
                       key={promo.id}
-                      onClick={() => handleSelectPromo(promo)}
-                      className={`group cursor-pointer rounded-3xl border-2 p-5 bg-white transition-all duration-300 relative flex flex-col justify-between overflow-hidden ${
+                      onClick={() => {
+                        if (selectedQty === 0) handleSelectPromo(promo)
+                      }}
+                      className={`group rounded-3xl border-2 p-5 bg-white transition-all duration-300 relative flex flex-col justify-between overflow-hidden ${
                         isSelected
                           ? 'border-brand-blue ring-4 ring-brand-blue/10 transform scale-[1.02] shadow-xl'
-                          : 'border-ui-border shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-brand-orange/30'
+                          : 'cursor-pointer border-ui-border shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-brand-orange/30'
                       }`}
                     >
                       <div
                         className={`absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center transition-all z-20 ${
                           isSelected
-                            ? 'bg-brand-blue text-white scale-100 shadow-md'
+                            ? 'bg-brand-blue text-white scale-100 shadow-md font-black text-xs'
                             : 'bg-ui-bg text-transparent border border-ui-border'
                         }`}
                       >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={3}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
+                        {isSelected ? (
+                          selectedQty
+                        ) : (
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
                       </div>
 
                       <div className="space-y-3 z-10">
@@ -396,9 +381,30 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
                         <span className="text-[9px] font-black uppercase text-ui-muted tracking-widest">
                           Precio especial
                         </span>
-                        <span className="text-xl font-black text-brand-blue">
-                          Q{Number(promo.promoPrice || 0).toFixed(2)}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl font-black text-brand-blue">
+                            Q{Number(promo.promoPrice || 0).toFixed(2)}
+                          </span>
+                          {selectedQty > 0 && (
+                            <div className="flex items-center bg-[#0c2461]/10 border border-[#0c2461]/25 rounded-xl p-1 z-30" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePromo(promo)}
+                                className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-brand-blue font-black hover:bg-brand-blue hover:text-white transition-all active:scale-95 shadow-sm"
+                              >
+                                -
+                              </button>
+                              <span className="px-3 text-xs font-black text-brand-blue">{selectedQty}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleAddPromo(promo)}
+                                className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-brand-blue font-black hover:bg-brand-blue hover:text-white transition-all active:scale-95 shadow-sm"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )

@@ -152,26 +152,83 @@ const InternalOrder = ({ onSuccess }) => {
     const currentIndex = flowSteps.indexOf(currentStep)
     if (currentIndex >= 0 && currentIndex < flowSteps.length - 1) {
       let nextIndex = currentIndex + 1
+      let promoPlatesState = null
+
       if (order.isPromo && currentStep === 'SIZE') {
         nextIndex = flowSteps.indexOf('BASE_RECIPE')
+        const allFormattedPlates = []
+        const selectedPromos = order.appliedPromos || []
+        for (const promo of selectedPromos) {
+          const plates = promo.plates || []
+          if (plates.length > 0) {
+            const formattedPlates = plates.map((p) => ({
+              id: Math.random().toString(36).slice(2, 11),
+              sauce: p.sauce,
+              protein: p.protein,
+              complement: p.complement,
+              baseRecipe: {
+                cream: true,
+                onion: true,
+                cilantro: true,
+              },
+              promoId: promo.id,
+              promoName: promo.name
+            }))
+            allFormattedPlates.push(...formattedPlates)
+          } else {
+            // Legacy fallback
+            const count = Number(promo.requestedCount || promo.platesCount || 2)
+            const singleRecipe = {
+              id: Math.random().toString(36).slice(2, 11),
+              sauce: promo.recipe?.sauce || 'ROJA',
+              protein: promo.recipe?.protein || 'POLLO',
+              complement: promo.recipe?.complement || 'CEBOLLA_CARAMELIZADA',
+              baseRecipe: {
+                cream: true,
+                onion: true,
+                cilantro: true,
+              },
+              promoId: promo.id,
+              promoName: promo.name
+            }
+            const formattedPlates = Array(count)
+              .fill(null)
+              .map(() => ({
+                ...singleRecipe,
+                id: Math.random().toString(36).slice(2, 11),
+              }))
+            allFormattedPlates.push(...formattedPlates)
+          }
+        }
+        
+        if (allFormattedPlates.length > 0) {
+          promoPlatesState = {
+            cart: allFormattedPlates.slice(0, -1),
+            currentPlate: allFormattedPlates[allFormattedPlates.length - 1]
+          }
+        }
       } else if (order.isPromo && currentStep === 'BASE_RECIPE') {
         nextIndex = flowSteps.indexOf('SUMMARY')
       } else if (order.isPromo && currentStep === 'SUMMARY') {
         nextIndex = flowSteps.indexOf('TEMPERATURE')
       }
+
       const nextStepName = flowSteps[nextIndex]
 
       if (nextStepName === 'BASE_RECIPE') {
-        const updatedCurrentPlate = {
-          ...order.currentPlate,
-          baseRecipe: {
-            onion: true,
-            cilantro: true,
-            cream: true,
-          },
-        }
         if (order.isPromo) {
-          const updatedCart = order.cart.map((plate) => ({
+          const targetCart = promoPlatesState ? promoPlatesState.cart : order.cart
+          const targetCurrent = promoPlatesState ? promoPlatesState.currentPlate : order.currentPlate
+
+          const updatedCurrentPlate = {
+            ...targetCurrent,
+            baseRecipe: {
+              onion: true,
+              cilantro: true,
+              cream: true,
+            },
+          }
+          const updatedCart = targetCart.map((plate) => ({
             ...plate,
             baseRecipe: {
               onion: true,
@@ -181,8 +238,18 @@ const InternalOrder = ({ onSuccess }) => {
           }))
           updateOrder({ cart: updatedCart, currentPlate: updatedCurrentPlate })
         } else {
+          const updatedCurrentPlate = {
+            ...order.currentPlate,
+            baseRecipe: {
+              onion: true,
+              cilantro: true,
+              cream: true,
+            },
+          }
           updateOrder({ currentPlate: updatedCurrentPlate })
         }
+      } else if (promoPlatesState) {
+        updateOrder(promoPlatesState)
       }
 
       setCurrentStep(nextStepName)
