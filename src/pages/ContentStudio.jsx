@@ -9,10 +9,14 @@ export default function ContentStudio() {
   const [topic, setTopic] = useState('');
   const [promotions, setPromotions] = useState([]);
   const [selectedPromo, setSelectedPromo] = useState('');
-  const [selectedFormat, setSelectedFormat] = useState('instagram_feed');
+  const [selectedFormat, setSelectedFormat] = useState('post');
   const [drafts, setDrafts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState(null);
+
+  // New visual elements selectors
+  const [includePlate, setIncludePlate] = useState(false);
+  const [includeTopIA, setIncludeTopIA] = useState(false);
 
   // Schedule Modal State
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -48,7 +52,7 @@ export default function ContentStudio() {
 
   const handleGenerate = async () => {
     if (!topic && !selectedPromo) {
-      toast.error('Selecciona una promoción para empezar');
+      toast.error('Selecciona una opción para empezar');
       return;
     }
     setLoading(true);
@@ -56,10 +60,12 @@ export default function ContentStudio() {
     try {
       const promoData = promotions.find(p => p.id === selectedPromo);
       const res = await generateContentDraft({
-        topic: topic || '', // Ya no forzamos nada si está vacío
+        topic: topic || '', 
         objective: 'sales',
         platforms: ['instagram', 'facebook', 'whatsapp'],
         formats: [selectedFormat],
+        includePlate,
+        includeTopIA,
         promotionData: promoData ? { id: promoData.id, name: promoData.name, description: promoData.contentDescription, price: promoData.promoPrice, imageUrl: promoData.imageUrl } : null
       });
       
@@ -171,50 +177,98 @@ export default function ContentStudio() {
             
             {/* Columna Izquierda: Formulario */}
             <div className="flex flex-col">
-              <h3 className="text-2xl font-black mb-6">Diseñar Nueva Promoción</h3>
+              <h3 className="text-2xl font-black mb-6">Diseñar Nueva Publicación</h3>
               
-              <div className="mb-6 p-6 bg-ui-bg rounded-2xl border border-ui-border/50">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 1: Selecciona una promoción base</label>
+              <div className="mb-4 p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Tipo de Publicación</label>
+                <select 
+                  className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
+                  value={topic}
+                  onChange={(e) => {
+                    setTopic(e.target.value);
+                    if (e.target.value !== 'promocion') setSelectedPromo('');
+                  }}
+                >
+                  <option value="promocion">Promoción</option>
+                  <option value="comunicado">Comunicado</option>
+                  <option value="educativo">Educativo</option>
+                  <option value="como_pedir">Cómo pedir</option>
+                  <option value="como_calentar">Cómo calentar</option>
+                  <option value="frescura">Frescura</option>
+                  <option value="entrega_en_frio">Entrega en frío</option>
+                  <option value="recordatorio">Recordatorio</option>
+                  <option value="topia">TopIA</option>
+                  <option value="marca">Marca</option>
+                  <option value="venta_general">Venta general</option>
+                  <option value="idea_libre">Idea libre</option>
+                </select>
+              </div>
+
+              {topic === 'promocion' && (
+              <div className="mb-4 p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Selecciona una promoción base</label>
                 <select 
                   className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
                   value={selectedPromo}
                   onChange={(e) => setSelectedPromo(e.target.value)}
                 >
-                  <option value="">(Crear diseño desde cero)</option>
+                  <option value="">(Seleccionar)</option>
                   {promotions.map(p => (
                     <option key={p.id} value={p.id}>{p.name} - Q{p.promoPrice}</option>
                   ))}
                 </select>
               </div>
+            )}
 
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 2: Formato del Arte</label>
-                <select 
-                  className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value)}
-                >
-                  <option value="instagram_feed">Post de Instagram / Facebook (Cuadrado 1080x1080)</option>
-                  <option value="instagram_story">Historia de Instagram / Reels (Vertical 1080x1920)</option>
-                  <option value="whatsapp_image">Imagen para WhatsApp (Especial con CTA grande)</option>
-                </select>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Paso 3: Instrucciones Adicionales (Opcional)</label>
-                <textarea 
-                  className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
-                  rows={4}
-                  placeholder="Ej: Destaca que es una promo de fin de mes, usa un tono súper enérgico. (Si lo dejas en blanco, la IA hará todo el diseño y los textos por ti)."
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                />
-              </div>
-
-              <Button size="lg" className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform" onClick={handleGenerate} disabled={loading}>
-                {loading ? 'Generando e Ilustrando Arte...' : 'Generar Arte con IA'}
-              </Button>
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Instrucción / Idea (Opcional)</label>
+              <textarea 
+                className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
+                rows={3}
+                placeholder="Escribe la idea principal o instrucción que le darás al Director de Arte IA..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+              />
             </div>
+
+            <div className="mb-4 flex flex-col gap-3">
+              <label className="block text-sm font-bold text-ui-text mb-1 tracking-wide">Elementos de Marca Opcionales</label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" 
+                  checked={includePlate}
+                  onChange={(e) => setIncludePlate(e.target.checked)}
+                />
+                <span className="font-medium">Incluir foto de producto/plato</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" 
+                  checked={includeTopIA}
+                  onChange={(e) => setIncludeTopIA(e.target.checked)}
+                />
+                <span className="font-medium">Incluir mascota TopIA</span>
+              </label>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">Formato del Arte</label>
+              <select 
+                className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value)}
+              >
+                <option value="post">Post (Cuadrado 1080x1080)</option>
+                <option value="historia">Historia (Vertical 1080x1920)</option>
+              </select>
+            </div>
+
+            <Button size="lg" className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform" onClick={handleGenerate} disabled={loading}>
+              {loading ? 'Generando Arte...' : 'Generar Arte con IA'}
+            </Button>
+          </div>
 
             {/* Columna Derecha: Vista Previa */}
             <div className="flex flex-col items-center justify-center bg-ui-bg rounded-3xl border border-ui-border/30 p-8 min-h-[500px] relative overflow-hidden">
