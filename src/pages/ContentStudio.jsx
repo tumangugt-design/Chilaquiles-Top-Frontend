@@ -25,7 +25,7 @@ export default function ContentStudio() {
   
   // Platos
   const [includePlate, setIncludePlate] = useState(false);
-  const [selectedPlate, setSelectedPlate] = useState('chilaquiles_1');
+  const [selectedPlate, setSelectedPlate] = useState('aleatorio');
 
   // ---- Datos ----
   const [promotions, setPromotions] = useState([]);
@@ -254,39 +254,58 @@ export default function ContentStudio() {
                 <label className="block text-sm font-bold text-ui-text mb-3 tracking-wide">
                   Paso 2 — Elementos Opcionales
                 </label>
-                
-                <label className="flex items-center gap-3 cursor-pointer group mb-4">
-                  <input
-                    type="checkbox"
-                    className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
-                    checked={includePlate}
-                    onChange={(e) => setIncludePlate(e.target.checked)}
-                  />
-                  <span className="font-semibold text-ui-text">Incluir foto del plato</span>
-                </label>
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <span className="font-semibold text-ui-text flex items-center gap-2">🍽️ Incluir foto real de plato</span>
+                    <span className="text-xs text-ui-muted">Se añade encima del arte generado</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={includePlate}
+                      onChange={(e) => setIncludePlate(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
 
                 {includePlate && (
-                  <div className="animate-fade-in bg-white p-4 rounded-xl border border-ui-border">
-                    <label className="block text-xs font-bold text-ui-muted uppercase tracking-wider mb-2">
-                      Selecciona la imagen del plato
-                    </label>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <select
-                          className="w-full rounded-xl border border-ui-border bg-gray-50 px-3 py-2 font-medium outline-none text-ui-text mb-2"
-                          value={selectedPlate}
-                          onChange={(e) => setSelectedPlate(e.target.value)}
+                  <div className="animate-fade-in mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {/* Aleatorio */}
+                      <button
+                        onClick={() => setSelectedPlate('aleatorio')}
+                        className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                          selectedPlate === 'aleatorio'
+                            ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                            : 'border-gray-200 bg-white hover:border-blue-300'
+                        }`}
+                        style={{ height: '120px' }}
+                      >
+                        Aleatorio
+                      </button>
+
+                      {/* Platos */}
+                      {PLATE_ASSETS.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedPlate(p.id)}
+                          className={`flex flex-col items-center rounded-xl border-2 overflow-hidden transition-all bg-white ${
+                            selectedPlate === p.id
+                              ? 'border-blue-600'
+                              : 'border-gray-200 hover:border-blue-300'
+                          }`}
+                          style={{ height: '120px' }}
                         >
-                          {PLATE_ASSETS.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-gray-200">
-                        {activePlate && (
-                          <img src={activePlate.url} alt="Plato preview" className="w-full h-full object-cover scale-150" />
-                        )}
-                      </div>
+                          <div className="h-[85px] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <img src={p.url} alt={p.name} className="w-full h-full object-cover scale-[1.3]" />
+                          </div>
+                          <div className="h-[35px] flex items-center justify-center text-xs font-semibold text-gray-700 w-full bg-white border-t border-gray-100">
+                            {p.name.replace(/ \(.*\)/, '')}
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
