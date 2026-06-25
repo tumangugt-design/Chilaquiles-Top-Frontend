@@ -401,6 +401,22 @@ export const normalizePromotionForOrder = (promo = {}) => {
   }
 }
 
+export const getPromoForPlateIndex = (appliedPromos, pIdx) => {
+  if (!Array.isArray(appliedPromos)) return null
+  let accumulated = 0
+  for (const promo of appliedPromos) {
+    const count = Number(promo.requestedCount || promo.plates?.length || 2)
+    if (pIdx >= accumulated && pIdx < accumulated + count) {
+      return {
+        promo,
+        indexInPromo: pIdx - accumulated
+      }
+    }
+    accumulated += count
+  }
+  return null
+}
+
 export const OPTIONS_BASE_RECIPE = [
   {
     id: 'cream',

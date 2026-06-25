@@ -8,9 +8,9 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
   if (currentStep === 'LOCATION' || currentStep === 'CONFIRMATION' || currentStep === 'COPY_PLATE') return null
 
   const currentPlate = order.currentPlate
-  const promoRequestedCount = Number(order.appliedPromo?.requestedCount || 0)
-  const promoPrice = Number(order.appliedPromo?.promoPrice || 0)
-  const promoIsApplied = Boolean(order.appliedPromo && promoRequestedCount > 0 && promoPrice > 0)
+  const promoRequestedCount = (order.appliedPromos || []).reduce((sum, p) => sum + Number(p.requestedCount || p.plates?.length || 2), 0)
+  const promoPrice = (order.appliedPromos || []).reduce((sum, p) => sum + Number(p.promoPrice ?? p.price ?? 0), 0)
+  const promoIsApplied = Boolean(order.isPromo && order.appliedPromos && order.appliedPromos.length > 0 && promoRequestedCount > 0 && promoPrice > 0)
   const totalItems = !order.requestedCount
     ? 0
     : order.isPromo
@@ -177,7 +177,7 @@ const OrderSummary = ({ order, currentStep, onNext, onAddAnother }) => {
             <span className="text-gray-500 font-bold block">Total Final</span>
             {promoIsApplied && (
               <span className="inline-block bg-green-500/10 text-green-700 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-green-500/20 mt-1">
-                Promo: {order.appliedPromo.name}
+                Promos: {order.appliedPromos.map(p => p.name).join(', ')}
               </span>
             )}
             {order.couponCode && (

@@ -286,13 +286,13 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         baseRecipe: item.baseRecipe,
       })
 
-      const targetPromoCount = Number(order.appliedPromo?.requestedCount || 0)
+      const targetPromoCount = (order.appliedPromos || []).reduce((sum, p) => sum + Number(p.requestedCount || p.plates?.length || 2), 0)
       const allItems = [...order.cart, order.currentPlate].map(sanitizePlate)
       const itemsToSend = [...allItems]
 
-      // Respaldo de seguridad: si una promo 2x1 llega con un solo plato por un flujo viejo,
+      // Respaldo de seguridad: si una promo llega con menos platos por un flujo viejo,
       // se duplica el último plato para que backend cobre la promo y descuente inventario completo.
-      if (order.appliedPromo && targetPromoCount > itemsToSend.length && itemsToSend.length > 0) {
+      if (order.isPromo && targetPromoCount > itemsToSend.length && itemsToSend.length > 0) {
         const lastPlate = itemsToSend[itemsToSend.length - 1]
         while (itemsToSend.length < targetPromoCount) {
           itemsToSend.push({
@@ -306,7 +306,8 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         customer: payloadCustomer,
         sauceTemperature: order.sauceTemperature,
         items: itemsToSend,
-        appliedPromo: order.appliedPromo ? { id: order.appliedPromo.id } : null,
+        appliedPromo: order.appliedPromos?.[0] ? { id: order.appliedPromos[0].id } : null,
+        appliedPromos: (order.appliedPromos || []).map(p => ({ id: p.id })),
         couponCode: order.couponCode || null,
         paymentMethod,
         ...(isInternal ? { isInternal: true } : {}),

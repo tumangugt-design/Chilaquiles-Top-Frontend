@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { OPTIONS_BASE_RECIPE, getOptionObject } from '../shared/constants/index.jsx'
+import { OPTIONS_BASE_RECIPE, getOptionObject, getPromoForPlateIndex } from '../shared/constants/index.jsx'
 import { getPublicInventoryOptions } from '../shared/config/api.js'
 import { buildInventoryStatusMap, getProductAvailability } from '../shared/utils/inventoryAvailability.js'
 import OptionCard from '../components/ui/OptionCard.jsx'
@@ -154,6 +154,9 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
               const sauceLabel = sauceOpt?.label || plateItem.sauce
               const proteinLabel = proteinOpt?.label || plateItem.protein
               
+              const promoInfo = getPromoForPlateIndex(order.appliedPromos, pIdx)
+              const promoLabel = promoInfo ? ` (Promo: ${promoInfo.promo.name})` : ''
+
               return (
                 <div key={plateItem.id || pIdx} className="bg-ui-card rounded-[2rem] border border-ui-border p-5 sm:p-6 space-y-4 shadow-sm bg-white">
                   <div className="flex items-center gap-2 border-b border-ui-border pb-3">
@@ -169,8 +172,9 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
                         </div>
                       )}
                     </div>
-                    <h3 className="text-xs font-black text-brand-blue uppercase tracking-widest">
+                    <h3 className="text-xs font-black text-brand-blue uppercase tracking-widest flex items-center flex-wrap gap-1">
                       Plato {pIdx + 1}: <span className="text-ui-text lowercase font-bold text-xs">({sauceLabel.toLowerCase()} • {proteinLabel.toLowerCase()})</span>
+                      {promoLabel && <span className="text-brand-orange ml-2 normal-case font-bold">{promoLabel}</span>}
                     </h3>
                   </div>
 
@@ -185,17 +189,22 @@ const BaseRecipePage = ({ plate, plateNumber, updatePlate, onNext, onBack, showU
                       if (isCebolaCaramelizada && opt.id === 'onion') return false
 
                       // 3. Validar restricciones de la promoción
-                      if (!order?.appliedPromo) return true
+                      if (!order?.isPromo) return true
+                      
+                      const currentPromoInfo = getPromoForPlateIndex(order.appliedPromos, pIdx)
+                      if (!currentPromoInfo) return true
+                      
+                      const { promo, indexInPromo } = currentPromoInfo
                       
                       // For modern promotions with a plates array
-                      if (Array.isArray(order.appliedPromo.plates) && order.appliedPromo.plates[pIdx]) {
-                        const promoPlate = order.appliedPromo.plates[pIdx]
+                      if (Array.isArray(promo.plates) && promo.plates[indexInPromo]) {
+                        const promoPlate = promo.plates[indexInPromo]
                         return promoPlate.baseRecipe?.[opt.id] === true
                       }
                       
                       // For legacy/single recipe promotions
-                      if (order.appliedPromo.recipe?.baseRecipe) {
-                        return order.appliedPromo.recipe.baseRecipe?.[opt.id] === true
+                      if (promo.recipe?.baseRecipe) {
+                        return promo.recipe.baseRecipe?.[opt.id] === true
                       }
                       
                       return true

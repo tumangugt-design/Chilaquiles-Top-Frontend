@@ -27,6 +27,8 @@ const createInitialOrder = () => ({
     accessCode: '',
   },
   lastOrder: null,
+  appliedPromo: null,
+  appliedPromos: [],
 })
 
 export const useOrder = () => {
