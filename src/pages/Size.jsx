@@ -210,10 +210,18 @@ const SizePage = ({ order, updateOrder, onNext, onBack }) => {
       title: '¿Ordenar para más de 3 personas?',
       text: 'Si quieres ordenar comida para más personas, deberás realizar dos pedidos y nuestro sistema lo unificará.',
       icon: 'info',
+      iconColor: '#0000ff',
       confirmButtonText: 'Entendido',
-      confirmButtonColor: '#0c2461'
+      buttonsStyling: false,
+      customClass: {
+        popup: 'rounded-3xl border-2 border-ui-border bg-white p-6 shadow-xl max-w-sm sm:max-w-md',
+        title: 'text-lg sm:text-xl font-extrabold text-gray-900 mb-2 font-brand',
+        htmlContainer: 'text-xs sm:text-sm text-gray-500 font-bold leading-relaxed',
+        confirmButton: 'px-8 py-3.5 rounded-full font-black text-xs sm:text-sm tracking-widest uppercase bg-brand-orange text-white hover:bg-brand-orange/90 active:scale-95 transition-all outline-none border-none cursor-pointer'
+      }
     })
   }
+
 
   const isNextDisabled =
     activeTab === 'NORMAL'
