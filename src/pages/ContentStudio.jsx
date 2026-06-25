@@ -4,32 +4,28 @@ import toast from 'react-hot-toast';
 import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
-// Tipos de publicación disponibles
-const PUBLICATION_TYPES = [
-  { value: 'promocion', label: 'Promoción' },
-  { value: 'comunicado', label: 'Comunicado' },
-  { value: 'educativo', label: 'Educativo — Cómo funciona' },
-  { value: 'como_pedir', label: 'Cómo pedir' },
-  { value: 'como_calentar', label: 'Cómo calentar los chilaquiles' },
-  { value: 'frescura', label: 'Frescura de ingredientes' },
-  { value: 'entrega_en_frio', label: 'Entrega en frío' },
-  { value: 'recordatorio', label: 'Recordatorio de pedido' },
-  { value: 'topia', label: 'Contenido con TopIA' },
-  { value: 'marca', label: 'Branding / Identidad' },
-  { value: 'venta_general', label: 'Venta general' },
-  { value: 'idea_libre', label: 'Idea libre (describe abajo)' },
+// Platos disponibles
+const PLATE_ASSETS = [
+  { id: 'chilaquiles_1', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%201.png', name: 'Plato 1 (Clásico)' },
+  { id: 'chilaquiles_2', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%202.png', name: 'Plato 2 (Aguacate)' },
+  { id: 'chilaquiles_3', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%203.png', name: 'Plato 3' },
+  { id: 'chilaquiles_4', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%204.png', name: 'Plato 4' },
+  { id: 'chilaquiles_5', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%205.png', name: 'Plato 5' },
+  { id: 'chilaquiles_6', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%206.png', name: 'Plato 6' }
 ];
 
 export default function ContentStudio() {
   const [activeTab, setActiveTab] = useState('generador');
 
   // ---- Estado del Generador ----
-  const [publicationType, setPublicationType] = useState('promocion'); // tipo de publicación
+  const [publicationType, setPublicationType] = useState('promocion'); // 'promocion' | 'otro'
   const [freeIdea, setFreeIdea] = useState(''); // instrucción adicional libre
   const [selectedPromo, setSelectedPromo] = useState('');
   const [selectedFormat, setSelectedFormat] = useState('post');
+  
+  // Platos
   const [includePlate, setIncludePlate] = useState(false);
-  const [includeTopIA, setIncludeTopIA] = useState(false);
+  const [selectedPlate, setSelectedPlate] = useState('chilaquiles_1');
 
   // ---- Datos ----
   const [promotions, setPromotions] = useState([]);
@@ -66,9 +62,13 @@ export default function ContentStudio() {
   };
 
   const handleGenerate = async () => {
-    // Validación: si es promoción, debe haber una promo seleccionada
+    // Validación
     if (publicationType === 'promocion' && !selectedPromo) {
       toast.error('Selecciona una promoción de la lista para continuar');
+      return;
+    }
+    if (publicationType === 'otro' && !freeIdea.trim()) {
+      toast.error('Escribe de qué tratará la publicación');
       return;
     }
 
@@ -76,12 +76,9 @@ export default function ContentStudio() {
     setGeneratedDraft(null);
 
     try {
-      const promoData = promotions.find(p => p.id === selectedPromo);
+      const promoData = publicationType === 'promocion' ? promotions.find(p => p.id === selectedPromo) : null;
 
-      // El "topic" que se manda al backend es el tipo de publicación + la idea libre
-      const topicText = freeIdea
-        ? `${publicationType}: ${freeIdea}`
-        : publicationType;
+      const topicText = publicationType === 'promocion' ? 'Promoción de ventas' : freeIdea;
 
       const payload = {
         topic: topicText,
@@ -90,7 +87,7 @@ export default function ContentStudio() {
         objective: 'sales',
         platforms: ['instagram', 'facebook', 'whatsapp'],
         includePlate,
-        includeTopIA,
+        selectedPlate, // enviamos el plato específico si está seleccionado
         promotionData: promoData ? {
           id: promoData.id,
           name: promoData.name,
@@ -175,6 +172,7 @@ export default function ContentStudio() {
   };
 
   const isPromo = publicationType === 'promocion';
+  const activePlate = PLATE_ASSETS.find(p => p.id === selectedPlate);
 
   return (
     <div className="p-6 relative min-h-screen">
@@ -199,101 +197,110 @@ export default function ContentStudio() {
 
               {/* PASO 1: Tipo de publicación */}
               <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
-                  Paso 1 — Tipo de Publicación
+                <label className="block text-sm font-bold text-ui-text mb-3 tracking-wide">
+                  Paso 1 — ¿De qué tratará el arte?
                 </label>
-                <select
-                  className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                  value={publicationType}
-                  onChange={(e) => {
-                    setPublicationType(e.target.value);
-                    setSelectedPromo('');
-                  }}
-                >
-                  {PUBLICATION_TYPES.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* PASO 2 (condicional): Seleccionar promoción */}
-              {isPromo && (
-                <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
-                  <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
-                    Paso 2 — Selecciona la Promoción
-                  </label>
-                  <select
-                    className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
-                    value={selectedPromo}
-                    onChange={(e) => setSelectedPromo(e.target.value)}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    onClick={() => { setPublicationType('promocion'); setFreeIdea(''); }}
+                    className={`p-3 rounded-xl border-2 transition-all font-bold ${publicationType === 'promocion'
+                      ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                      : 'border-ui-border bg-white text-ui-text'
+                    }`}
                   >
-                    <option value="">(Seleccionar una promoción)</option>
-                    {promotions.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} — Q{p.promoPrice}</option>
-                    ))}
-                  </select>
+                    🚀 Promoción
+                  </button>
+                  <button
+                    onClick={() => { setPublicationType('otro'); setSelectedPromo(''); }}
+                    className={`p-3 rounded-xl border-2 transition-all font-bold ${publicationType === 'otro'
+                      ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                      : 'border-ui-border bg-white text-ui-text'
+                    }`}
+                  >
+                    ✍️ Otro tema
+                  </button>
                 </div>
-              )}
 
-              {/* Instrucción adicional */}
-              <div>
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
-                  {isPromo ? 'Instrucción adicional (Opcional)' : 'Describe tu idea (Opcional)'}
-                </label>
-                <textarea
-                  className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
-                  rows={3}
-                  placeholder={isPromo
-                    ? 'Ej: Destaca que es fin de mes, usa tono urgente...'
-                    : 'Ej: Habla sobre cómo los chilaquiles se mantienen calientes hasta 2 horas...'
-                  }
-                  value={freeIdea}
-                  onChange={(e) => setFreeIdea(e.target.value)}
-                />
+                {isPromo ? (
+                  <div className="animate-fade-in">
+                    <label className="block text-sm font-bold text-ui-text mb-2">Selecciona la Promoción</label>
+                    <select
+                      className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 font-medium outline-none text-ui-text shadow-sm focus:border-brand-blue"
+                      value={selectedPromo}
+                      onChange={(e) => setSelectedPromo(e.target.value)}
+                    >
+                      <option value="">(Seleccionar promoción)</option>
+                      {promotions.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} — Q{p.promoPrice}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="animate-fade-in">
+                    <label className="block text-sm font-bold text-ui-text mb-2">Descripción del tema</label>
+                    <textarea
+                      className="w-full rounded-2xl border border-ui-border bg-white px-4 py-4 font-medium outline-none shadow-sm focus:border-brand-blue resize-none"
+                      rows={3}
+                      placeholder="Ej: Hablar de nuestra entrega en frío..."
+                      value={freeIdea}
+                      onChange={(e) => setFreeIdea(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Elementos visuales opcionales */}
+              {/* PASO 2: Elementos visuales opcionales */}
               <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
                 <label className="block text-sm font-bold text-ui-text mb-3 tracking-wide">
-                  Elementos de Marca (Opcionales)
+                  Paso 2 — Elementos Opcionales
                 </label>
-                <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
-                      checked={includePlate}
-                      onChange={(e) => setIncludePlate(e.target.checked)}
-                    />
-                    <div>
-                      <span className="font-semibold block">Foto real de plato</span>
-                      <span className="text-xs text-ui-muted">Incluye una foto real de chilaquiles sin fondo</span>
+                
+                <label className="flex items-center gap-3 cursor-pointer group mb-4">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
+                    checked={includePlate}
+                    onChange={(e) => setIncludePlate(e.target.checked)}
+                  />
+                  <span className="font-semibold text-ui-text">Incluir foto del plato</span>
+                </label>
+
+                {includePlate && (
+                  <div className="animate-fade-in bg-white p-4 rounded-xl border border-ui-border">
+                    <label className="block text-xs font-bold text-ui-muted uppercase tracking-wider mb-2">
+                      Selecciona la imagen del plato
+                    </label>
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <select
+                          className="w-full rounded-xl border border-ui-border bg-gray-50 px-3 py-2 font-medium outline-none text-ui-text mb-2"
+                          value={selectedPlate}
+                          onChange={(e) => setSelectedPlate(e.target.value)}
+                        >
+                          {PLATE_ASSETS.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-gray-200">
+                        {activePlate && (
+                          <img src={activePlate.url} alt="Plato preview" className="w-full h-full object-cover scale-150" />
+                        )}
+                      </div>
                     </div>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 rounded border-gray-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
-                      checked={includeTopIA}
-                      onChange={(e) => setIncludeTopIA(e.target.checked)}
-                    />
-                    <div>
-                      <span className="font-semibold block">Mascota TopIA</span>
-                      <span className="text-xs text-ui-muted">Incluye el avatar oficial de TopIA</span>
-                    </div>
-                  </label>
-                </div>
+                  </div>
+                )}
               </div>
 
-              {/* Formato */}
-              <div>
-                <label className="block text-sm font-bold text-ui-text mb-2 tracking-wide">
-                  Formato del Arte
+              {/* PASO 3: Formato */}
+              <div className="p-5 bg-ui-bg rounded-2xl border border-ui-border/50">
+                <label className="block text-sm font-bold text-ui-text mb-3 tracking-wide">
+                  Paso 3 — Formato del Arte
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { val: 'post', label: 'Post', desc: '1080 × 1080 px', icon: '⬛' },
-                    { val: 'historia', label: 'Historia', desc: '1080 × 1920 px', icon: '📱' },
+                    { val: 'post', label: 'Post', desc: 'Cuadrado 1080x1080', icon: '⬛' },
+                    { val: 'historia', label: 'Historia', desc: 'Vertical 1080x1920', icon: '📱' },
                   ].map(f => (
                     <button
                       key={f.val}
