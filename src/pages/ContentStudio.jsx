@@ -416,20 +416,9 @@ export default function ContentStudio() {
                     </a>
                   )}
 
-                  {generatedDraft.copy && (
-                    <div className="space-y-2 mb-4">
-                      {generatedDraft.copy.caption && (
-                        <div className="bg-white p-3 rounded-xl border border-ui-border text-sm text-ui-muted italic">
-                          <span className="font-bold text-xs uppercase block mb-1">Redes (IG/FB):</span>
-                          "{generatedDraft.copy.caption}"
-                        </div>
-                      )}
-                      {generatedDraft.copy.whatsappText && (
-                        <div className="bg-brand-green/10 p-3 rounded-xl border border-brand-green/30 text-sm text-brand-green italic">
-                          <span className="font-bold text-xs uppercase block mb-1">WhatsApp Marketing:</span>
-                          "{generatedDraft.copy.whatsappText}"
-                        </div>
-                      )}
+                  {generatedDraft.copy?.caption && (
+                    <div className="bg-white p-3 rounded-xl border border-ui-border mb-4 text-sm text-ui-muted italic line-clamp-3">
+                      "{generatedDraft.copy.caption}"
                     </div>
                   )}
 
