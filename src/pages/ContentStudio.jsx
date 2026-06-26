@@ -93,7 +93,8 @@ export default function ContentStudio() {
           name: promoData.name,
           description: promoData.contentDescription || promoData.description || '',
           price: promoData.promoPrice || promoData.price || '',
-          imageUrl: promoData.imageUrl || ''
+          imageUrl: promoData.imageUrl || '',
+          endDate: promoData.endDate || promoData.validUntil || promoData.expiresAt || null
         } : null
       };
 
