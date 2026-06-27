@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
-import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft } from '../shared/config/api.js';
+import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft, publishContentDraft } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
 // Platos disponibles
@@ -169,6 +169,22 @@ export default function ContentStudio() {
       fetchData();
     } catch (e) {
       toast.error('Error al eliminar');
+    }
+  };
+
+  const handlePublishNow = async (id) => {
+    let toastId;
+    try {
+      toastId = toast.loading('Publicando en Meta (FB/IG)...');
+      await publishContentDraft(id, { platforms: ['facebook', 'instagram'] });
+      toast.success('¡Publicado con éxito en redes!', { id: toastId });
+      
+      if (generatedDraft?._id === id) {
+        setGeneratedDraft({ ...generatedDraft, status: 'published' });
+      }
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Error al publicar', { id: toastId });
     }
   };
 
@@ -429,7 +445,10 @@ export default function ContentStudio() {
                         <Button variant="primary" onClick={() => handleApprove(generatedDraft._id, true)}>Aprobar Arte</Button>
                       </>
                     ) : (
-                      <Button variant="primary" className="col-span-2" onClick={() => openScheduleModal(generatedDraft._id)}>Programar Publicación</Button>
+                      <>
+                        <Button variant="primary" className="col-span-1" onClick={() => openScheduleModal(generatedDraft._id)}>Programar</Button>
+                        <Button variant="secondary" className="col-span-1 border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white" onClick={() => handlePublishNow(generatedDraft._id)}>🚀 Publicar Ahora</Button>
+                      </>
                     )}
                   </div>
                 </div>
