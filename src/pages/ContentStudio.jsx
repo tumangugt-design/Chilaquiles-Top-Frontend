@@ -253,8 +253,11 @@ export default function ContentStudio() {
   };
 
   const openPublishModal = (id) => {
+    const draft = drafts.find(d => d._id === id) || (generatedDraft?._id === id ? generatedDraft : null);
+    const isStory = draft?.formats?.includes('historia');
+    
     setPublishDraftId(id);
-    setPublishPlatforms({ facebook: true, instagram: true });
+    setPublishPlatforms({ facebook: !isStory, instagram: true });
     setPublishModalOpen(true);
   };
 
@@ -830,16 +833,26 @@ export default function ContentStudio() {
             <p className="text-sm text-ui-muted mb-6">Selecciona en dónde deseas publicar este arte.</p>
             
             <div className="flex flex-col gap-4 mb-8 text-left">
-              <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
-                <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.facebook} onChange={e => setPublishPlatforms(p => ({ ...p, facebook: e.target.checked }))} />
-                <span className="font-bold text-gray-700 flex-1">Facebook Page</span>
-                <span className="text-2xl">📘</span>
-              </label>
-              <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
-                <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.instagram} onChange={e => setPublishPlatforms(p => ({ ...p, instagram: e.target.checked }))} />
-                <span className="font-bold text-gray-700 flex-1">Instagram</span>
-                <span className="text-2xl">📸</span>
-              </label>
+              {(() => {
+                const draft = drafts.find(d => d._id === publishDraftId) || (generatedDraft?._id === publishDraftId ? generatedDraft : null);
+                const isStory = draft?.formats?.includes('historia');
+                return (
+                  <>
+                    {!isStory && (
+                      <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.facebook} onChange={e => setPublishPlatforms(p => ({ ...p, facebook: e.target.checked }))} />
+                        <span className="font-bold text-gray-700 flex-1">Facebook Page</span>
+                        <span className="text-2xl">📘</span>
+                      </label>
+                    )}
+                    <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.instagram} onChange={e => setPublishPlatforms(p => ({ ...p, instagram: e.target.checked }))} />
+                      <span className="font-bold text-gray-700 flex-1">Instagram</span>
+                      <span className="text-2xl">📸</span>
+                    </label>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex gap-3">
