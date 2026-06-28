@@ -731,8 +731,14 @@ export default function ContentStudio() {
                           </div>
                         )}
                         {draft.status === 'published' && (
-                          <div className="w-full text-center py-2 text-green-600 font-bold bg-green-50 rounded-xl text-sm">
-                            ✓ Publicado en Redes
+                          <div className="flex flex-col gap-2 w-full">
+                            <div className="w-full text-center py-1.5 text-green-600 font-bold bg-green-50 rounded-xl text-xs mb-1">
+                              ✓ Publicado en Redes
+                            </div>
+                            <div className="flex gap-2 w-full">
+                              <button className="flex-1 py-2 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(draft._id)}>Programar</button>
+                              <button className="flex-1 py-2 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase border border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white shadow-sm transition-colors" onClick={() => openPublishModal(draft._id)}>Re-Publicar</button>
+                            </div>
                           </div>
                         )}
                       </div>
