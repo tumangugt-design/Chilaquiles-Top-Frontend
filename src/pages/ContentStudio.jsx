@@ -184,6 +184,23 @@ export default function ContentStudio() {
       toast.error('Error al guardar el texto');
     }
   };
+
+  const handleDraftCaptionBlur = async (id, newCaption, oldCaption) => {
+    if (newCaption === oldCaption) return;
+    try {
+      await updateContentDraft(id, newCaption);
+      setDrafts(prev => prev.map(d => {
+        if (d._id === id) {
+          return { ...d, copy: { ...d.copy, caption: newCaption, main: newCaption } };
+        }
+        return d;
+      }));
+      toast.success('Texto del borrador guardado');
+    } catch (error) {
+      toast.error('Error al guardar el texto');
+    }
+  };
+
   const handleApprove = async (id) => {
     try {
       await approveContentDraft(id);
@@ -674,7 +691,22 @@ export default function ContentStudio() {
 
                     <div className="p-5 flex flex-col flex-1">
                       <h4 className="font-bold text-md mb-1 truncate" title={draft.title}>{draft.title}</h4>
-                      <p className="text-xs text-ui-muted mb-3 line-clamp-2">{draft.copy?.caption || draft.copy?.main}</p>
+                      
+                      {draft.status === 'draft' ? (
+                        <div className="flex-1 flex flex-col mb-3">
+                          <textarea
+                            className="w-full flex-1 text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-lg p-2 resize-none focus:border-brand-blue outline-none"
+                            style={{ minHeight: '100px' }}
+                            defaultValue={draft.copy?.caption || draft.copy?.main || ''}
+                            onBlur={(e) => handleDraftCaptionBlur(draft._id, e.target.value, draft.copy?.caption || draft.copy?.main)}
+                            placeholder="Texto de la publicación..."
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-ui-muted mb-3 line-clamp-3" title={draft.copy?.caption || draft.copy?.main}>
+                          {draft.copy?.caption || draft.copy?.main}
+                        </p>
+                      )}
 
                       {draft.visual?.imageUrl && (
                         <a
