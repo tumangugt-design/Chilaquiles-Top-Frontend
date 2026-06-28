@@ -1579,9 +1579,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   }
 
   const handleSendWhatsAppCampaign = (draft) => {
+    const pid = draft.promotionId || draft.promotionData?.id || '';
+    const promo = promotions.find(p => p.id === pid);
+    
     setBlastForm({
-      promotionId: draft.promotionData?.id || '',
-      promoName: draft.promotionData?.name || '',
+      promotionId: pid,
+      promoName: promo?.name || draft.promotionData?.name || '',
       imageUrl: draft.visual?.imageUrl || '',
       message: '',
       scheduledAt: ''
