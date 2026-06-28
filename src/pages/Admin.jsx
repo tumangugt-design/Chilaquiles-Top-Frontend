@@ -531,6 +531,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   })
   const [stockAlert, setStockAlert] = useState({ isOpen: false, platesCount: null, items: [] })
   const [promotions, setPromotions] = useState([])
+  const [promoForStudio, setPromoForStudio] = useState(null)
   const [zoomedImage, setZoomedImage] = useState(null)
   const [promoForm, setPromoForm] = useState(resetPromoFormState())
   const [simulatedCosts, setSimulatedCosts] = useState({})
@@ -1577,6 +1578,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const handleSendWhatsAppCampaign = (draft) => {
+    setBlastForm({
+      promotionId: draft.promotionData?.id || '',
+      promoName: draft.promotionData?.name || '',
+      imageUrl: draft.visual?.imageUrl || '',
+      message: '',
+      scheduledAt: ''
+    })
+    setActiveTab('campaigns')
+  }
+
   const handleEditPromotion = (promo) => {
     const countVal = String(promo.requestedCount || promo.plates?.length || promo.platesCount || 2)
     setPromoForm({
@@ -1910,7 +1922,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             {activeTab === 'internal_order' ? (
               <InternalOrder onSuccess={() => setActiveTab('orders')} />
             ) : activeTab === 'content_studio' ? (
-              <ContentStudio />
+              <ContentStudio 
+                initialPromoId={promoForStudio} 
+                onSendWhatsAppCampaign={handleSendWhatsAppCampaign}
+              />
             ) : activeTab === 'finances' ? (
               <div className="space-y-8 animate-fade-in">
                 <div className="flex items-center justify-between border-b border-ui-border pb-6">
@@ -3379,6 +3394,16 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       </div>
 
                       <div className="flex gap-3 text-[10px] font-black uppercase tracking-wider">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPromoForStudio(promo.id)
+                            setActiveTab('content_studio')
+                          }}
+                          className="text-brand-blue hover:underline font-black"
+                        >
+                          Generar Arte
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleEditPromotion(promo)}

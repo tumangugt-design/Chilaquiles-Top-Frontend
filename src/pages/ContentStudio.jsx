@@ -14,7 +14,7 @@ const PLATE_ASSETS = [
   { id: 'chilaquiles_6', url: 'https://raw.githubusercontent.com/tumangugt-design/Imagenes-chilaquiles/main/Fotos%20de%20Platos%20Reales%20Sin%20Fondo/Plato%206.png', name: 'Plato 6' }
 ];
 
-export default function ContentStudio() {
+export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }) {
   const [activeTab, setActiveTab] = useState('generador');
 
   // ---- Estado del Generador ----
@@ -56,6 +56,13 @@ export default function ContentStudio() {
   useEffect(() => {
     fetchData();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (initialPromoId) {
+      setPublicationType('promocion');
+      setSelectedPromo(initialPromoId);
+    }
+  }, [initialPromoId]);
 
   const fetchData = async () => {
     try {
@@ -858,6 +865,21 @@ export default function ContentStudio() {
             <div className="flex gap-3">
               <Button variant="secondary" className="w-full" onClick={() => setPublishModalOpen(false)}>Cancelar</Button>
               <Button variant="primary" className="w-full bg-brand-blue hover:bg-blue-700 shadow-md border-none" onClick={handlePublishNow}>Confirmar</Button>
+            </div>
+            <div className="mt-3">
+              <Button 
+                variant="secondary" 
+                className="w-full bg-[#25D366] text-white hover:bg-[#1DA851] hover:text-white border-none shadow-md flex items-center justify-center gap-2"
+                onClick={() => {
+                  setPublishModalOpen(false);
+                  if (onSendWhatsAppCampaign) {
+                    const draft = drafts.find(d => d._id === publishDraftId) || (generatedDraft?._id === publishDraftId ? generatedDraft : null);
+                    onSendWhatsAppCampaign(draft);
+                  }
+                }}
+              >
+                <span>💬</span> Enviar por WhatsApp
+              </Button>
             </div>
           </div>
         </div>
