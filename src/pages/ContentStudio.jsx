@@ -222,6 +222,12 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
 
   const openScheduleModal = (draftId) => {
     setScheduleDraftId(draftId);
+    
+    // Obtener formato
+    const draft = drafts.find(d => d._id === draftId) || (generatedDraft?._id === draftId ? generatedDraft : null);
+    const isStory = draft?.formats?.includes('historia');
+    
+    setPublishPlatforms({ facebook: !isStory, instagram: true });
     setScheduleModalOpen(true);
   };
 
@@ -230,14 +236,32 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
       toast.error('Selecciona fecha y hora');
       return;
     }
+    
+    const selectedPlatforms = Object.keys(publishPlatforms).filter(k => publishPlatforms[k]);
+    if (selectedPlatforms.length === 0) {
+      toast.error('Selecciona al menos una red social');
+      return;
+    }
+
     try {
       const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
-      await scheduleContentDraft(scheduleDraftId, { scheduledAt });
-      toast.success('Publicación programada');
+      const draft = drafts.find(d => d._id === scheduleDraftId) || (generatedDraft?._id === scheduleDraftId ? generatedDraft : null);
+      const isStory = draft?.formats?.includes('historia');
+
+      // Programar en cada red social
+      for (const platform of selectedPlatforms) {
+        await scheduleContentDraft(scheduleDraftId, { 
+          scheduledAt, 
+          platform, 
+          format: isStory ? 'historia' : 'post' 
+        });
+      }
+
+      toast.success('Publicación programada exitosamente');
       setScheduleModalOpen(false);
       fetchData();
     } catch (e) {
-      toast.error('Error al programar publicación');
+      toast.error(e.response?.data?.message || 'Error al programar publicación');
     }
   };
 
@@ -810,7 +834,30 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
             <button onClick={() => setScheduleModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl">×</button>
             <h3 className="text-2xl font-black mb-2">Programar Publicación</h3>
             <p className="text-sm text-ui-muted mb-6">Selecciona el momento exacto para publicar este arte.</p>
-            <div className="space-y-4 mb-8">
+            <div className="space-y-4 mb-6 text-left">
+              {(() => {
+                const draft = drafts.find(d => d._id === scheduleDraftId) || (generatedDraft?._id === scheduleDraftId ? generatedDraft : null);
+                const isStory = draft?.formats?.includes('historia');
+                return (
+                  <div className="flex flex-col gap-3">
+                    <label className="block text-sm font-bold text-ui-text mb-1">¿Dónde programar?</label>
+                    {!isStory && (
+                      <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" className="w-4 h-4 accent-brand-blue" checked={publishPlatforms.facebook} onChange={e => setPublishPlatforms(p => ({ ...p, facebook: e.target.checked }))} />
+                        <span className="font-bold flex-1">Facebook</span>
+                        <span className="text-xl">📘</span>
+                      </label>
+                    )}
+                    <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input type="checkbox" className="w-4 h-4 accent-brand-blue" checked={publishPlatforms.instagram} onChange={e => setPublishPlatforms(p => ({ ...p, instagram: e.target.checked }))} />
+                      <span className="font-bold flex-1">Instagram</span>
+                      <span className="text-xl">📸</span>
+                    </label>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="space-y-4 mb-8 text-left">
               <div>
                 <label className="block text-sm font-bold text-ui-text mb-2">Día de publicación</label>
                 <input type="date" className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
