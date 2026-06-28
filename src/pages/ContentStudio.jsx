@@ -442,10 +442,10 @@ export default function ContentStudio() {
                         <Button variant="primary" onClick={() => handleApprove(generatedDraft._id, true)}>Aprobar Arte</Button>
                       </>
                     ) : (
-                      <>
-                        <Button variant="primary" className="col-span-1" onClick={() => openScheduleModal(generatedDraft._id)}>Programar</Button>
-                        <Button variant="secondary" className="col-span-1 border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white" onClick={() => handlePublishNow(generatedDraft._id)}>🚀 Publicar Ahora</Button>
-                      </>
+                      <div className="col-span-2 flex gap-2">
+                        <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(generatedDraft._id)}>Programar</button>
+                        <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-md transition-colors" onClick={() => handlePublishNow(generatedDraft._id)}>🚀 Publicar Ahora</button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -503,9 +503,9 @@ export default function ContentStudio() {
                           <Button size="sm" className="w-full py-2" onClick={() => handleApprove(draft._id)}>Aprobar</Button>
                         )}
                         {draft.status === 'approved' && (
-                          <div className="flex gap-2">
-                            <Button size="sm" className="w-full py-2 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20" onClick={() => openScheduleModal(draft._id)} style={{ border: 'none' }}>Programar</Button>
-                            <Button size="sm" className="w-full py-2 bg-brand-blue text-white hover:bg-blue-700" onClick={() => handlePublishNow(draft._id)} style={{ border: 'none' }}>Publicar</Button>
+                          <div className="flex gap-2 w-full">
+                            <button className="flex-1 py-2.5 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(draft._id)}>Programar</button>
+                            <button className="flex-1 py-2.5 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-sm transition-colors" onClick={() => handlePublishNow(draft._id)}>Publicar</button>
                           </div>
                         )}
                         {draft.status === 'published' && (
