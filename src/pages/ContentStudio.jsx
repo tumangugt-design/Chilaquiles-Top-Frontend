@@ -119,15 +119,12 @@ export default function ContentStudio() {
     }
   };
 
-  const handleApprove = async (id, isFromGenerator = false) => {
+  const handleApprove = async (id) => {
     try {
       await approveContentDraft(id);
-      toast.success('Arte aprobado exitosamente');
-      if (isFromGenerator) {
-        setGeneratedDraft(prev => ({ ...prev, status: 'approved' }));
-      } else {
-        fetchData();
-      }
+      toast.success('Arte Aprobado');
+      setDrafts(prev => prev.map(d => d._id === id ? { ...d, status: 'approved' } : d));
+      if (generatedDraft?._id === id) setGeneratedDraft(prev => ({ ...prev, status: 'approved' }));
     } catch (e) {
       toast.error('Error al aprobar');
     }
@@ -163,10 +160,10 @@ export default function ContentStudio() {
     try {
       await deleteContentDraft(deleteDraftId);
       toast.success('Borrador eliminado');
+      setDrafts(prev => prev.filter(d => d._id !== deleteDraftId));
+      if (generatedDraft?._id === deleteDraftId) setGeneratedDraft(null);
       setDeleteModalOpen(false);
       setDeleteDraftId(null);
-      if (generatedDraft?._id === deleteDraftId) setGeneratedDraft(null);
-      fetchData();
     } catch (e) {
       toast.error('Error al eliminar');
     }
@@ -179,10 +176,10 @@ export default function ContentStudio() {
       await publishContentDraft(id, { platforms: ['facebook', 'instagram'] });
       toast.success('¡Publicado con éxito en redes!', { id: toastId });
       
+      setDrafts(prev => prev.map(d => d._id === id ? { ...d, status: 'published' } : d));
       if (generatedDraft?._id === id) {
         setGeneratedDraft({ ...generatedDraft, status: 'published' });
       }
-      fetchData();
     } catch (e) {
       toast.error(e.response?.data?.error || 'Error al publicar', { id: toastId });
     }
@@ -501,12 +498,20 @@ export default function ContentStudio() {
                         </a>
                       )}
 
-                      <div className="mt-auto pt-2 flex gap-2">
+                      <div className="mt-auto pt-2 flex flex-col gap-2">
                         {draft.status === 'draft' && (
                           <Button size="sm" className="w-full py-2" onClick={() => handleApprove(draft._id)}>Aprobar</Button>
                         )}
                         {draft.status === 'approved' && (
-                          <Button size="sm" variant="secondary" className="w-full py-2 bg-brand-orange text-white hover:bg-brand-orange/90" onClick={() => openScheduleModal(draft._id)}>Programar</Button>
+                          <div className="flex gap-2">
+                            <Button size="sm" className="w-full py-2 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20" onClick={() => openScheduleModal(draft._id)} style={{ border: 'none' }}>Programar</Button>
+                            <Button size="sm" className="w-full py-2 bg-brand-blue text-white hover:bg-blue-700" onClick={() => handlePublishNow(draft._id)} style={{ border: 'none' }}>Publicar</Button>
+                          </div>
+                        )}
+                        {draft.status === 'published' && (
+                          <div className="w-full text-center py-2 text-green-600 font-bold bg-green-50 rounded-xl text-sm">
+                            ✓ Publicado en Redes
+                          </div>
                         )}
                       </div>
                     </div>
