@@ -272,6 +272,7 @@ export default function ContentStudio() {
         <h2 className="text-3xl font-black text-ui-text">Estudio de Contenido</h2>
         <div className="flex gap-2">
           <Button variant={activeTab === 'generador' ? 'primary' : 'secondary'} onClick={() => { setActiveTab('generador'); setGeneratedDraft(null); }}>Generador</Button>
+          <Button variant={activeTab === 'manual' ? 'primary' : 'secondary'} onClick={() => { setActiveTab('manual'); setGeneratedDraft(null); }}>📸 Pub. Manual</Button>
           <Button variant={activeTab === 'borradores' ? 'primary' : 'secondary'} onClick={() => setActiveTab('borradores')}>Galería de Borradores</Button>
           <Button variant={activeTab === 'calendario' ? 'primary' : 'secondary'} onClick={() => setActiveTab('calendario')}>Calendario</Button>
         </div>
