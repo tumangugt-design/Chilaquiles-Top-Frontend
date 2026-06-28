@@ -771,6 +771,17 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
                             </div>
                           </div>
                         )}
+                        {draft.status === 'scheduled' && (
+                          <div className="flex flex-col gap-2 w-full">
+                            <div className="w-full text-center py-1.5 text-orange-600 font-bold bg-orange-50 rounded-xl text-xs mb-1">
+                              🕒 Programado
+                            </div>
+                            <div className="flex gap-2 w-full">
+                              <button className="flex-1 py-2 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(draft._id)}>Re-Programar</button>
+                              <button className="flex-1 py-2 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase border border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white shadow-sm transition-colors" onClick={() => openPublishModal(draft._id)}>Publicar</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -869,7 +880,8 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
             <div className="mt-3">
               <Button 
                 variant="secondary" 
-                className="w-full bg-[#25D366] text-white hover:bg-[#1DA851] hover:text-white border-none shadow-md flex items-center justify-center gap-2"
+                className="w-full border-none shadow-md flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#25D366', color: 'white' }}
                 onClick={() => {
                   setPublishModalOpen(false);
                   if (onSendWhatsAppCampaign) {
