@@ -38,6 +38,11 @@ export default function ContentStudio() {
   const [scheduleDraftId, setScheduleDraftId] = useState(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
+
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishDraftId, setPublishDraftId] = useState(null);
+  const [publishPlatforms, setPublishPlatforms] = useState({ facebook: true, instagram: true });
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteDraftId, setDeleteDraftId] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
@@ -169,15 +174,28 @@ export default function ContentStudio() {
     }
   };
 
-  const handlePublishNow = async (id) => {
+  const openPublishModal = (id) => {
+    setPublishDraftId(id);
+    setPublishPlatforms({ facebook: true, instagram: true });
+    setPublishModalOpen(true);
+  };
+
+  const handlePublishNow = async () => {
+    const selected = Object.keys(publishPlatforms).filter(k => publishPlatforms[k]);
+    if (selected.length === 0) {
+      toast.error('Selecciona al menos una plataforma');
+      return;
+    }
+
+    setPublishModalOpen(false);
     let toastId;
     try {
-      toastId = toast.loading('Publicando en Meta (FB/IG)...');
-      await publishContentDraft(id, { platforms: ['facebook', 'instagram'] });
+      toastId = toast.loading('Publicando en Redes...');
+      await publishContentDraft(publishDraftId, { platforms: selected });
       toast.success('¡Publicado con éxito en redes!', { id: toastId });
       
-      setDrafts(prev => prev.map(d => d._id === id ? { ...d, status: 'published' } : d));
-      if (generatedDraft?._id === id) {
+      setDrafts(prev => prev.map(d => d._id === publishDraftId ? { ...d, status: 'published' } : d));
+      if (generatedDraft?._id === publishDraftId) {
         setGeneratedDraft({ ...generatedDraft, status: 'published' });
       }
     } catch (e) {
@@ -444,7 +462,7 @@ export default function ContentStudio() {
                     ) : (
                       <div className="col-span-2 flex gap-2">
                         <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(generatedDraft._id)}>Programar</button>
-                        <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-md transition-colors" onClick={() => handlePublishNow(generatedDraft._id)}>🚀 Publicar Ahora</button>
+                        <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-md transition-colors" onClick={() => openPublishModal(generatedDraft._id)}>🚀 Publicar Ahora</button>
                       </div>
                     )}
                   </div>
@@ -505,7 +523,7 @@ export default function ContentStudio() {
                         {draft.status === 'approved' && (
                           <div className="flex gap-2 w-full">
                             <button className="flex-1 py-2.5 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(draft._id)}>Programar</button>
-                            <button className="flex-1 py-2.5 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-sm transition-colors" onClick={() => handlePublishNow(draft._id)}>Publicar</button>
+                            <button className="flex-1 py-2.5 rounded-full font-bold text-[10px] sm:text-xs tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-sm transition-colors" onClick={() => openPublishModal(draft._id)}>Publicar</button>
                           </div>
                         )}
                         {draft.status === 'published' && (
@@ -568,6 +586,35 @@ export default function ContentStudio() {
             <div className="flex gap-3">
               <Button variant="secondary" className="w-full" onClick={() => { setDeleteModalOpen(false); setDeleteDraftId(null); }}>Cancelar</Button>
               <Button variant="danger" className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Eliminar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======== MODAL PUBLICAR ======== */}
+      {publishModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ui-text/40 backdrop-blur-sm px-4 animate-fade-in">
+          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative text-center">
+            <button onClick={() => setPublishModalOpen(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 transition-colors font-bold text-xl">×</button>
+            <h3 className="text-2xl font-black mb-2">Publicar en Redes</h3>
+            <p className="text-sm text-ui-muted mb-6">Selecciona en dónde deseas publicar este arte.</p>
+            
+            <div className="flex flex-col gap-4 mb-8 text-left">
+              <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
+                <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.facebook} onChange={e => setPublishPlatforms(p => ({ ...p, facebook: e.target.checked }))} />
+                <span className="font-bold text-gray-700 flex-1">Facebook Page</span>
+                <span className="text-2xl">📘</span>
+              </label>
+              <label className="flex items-center gap-3 p-4 border rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
+                <input type="checkbox" className="w-5 h-5 accent-brand-blue" checked={publishPlatforms.instagram} onChange={e => setPublishPlatforms(p => ({ ...p, instagram: e.target.checked }))} />
+                <span className="font-bold text-gray-700 flex-1">Instagram</span>
+                <span className="text-2xl">📸</span>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="secondary" className="w-full" onClick={() => setPublishModalOpen(false)}>Cancelar</Button>
+              <Button variant="primary" className="w-full bg-brand-blue hover:bg-blue-700 shadow-md border-none" onClick={handlePublishNow}>Confirmar</Button>
             </div>
           </div>
         </div>
