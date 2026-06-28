@@ -88,7 +88,8 @@ export const approveContentDraft = (id) => api.post(`/content/drafts/${id}/appro
 export const scheduleContentDraft = (id, data) => api.post(`/content/drafts/${id}/schedule`, data).then(r => r.data)
 export const deleteContentDraft = (id) => api.delete(`/content/drafts/${id}`).then(r => r.data)
 export const publishContentDraft = (id, data) => api.post(`/content/drafts/${id}/publish`, data).then(r => r.data)
-
+export const createManualDraft = (payload) => api.post('/content/drafts/manual', payload).then(r => r.data)
+export const updateContentDraft = (id, copy) => api.put(`/content/drafts/${id}/copy`, { copy }).then(r => r.data)
 // Canva
 export const getCanvaStatus = () => api.get('/canva/status')
 export const getCanvaAuthUrl = () => api.get('/canva/auth')

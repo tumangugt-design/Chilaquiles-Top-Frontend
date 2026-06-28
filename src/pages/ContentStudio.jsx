@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
-import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft, publishContentDraft } from '../shared/config/api.js';
+import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft, publishContentDraft, createManualDraft, updateContentDraft } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
 // Platos disponibles
@@ -26,6 +26,11 @@ export default function ContentStudio() {
   // Platos
   const [includePlate, setIncludePlate] = useState(false);
   const [selectedPlate, setSelectedPlate] = useState('aleatorio');
+
+  // ---- Publicación Manual ----
+  const [manualFile, setManualFile] = useState(null);
+  const [manualPreviewUrl, setManualPreviewUrl] = useState(null);
+  const [manualPrompt, setManualPrompt] = useState('');
 
   // ---- Datos ----
   const [promotions, setPromotions] = useState([]);
@@ -124,6 +129,61 @@ export default function ContentStudio() {
     }
   };
 
+  const handleManualImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setManualFile(file);
+      setManualPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleManualGenerate = async () => {
+    if (!manualFile) {
+      toast.error('Sube una imagen primero');
+      return;
+    }
+
+    setLoading(true);
+    setGeneratedDraft(null);
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(manualFile);
+      reader.onload = async () => {
+        const base64 = reader.result;
+        try {
+          const res = await createManualDraft({ imageBase64: base64, promptText: manualPrompt });
+          setGeneratedDraft(res.draft);
+          toast.success('¡Análisis completado! Revisa el copy propuesto.');
+        } catch (e) {
+          toast.error('Error al generar contenido manual');
+        } finally {
+          setLoading(false);
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Error al leer el archivo');
+        setLoading(false);
+      };
+    } catch (e) {
+      console.error(e);
+      toast.error('Error en el proceso manual');
+      setLoading(false);
+    }
+  };
+
+  const handleCaptionBlur = async (e) => {
+    const newCaption = e.target.value;
+    if (newCaption === generatedDraft?.copy?.caption) return;
+
+    try {
+      await updateContentDraft(generatedDraft._id, newCaption);
+      setGeneratedDraft(prev => ({ ...prev, copy: { ...prev.copy, caption: newCaption } }));
+      toast.success('Texto guardado correctamente');
+    } catch (error) {
+      toast.error('Error al guardar el texto');
+    }
+  };
   const handleApprove = async (id) => {
     try {
       await approveContentDraft(id);
@@ -448,8 +508,14 @@ export default function ContentStudio() {
                   )}
 
                   {generatedDraft.copy?.caption && (
-                    <div className="bg-white p-3 rounded-xl border border-ui-border mb-4 text-sm text-ui-muted italic line-clamp-3">
-                      "{generatedDraft.copy.caption}"
+                    <div className="mb-4">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Caption Propuesto (Puedes editarlo)</label>
+                      <textarea
+                        className="w-full bg-white p-3 rounded-xl border border-ui-border text-sm text-gray-800 focus:border-brand-blue outline-none resize-none h-32"
+                        defaultValue={generatedDraft.copy.caption}
+                        onBlur={handleCaptionBlur}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">El texto se guardará automáticamente al salir de la caja.</p>
                     </div>
                   )}
 
@@ -465,6 +531,111 @@ export default function ContentStudio() {
                         <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-md transition-colors" onClick={() => openPublishModal(generatedDraft._id)}>🚀 Publicar Ahora</button>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ======== TAB PUBLICACION MANUAL ======== */}
+        {activeTab === 'manual' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 animate-fade-in relative max-w-6xl mx-auto">
+            {/* Columna Izquierda: Formulario Manual */}
+            <div className="flex flex-col gap-6">
+              <h3 className="text-2xl font-black mb-2 text-ui-text">Publicación Manual</h3>
+              <p className="text-ui-muted text-sm -mt-4 mb-4">Sube tu propia foto. Claude analizará la imagen y te propondrá un caption ideal.</p>
+
+              {/* Subida de Imagen */}
+              <div className="bg-white p-6 border-2 border-dashed border-ui-border rounded-[2rem]">
+                <label className="block text-sm font-bold text-ui-text mb-4">1. Sube tu imagen</label>
+                <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleManualImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20" />
+                {manualPreviewUrl && (
+                  <div className="mt-4">
+                    <img src={manualPreviewUrl} alt="Preview" className="max-h-48 rounded-xl object-contain mx-auto shadow-sm" />
+                  </div>
+                )}
+              </div>
+
+              {/* Instrucción opcional */}
+              <div className="bg-white p-6 border border-ui-border rounded-[2rem] shadow-sm">
+                <label className="block text-sm font-bold text-ui-text mb-2">2. Instrucciones para la IA (Opcional)</label>
+                <textarea
+                  placeholder="Ej. Haz énfasis en que es promoción del mes..."
+                  className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue resize-none h-24"
+                  value={manualPrompt}
+                  onChange={e => setManualPrompt(e.target.value)}
+                />
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full text-lg shadow-xl hover:scale-[1.02] transition-transform"
+                onClick={handleManualGenerate}
+                disabled={loading || !manualFile}
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Analizando Imagen...
+                  </span>
+                ) : '✨ Analizar y Generar Copy'}
+              </Button>
+            </div>
+
+            {/* Columna Derecha: Vista Previa */}
+            <div className="flex flex-col items-center justify-center bg-ui-bg rounded-3xl border border-ui-border/30 p-8 min-h-[500px] relative overflow-hidden">
+              {loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-10 gap-4">
+                  <div className="w-16 h-16 border-4 border-brand-blue/30 border-t-brand-blue rounded-full animate-spin" />
+                  <p className="font-bold text-lg text-brand-blue animate-pulse text-center px-4">
+                    Subiendo imagen y generando texto...
+                  </p>
+                </div>
+              )}
+
+              {!generatedDraft && !loading && (
+                <div className="text-center opacity-50">
+                  <div className="w-40 h-40 bg-gray-200 rounded-3xl mx-auto mb-4 border-2 border-dashed border-gray-300 flex items-center justify-center text-5xl">📸</div>
+                  <p className="font-bold text-lg">Sube una foto para empezar</p>
+                </div>
+              )}
+
+              {generatedDraft && !loading && (
+                <div className="w-full flex flex-col h-full animate-fade-in">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">✓ Listo</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleDeleteClick(generatedDraft._id)} className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold hover:bg-red-200 transition-colors">Descartar</button>
+                    </div>
+                  </div>
+
+                  {generatedDraft.visual?.imageUrl && (
+                    <div
+                      className="relative group w-full rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white mb-4 flex items-center justify-center cursor-zoom-in"
+                      onClick={() => setLightboxUrl(generatedDraft.visual.imageUrl)}
+                    >
+                      <img src={generatedDraft.visual.imageUrl} alt="Upload" className="max-w-full max-h-[420px] object-contain" />
+                    </div>
+                  )}
+
+                  {generatedDraft.copy?.caption && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Caption Propuesto (Puedes editarlo)</label>
+                      <textarea
+                        className="w-full bg-white p-3 rounded-xl border border-ui-border text-sm text-gray-800 focus:border-brand-blue outline-none resize-none h-32"
+                        defaultValue={generatedDraft.copy.caption}
+                        onBlur={handleCaptionBlur}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">El texto se guardará automáticamente al salir de la caja.</p>
+                    </div>
+                  )}
+
+                  <div className="mt-auto grid grid-cols-2 gap-3">
+                    <div className="col-span-2 flex gap-2">
+                      <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 transition-colors" onClick={() => openScheduleModal(generatedDraft._id)}>Programar</button>
+                      <button className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase bg-brand-blue text-white hover:bg-blue-700 shadow-md transition-colors" onClick={() => openPublishModal(generatedDraft._id)}>🚀 Publicar Ahora</button>
+                    </div>
                   </div>
                 </div>
               )}
