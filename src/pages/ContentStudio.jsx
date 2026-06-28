@@ -31,6 +31,7 @@ export default function ContentStudio() {
   const [manualFile, setManualFile] = useState(null);
   const [manualPreviewUrl, setManualPreviewUrl] = useState(null);
   const [manualPrompt, setManualPrompt] = useState('');
+  const [manualFormat, setManualFormat] = useState('post');
 
   // ---- Datos ----
   const [promotions, setPromotions] = useState([]);
@@ -152,7 +153,7 @@ export default function ContentStudio() {
       reader.onload = async () => {
         const base64 = reader.result;
         try {
-          const res = await createManualDraft({ imageBase64: base64, promptText: manualPrompt });
+          const res = await createManualDraft({ imageBase64: base64, promptText: manualPrompt, format: manualFormat });
           setGeneratedDraft(res.draft);
           toast.success('¡Análisis completado! Revisa el copy propuesto.');
         } catch (e) {
@@ -575,9 +576,28 @@ export default function ContentStudio() {
                 )}
               </div>
 
-              {/* Instrucción opcional */}
               <div className="bg-white p-6 border border-ui-border rounded-[2rem] shadow-sm">
-                <label className="block text-sm font-bold text-ui-text mb-2">2. Instrucciones para la IA (Opcional)</label>
+                <label className="block text-sm font-bold text-ui-text mb-2">2. Formato</label>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {[
+                    { val: 'post', label: 'Post', icon: '⬛' },
+                    { val: 'historia', label: 'Historia', icon: '📱' },
+                  ].map(f => (
+                    <button
+                      key={f.val}
+                      onClick={() => setManualFormat(f.val)}
+                      className={`p-3 rounded-xl border-2 text-left transition-all ${manualFormat === f.val
+                        ? 'border-brand-blue bg-brand-blue/5 text-brand-blue'
+                        : 'border-ui-border bg-white text-ui-text hover:border-brand-blue/50'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{f.icon}</div>
+                      <div className="font-bold text-sm">{f.label}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <label className="block text-sm font-bold text-ui-text mb-2">3. Instrucciones para la IA (Opcional)</label>
                 <textarea
                   placeholder="Ej. Haz énfasis en que es promoción del mes..."
                   className="w-full bg-ui-bg border border-ui-border rounded-xl px-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-blue resize-none h-24"
