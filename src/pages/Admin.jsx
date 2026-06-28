@@ -1578,18 +1578,54 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
+  const generateAndSetMarketingMessage = async (formState) => {
+    if (!formState.promoName || !formState.description || !formState.price || !formState.validUntil) return;
+    setIsGeneratingMessage(true);
+    try {
+      const res = await generateMarketingMessage({
+        promoName: formState.promoName,
+        description: formState.description,
+        price: formState.price,
+        validUntil: formState.validUntil
+      });
+      setBlastForm(prev => ({ ...prev, marketingMessage: res.data.marketingMessage }));
+      toast.success('Mensaje generado automáticamente ✨');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al auto-generar el mensaje');
+    } finally {
+      setIsGeneratingMessage(false);
+    }
+  };
+
   const handleSendWhatsAppCampaign = (draft) => {
     const pid = draft.promotionId || draft.promotionData?.id || '';
     const promo = promotions.find(p => p.id === pid);
     
-    setBlastForm({
+    let formattedDate = ''
+    if (promo?.endDate) {
+      try {
+        formattedDate = new Date(promo.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
+      } catch(e){}
+    }
+
+    const newState = {
       promotionId: pid,
       promoName: promo?.name || draft.promotionData?.name || '',
+      description: promo?.contentDescription || promo?.description || '',
+      price: promo?.promoPrice ? `Q${promo.promoPrice}` : '',
+      validUntil: formattedDate,
       imageUrl: draft.visual?.imageUrl || '',
       message: '',
+      marketingMessage: '',
       scheduledAt: ''
-    })
-    setActiveTab('campaigns')
+    };
+
+    setBlastForm(newState);
+    setActiveTab('campaigns');
+
+    if (newState.promoName && newState.description) {
+      generateAndSetMarketingMessage(newState);
+    }
   }
 
   const handleEditPromotion = (promo) => {
@@ -3611,14 +3647,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           formattedDate = new Date(promo.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
                         } catch(e){}
                       }
-                      setBlastForm({ 
+                      const newState = { 
                         ...blastForm, 
                         promotionId: e.target.value,
                         promoName: promo?.name || '',
                         description: promo?.contentDescription || promo?.description || '',
                         price: promo?.promoPrice ? `Q${promo.promoPrice}` : '',
                         validUntil: formattedDate
-                      })
+                      };
+                      setBlastForm(newState);
+                      if (newState.promoName && newState.description) {
+                        generateAndSetMarketingMessage(newState);
+                      }
                     }}
                   >
                     <option value="">-- Seleccionar promoción --</option>
