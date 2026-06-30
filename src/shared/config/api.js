@@ -83,7 +83,7 @@ export const generateMarketingMessage = (payload) => api.post('/settings/promoti
 
 // Content Studio
 export const generateContentDraft = (payload) => api.post('/content/generate', payload)
-export const getContentDrafts = () => api.get('/content/drafts')
+export const getContentDrafts = () => api.get(`/content/drafts?t=${new Date().getTime()}`)
 export const approveContentDraft = (id) => api.post(`/content/drafts/${id}/approve`)
 export const scheduleContentDraft = (id, data) => api.post(`/content/drafts/${id}/schedule`, data).then(r => r.data)
 export const deleteContentDraft = (id) => api.delete(`/content/drafts/${id}`).then(r => r.data)
