@@ -96,3 +96,4 @@ export const getCanvaAuthUrl = () => api.get('/canva/auth')
 export const testCanvaIntegration = (payload) => api.post('/canva/test', payload)
 
 export default api
+export const uploadPlateImage = (imageBase64) => api.post('/content/upload-plate', { imageBase64 }).then(r => r.data);

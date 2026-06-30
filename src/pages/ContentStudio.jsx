@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../components/ui/Button.jsx';
 import toast from 'react-hot-toast';
-import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft, publishContentDraft, createManualDraft, updateContentDraft } from '../shared/config/api.js';
+import { generateContentDraft, getContentDrafts, getPromotions, approveContentDraft, scheduleContentDraft, deleteContentDraft, publishContentDraft, createManualDraft, updateContentDraft, uploadPlateImage } from '../shared/config/api.js';
 import StatusBadge from '../components/ui/StatusBadge.jsx';
 
 // Platos disponibles
@@ -26,6 +26,34 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
   // Platos
   const [includePlate, setIncludePlate] = useState(false);
   const [selectedPlate, setSelectedPlate] = useState('aleatorio');
+  const [customPlates, setCustomPlates] = useState([]);
+  const [isUploadingPlate, setIsUploadingPlate] = useState(false);
+
+  const handlePlateUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      setIsUploadingPlate(true);
+      try {
+        const res = await uploadPlateImage(reader.result);
+        const newPlate = {
+          id: res.url, // Usamos la URL como ID
+          url: res.url,
+          name: 'Plato Personalizado'
+        };
+        setCustomPlates(prev => [...prev, newPlate]);
+        setSelectedPlate(newPlate.id);
+        toast.success('Foto subida exitosamente');
+      } catch (err) {
+        toast.error('Error al subir la foto');
+      } finally {
+        setIsUploadingPlate(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // ---- Publicación Manual ----
   const [manualFile, setManualFile] = useState(null);
@@ -431,7 +459,42 @@ export default function ContentStudio({ initialPromoId, onSendWhatsAppCampaign }
                         Aleatorio
                       </button>
 
-                      {/* Platos */}
+                      {/* Botón para subir foto */}
+                      <label
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-brand-blue cursor-pointer transition-all text-center"
+                        style={{ height: '120px' }}
+                      >
+                        {isUploadingPlate ? (
+                          <div className="w-6 h-6 border-2 border-gray-300 border-t-brand-blue rounded-full animate-spin mb-2" />
+                        ) : (
+                          <span className="text-2xl mb-1">⬆️</span>
+                        )}
+                        <span className="text-xs font-bold text-gray-600">Subir Foto</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePlateUpload} disabled={isUploadingPlate} />
+                      </label>
+
+                      {/* Platos Personalizados Subidos */}
+                      {customPlates.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSelectedPlate(p.id)}
+                          className={`flex flex-col items-center rounded-xl border-2 overflow-hidden transition-all bg-white ${
+                            selectedPlate === p.id
+                              ? 'border-blue-600'
+                              : 'border-gray-200 hover:border-blue-300'
+                          }`}
+                          style={{ height: '120px' }}
+                        >
+                          <div className="h-[85px] w-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <img src={p.url} alt={p.name} className="w-full h-full object-cover scale-[1.3]" />
+                          </div>
+                          <div className="h-[35px] flex items-center justify-center text-xs font-semibold text-gray-700 w-full bg-white border-t border-gray-100">
+                            {p.name}
+                          </div>
+                        </button>
+                      ))}
+
+                      {/* Platos (GitHub) */}
                       {PLATE_ASSETS.map(p => (
                         <button
                           key={p.id}
