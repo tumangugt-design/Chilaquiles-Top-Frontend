@@ -1508,9 +1508,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           cream: selectedBases.includes('crema'),
           onion: selectedBases.includes('cebolla'),
           cilantro: selectedBases.includes('cilantro')
-        }
+        },
+        packagingOverrides: plate.packagingOverrides || null
       }
     })
+
 
     const normalizedPromo = {
       ...promoForm,
@@ -1648,9 +1650,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           sauce: p.sauce || 'ROJA',
           protein: p.protein || 'POLLO',
           complement: p.complement || 'CEBOLLA_CARAMELIZADA',
-          selectedBases: bases
+          selectedBases: bases,
+          packagingOverrides: p.packagingOverrides || null
         }
       })
+
       setCalcPlates(loadedPlates)
       setActiveCalcPlateIndex(0)
     } else if (promo.recipe) {
