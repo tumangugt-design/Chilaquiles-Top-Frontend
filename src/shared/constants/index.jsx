@@ -241,10 +241,11 @@ export const OPTIONS_PROTEIN = [
     id: 'PULLED_PORK',
     label: 'Pulled Pork',
     value: 'PULLED_PORK',
-    description: 'Cerdo desmenuzado estilo BBQ, tierno y jugoso.',
+    description: 'Cerdo desmenuzado, tierno y jugoso.',
     illustration: React.createElement(IllustrationPulledPork),
     dbName: 'pulled pork',
   },
+
 ]
 
 export const OPTIONS_COMPLEMENT = [
