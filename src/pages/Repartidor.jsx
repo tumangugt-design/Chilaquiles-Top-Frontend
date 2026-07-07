@@ -172,7 +172,23 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
           <div>
             <p className="text-[10px] font-black text-black/55 uppercase tracking-widest mb-1">Número de orden</p>
             <h3 className="text-2xl font-black text-black/80">{order.orderNumber || order._id.slice(-6)}</h3>
-            <PromoBadge order={order} />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <PromoBadge order={order} />
+              {order.paymentMethod === 'tarjeta' ? (
+                <div className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-purple-800">
+                  <span>💳</span> Tarjeta
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-800">
+                  <span>💵</span> Efectivo
+                </div>
+              )}
+              {order.paymentMethod === 'efectivo' && order.cashAmount && order.cashAmount > order.total && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-orange-800 animate-pulse">
+                  <span>🔄</span> Llevar vuelto: Q{(order.cashAmount - order.total).toFixed(2)}
+                </div>
+              )}
+            </div>
           </div>
           <StatusBadge value={order.status} />
         </div>
@@ -182,6 +198,18 @@ const RepartidorPage = ({ authSession, onProfileClick }) => {
           <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Teléfono del cliente</span><span className="font-bold text-black/80">{order.phone}</span></div>
           <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Dirección</span><span className="font-bold text-black/80">{order.address}</span></div>
           <div><span className="text-black/55 font-black uppercase text-[10px] tracking-widest block mb-1">Código de acceso</span><span className="font-bold text-black/80">{order.accessCode || 'Sin código'}</span></div>
+          <div className="pt-3 border-t border-black/10 flex items-center justify-between">
+            <div>
+              <span className="text-black/55 font-black uppercase text-[10px] tracking-widest block">Total a cobrar</span>
+              <span className="text-xl font-black text-black/85">Q{order.total}</span>
+            </div>
+            {order.paymentMethod === 'efectivo' && order.cashAmount && (
+              <div className="text-right">
+                <span className="text-black/55 font-black uppercase text-[10px] tracking-widest block">Paga con / Cambio</span>
+                <span className="text-xs font-bold text-green-700">Q{order.cashAmount} / Vuelto: Q{(order.cashAmount - order.total).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 mb-5">

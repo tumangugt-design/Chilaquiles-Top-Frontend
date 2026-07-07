@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import Button from '../components/ui/Button.jsx'
 import { createOrder } from '../shared/config/api.js'
 import toast from 'react-hot-toast'
+import { calculateTotal } from '../shared/constants/index.jsx'
 
 const VERIFIED_PHONE_KEY = 'chilaquiles_verified_phone'
 const VERIFIED_PHONE_LOCAL_KEY = 'chilaquiles_verified_phone_local'
@@ -130,7 +131,26 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     location: order.customer?.location || null,
     accessCode: order.customer?.accessCode || '',
   })
+  const promoRequestedCount = (order.appliedPromos || []).reduce((sum, p) => sum + Number(p.requestedCount || p.plates?.length || 2), 0)
+  const promoPrice = (order.appliedPromos || []).reduce((sum, p) => sum + Number(p.promoPrice ?? p.price ?? 0), 0)
+  const promoIsApplied = Boolean(order.isPromo && order.appliedPromos && order.appliedPromos.length > 0 && promoRequestedCount > 0 && promoPrice > 0)
+  const totalItems = !order.requestedCount
+    ? 0
+    : order.isPromo
+      ? (promoIsApplied ? (order.cart.length + 1) : 0)
+      : (order.cart.length + 1)
+  const grandTotal = !order.requestedCount
+    ? 0
+    : order.requestedCount === 'PROMO'
+      ? (promoIsApplied ? promoPrice : 0)
+      : calculateTotal(Math.max(Number(order.requestedCount) || 0, totalItems))
+  
+  const discountPercent = Number(order.couponDiscountPercent || 0)
+  const discountAmount = Math.round((grandTotal * (discountPercent / 100)) * 100) / 100
+  const finalTotal = Math.max(0, grandTotal - discountAmount)
+
   const [paymentMethod, setPaymentMethod] = useState(order.customer?.paymentMethod || 'efectivo')
+  const [cashAmountInput, setCashAmountInput] = useState('')
   const [touched, setTouched] = useState({ name: false, address: false })
   const [loadingLoc, setLoadingLoc] = useState(false)
   const [coverageError, setCoverageError] = useState('')
@@ -259,11 +279,18 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
     setLocation(coords, 'Coordenadas guardadas')
   }
 
+  const isCashAmountValid = paymentMethod !== 'efectivo' || (
+    cashAmountInput.trim().length > 0 &&
+    !Number.isNaN(Number(cashAmountInput)) &&
+    Number(cashAmountInput) >= finalTotal
+  )
+
   const isValid =
     localData.name.trim().length > 2 &&
     hasVerifiedPhone &&
     hasLocation &&
-    localData.address.trim().length > 5
+    localData.address.trim().length > 5 &&
+    isCashAmountValid
 
   const handleSubmit = async () => {
     if (!isValid) return
@@ -310,6 +337,7 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         appliedPromos: (order.appliedPromos || []).map(p => ({ id: p.id })),
         couponCode: order.couponCode || null,
         paymentMethod,
+        cashAmount: paymentMethod === 'efectivo' ? Number(cashAmountInput) : null,
         ...(isInternal ? { isInternal: true } : {}),
       })
 
@@ -394,6 +422,35 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
               <span className="font-bold">Tarjeta (Link de Pago)</span>
             </button>
           </div>
+          {paymentMethod === 'efectivo' && (
+            <div className="mt-3 bg-brand-blue/5 border border-brand-blue/20 rounded-2xl p-4 animate-fade-in text-left">
+              <label className="block text-xs font-black uppercase tracking-wider text-brand-blue mb-1.5 ml-1">
+                💵 ¿Con cuánto vas a pagar?
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-brand-blue text-lg">Q</span>
+                <input
+                  type="number"
+                  min={finalTotal}
+                  step="any"
+                  value={cashAmountInput}
+                  onChange={(e) => setCashAmountInput(e.target.value)}
+                  placeholder={`${finalTotal}`}
+                  className="w-full pl-9 pr-4 py-3 border border-brand-blue/20 rounded-xl bg-ui-bg text-ui-text font-black placeholder-ui-muted focus:ring-2 focus:ring-brand-blue outline-none transition-all shadow-sm text-lg"
+                />
+              </div>
+              <p className="text-[11px] font-bold text-ui-muted mt-2 ml-1">
+                Total de la orden: <span className="text-ui-text font-extrabold">Q{finalTotal}</span>. 
+                {cashAmountInput.trim().length > 0 && !Number.isNaN(Number(cashAmountInput)) && (
+                  Number(cashAmountInput) >= finalTotal ? (
+                    <> Vuelto a llevar: <span className="text-green-600 font-extrabold font-brand">Q{(Number(cashAmountInput) - finalTotal).toFixed(2)}</span></>
+                  ) : (
+                    <span className="text-red-500 font-bold ml-1">El monto no puede ser menor a Q{finalTotal}</span>
+                  )
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">

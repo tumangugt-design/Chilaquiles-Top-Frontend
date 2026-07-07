@@ -314,7 +314,22 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
                 {getPromoInfo(order).manualCorrection && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-yellow-800">Corrección manual</span>}
               </div>
             )}
+            {order.paymentMethod === 'tarjeta' ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-800">
+                <span>💳</span> Tarjeta
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-800">
+                <span>💵</span> Efectivo
+              </div>
+            )}
+            {order.paymentMethod === 'efectivo' && order.cashAmount && order.cashAmount > order.total && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 animate-pulse">
+                <span>🔄</span> Llevar cambio: Q{(order.cashAmount - order.total).toFixed(2)}
+              </div>
+            )}
           </div>
+
         </div>
         <StatusBadge value={order.status} />
       </div>
@@ -367,7 +382,14 @@ const OrderHistoryCard = ({ order, type = 'client' }) => {
 
       <div className="mt-4 pt-4 border-t border-black/15 flex items-center justify-between gap-4">
         <p className="text-sm font-medium text-black/65 line-clamp-2">{order.address}</p>
-        <p className="font-black text-black/80 whitespace-nowrap">Q{order.total}</p>
+        <div className="text-right">
+          <p className="font-black text-black/80 whitespace-nowrap">Q{order.total}</p>
+          {order.paymentMethod === 'efectivo' && order.cashAmount && (
+            <p className="text-[10px] font-bold text-green-700 mt-0.5">
+              Paga con: Q{order.cashAmount} / Vuelto: Q{(order.cashAmount - order.total).toFixed(2)}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
