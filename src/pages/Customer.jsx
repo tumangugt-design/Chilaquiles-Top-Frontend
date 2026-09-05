@@ -341,7 +341,18 @@ const CustomerPage = ({ order, updateOrder, setLastOrder, onNext, onBack, isInte
         ...(isInternal ? { isInternal: true } : {}),
       })
 
-      setLastOrder(response.data.order)
+      const createdOrder = response.data.order
+
+      // Con tarjeta, el pedido queda pendiente de pago en el backend: en vez de
+      // mostrar la confirmacion aqui, se redirige directo al link de pago de
+      // Recurrente. Al terminar de pagar, Recurrente regresa al cliente a la
+      // pantalla de confirmacion (ver OrderConfirmation.jsx / success_url).
+      if (paymentMethod === 'tarjeta' && createdOrder.paymentLink) {
+        window.location.href = createdOrder.paymentLink
+        return
+      }
+
+      setLastOrder(createdOrder)
       toast.success('Pedido enviado')
       onNext()
     } catch (error) {

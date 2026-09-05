@@ -222,12 +222,14 @@ const getPromoConstraintLabel = (promo, field) => {
 }
 
 const getCardTone = (status) => {
+  if (status === 'pendiente_pago') return 'border-[#90A4AE] bg-[#ECEFF1]'
   if (status === 'recibido') return 'border-[#FBC02D] bg-[#FFF8D6]'
   if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'border-[#E65100] bg-[#FFE8D1]'
   return 'border-[#2E7D32] bg-[#DFF5E2]'
 }
 
 const getCardTextTone = (status) => {
+  if (status === 'pendiente_pago') return 'text-[#37474F]'
   if (status === 'recibido') return 'text-[#5C4400]'
   if (status === 'en_proceso' || status === 'recolectado' || status === 'en_camino') return 'text-[#7A2E00]'
   return 'text-[#14532D]'

@@ -59,6 +59,7 @@ export const updateInventoryStock = (name, stock, inputUnit) => api.patch(`/inve
 export const syncInventory = () => api.post('/inventory/sync')
 export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Date.now()}`)
 export const trackOrder = (orderNumber) => api.get(`/orders/track/${encodeURIComponent(orderNumber)}?t=${Date.now()}`)
+export const getOrderConfirmation = (orderNumber) => api.get(`/orders/confirmacion/${encodeURIComponent(orderNumber)}?t=${Date.now()}`)
 export const updateOperatingHours = (payload) => api.patch('/settings/operating-hours', payload)
 export const getPromotions = () => api.get(`/settings/promotions?t=${Date.now()}`)
 export const updatePromotions = (payload) => api.patch('/settings/promotions', payload)

@@ -58,14 +58,15 @@ const ConfirmationPage = ({ order, onReset, isInternal }) => {
         <Button
           fullWidth
           onClick={() => {
-            onReset()
-            if (!isInternal) {
-              window.location.href = 'https://chilaquilestop.com'
+            if (isInternal) {
+              onReset()
+              return
             }
+            window.location.href = `/pedido/${orderNumber}`
           }}
           className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-black py-4 text-lg rounded-2xl shadow-xl shadow-green-500/30 border-0"
         >
-          {isInternal ? 'Nuevo Pedido' : 'Continuar'}
+          {isInternal ? 'Nuevo Pedido' : 'Ver estado del pedido'}
         </Button>
       </div>
     </div>
