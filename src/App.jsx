@@ -22,6 +22,7 @@ import ChefPage from './pages/Chef.jsx'
 import RepartidorPage from './pages/Repartidor.jsx'
 import ProfileModal from './components/ui/ProfileModal.jsx'
 import LandingPage from './pages/Landing.jsx'
+import OrderTrackingPage from './pages/OrderTracking.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import TermsOfService from './pages/TermsOfService.jsx'
 import DataDeletion from './pages/DataDeletion.jsx'
@@ -490,6 +491,7 @@ function App() {
   if (path === '/privacidad') return <PrivacyPolicy />
   if (path === '/terminos') return <TermsOfService />
   if (path === '/eliminacion-datos') return <DataDeletion />
+  if (path.startsWith('/pedido/')) return <OrderTrackingPage orderNumber={decodeURIComponent(path.replace('/pedido/', ''))} />
   if (path === '/') return <LandingPage />
 
   return <LandingPage />

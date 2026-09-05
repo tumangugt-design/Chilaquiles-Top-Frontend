@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Mail, MapPin, ArrowRight, ChevronDown, MessageCircle } from 'lucide-react'
+import { Mail, MapPin, ArrowRight, ChevronDown, MessageCircle, X } from 'lucide-react'
 import Logo from '../components/Logo1.jsx'
 import heroPlate from '../assets/hero_transparent.png'
 
@@ -17,12 +17,21 @@ const SauceSplash = ({ className, color = '#0000FF' }) => (
 const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState(null)
+  const [paymentCancelled, setPaymentCancelled] = useState(false)
   const formRef = useRef(null)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('payment') === 'cancelled') {
+      setPaymentCancelled(true)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
   const scrollTo = (id) => {
@@ -41,6 +50,33 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white font-brand text-brand-black overflow-x-hidden selection:bg-brand-blue selection:text-white">
+      {paymentCancelled && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-[2.5rem] max-w-md w-full p-10 text-center shadow-2xl relative">
+            <button
+              onClick={() => setPaymentCancelled(false)}
+              className="absolute top-6 right-6 text-gray-300 hover:text-brand-black transition-colors"
+              aria-label="Cerrar"
+            >
+              <X size={22} />
+            </button>
+            <div className="inline-block bg-gray-100 text-gray-500 px-5 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.2em] mb-4">
+              Pago no completado
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-bold mb-3">Tu pago fue cancelado</h3>
+            <p className="text-gray-400 font-medium mb-8 leading-relaxed">
+              No te preocupes, puedes intentar de nuevo cuando quieras.
+            </p>
+            <a
+              href="https://pedidos.chilaquilestop.com/clientes"
+              className="w-full inline-block bg-brand-blue text-white py-4 rounded-2xl font-semibold text-sm uppercase tracking-[0.15em] shadow-xl shadow-brand-blue/20 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Volver a intentar
+            </a>
+          </div>
+        </div>
+      )}
+
       <nav
         className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-lg shadow-black/5 py-3' : 'bg-transparent py-5'
           }`}
