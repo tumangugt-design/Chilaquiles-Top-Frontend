@@ -80,6 +80,8 @@ export const getCalculatorCosts = () => api.get(`/settings/calculator-costs?t=${
 export const updateCalculatorCosts = (payload) => api.patch('/settings/calculator-costs', payload)
 
 export const getFinancesSummary = () => api.get(`/finances/summary?t=${Date.now()}`)
+export const getTaxConfig = () => api.get(`/settings/tax-config?t=${Date.now()}`)
+export const updateTaxConfig = (payload) => api.patch('/settings/tax-config', payload)
 // Customer OTP
 export const sendOtp = (phone) => api.post('/auth/send-otp', { phone })
 export const verifyOtp = (phone, code) => api.post('/auth/verify-otp', { phone, code })
@@ -104,6 +106,7 @@ export const approveContentDraft = (id) => api.post(`/content/drafts/${id}/appro
 export const scheduleContentDraft = (id, data) => api.post(`/content/drafts/${id}/schedule`, data).then(r => r.data)
 export const deleteContentDraft = (id) => api.delete(`/content/drafts/${id}`).then(r => r.data)
 export const publishContentDraft = (id, data) => api.post(`/content/drafts/${id}/publish`, data).then(r => r.data)
+export const sendDraftWhatsApp = (id, data) => api.post(`/content/drafts/${id}/send-whatsapp`, data).then(r => r.data)
 export const createManualDraft = (payload) => api.post('/content/drafts/manual', payload).then(r => r.data)
 export const updateContentDraft = (id, copy) => api.put(`/content/drafts/${id}/copy`, { copy }).then(r => r.data)
 // Canva

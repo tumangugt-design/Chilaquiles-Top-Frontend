@@ -26,6 +26,8 @@ import {
   getPromotions,
   updatePromotions,
   getFinancesSummary,
+  getTaxConfig,
+  updateTaxConfig,
   getIngredientCostHistory,
   getPurchases,
   createPurchase,
@@ -566,6 +568,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [financesSummary, setFinancesSummary] = useState(null)
   const [financesLoading, setFinancesLoading] = useState(false)
+  const [taxConfigForm, setTaxConfigForm] = useState(null)
+  const [taxConfigOpen, setTaxConfigOpen] = useState(false)
+  const [taxConfigSaving, setTaxConfigSaving] = useState(false)
   const [costHistoryIngredient, setCostHistoryIngredient] = useState('')
   const [costHistoryData, setCostHistoryData] = useState([])
   const [costHistoryLoading, setCostHistoryLoading] = useState(false)
@@ -927,11 +932,27 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     try {
       const response = await getFinancesSummary()
       // The API returns { success: true, data: { daily, weekly, monthly } }
-      setFinancesSummary(response.data.data || response.data)
+      const data = response.data.data || response.data
+      setFinancesSummary(data)
+      if (data?.taxConfig) setTaxConfigForm(data.taxConfig)
     } catch (err) {
       toast.error('No se pudieron cargar las finanzas')
     } finally {
       setFinancesLoading(false)
+    }
+  }
+
+  const handleSaveTaxConfig = async () => {
+    if (!taxConfigForm) return
+    setTaxConfigSaving(true)
+    try {
+      await updateTaxConfig(taxConfigForm)
+      toast.success('Configuracion fiscal actualizada')
+      await loadFinances()
+    } catch (err) {
+      toast.error('No se pudo guardar la configuracion fiscal')
+    } finally {
+      setTaxConfigSaving(false)
     }
   }
 
@@ -2153,7 +2174,10 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         { title: 'Esta Semana', data: financesSummary.weekly, color: 'brand-blue', bg: 'brand-blue/5' },
                         { title: 'Este Mes', data: financesSummary.monthly, color: 'brand-blue', bg: 'brand-blue/5' },
                         { title: 'Histórico Global', data: financesSummary.global, color: 'green-600', bg: 'green-500/5' }
-                      ].map((period) => (
+                      ].map((period) => {
+                        const f = period.data?.fiscal || {}
+                        const cargaFiscal = (f.comisionRecurrente || 0) + (f.facturacionFeeRecurrente || 0) + (f.ivaNetoEstimado || 0) + (f.isrEstimado || 0)
+                        return (
                         <div key={period.title} className="rounded-[2rem] border border-ui-border bg-white p-6 shadow-sm flex flex-col justify-between space-y-4">
                           <div>
                             <div className="flex items-center justify-between border-b border-ui-border/60 pb-3 mb-3">
@@ -2165,26 +2189,116 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                               </span>
                             </div>
                             
-                            <div className="space-y-2.5">
+                            <div className="space-y-2">
                               <div className="flex justify-between items-center text-xs">
                                 <span className="text-ui-muted font-bold">Ventas:</span>
                                 <span className="font-black text-brand-blue">Q{period.data?.revenue?.toFixed(2) || '0.00'}</span>
                               </div>
                               <div className="flex justify-between items-center text-xs">
-                                <span className="text-ui-muted font-bold">Costos:</span>
+                                <span className="text-ui-muted font-bold">Compras (flujo caja):</span>
                                 <span className="font-black text-brand-orange">Q{period.data?.costs?.toFixed(2) || '0.00'}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-ui-muted font-bold">Comisión + Impuestos:</span>
+                                <span className="font-black text-brand-red">Q{cargaFiscal.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-[10px] text-ui-muted pl-2">
+                                <span>Recurrente Q{((f.comisionRecurrente || 0) + (f.facturacionFeeRecurrente || 0)).toFixed(2)} · IVA Q{(f.ivaNetoEstimado || 0).toFixed(2)}{f.isrEstimado != null ? ` · ISR Q${f.isrEstimado.toFixed(2)}` : ' · ISR (ver Mes)'}</span>
                               </div>
                             </div>
                           </div>
                           
-                          <div className="pt-3 border-t border-ui-border/60 flex justify-between items-center text-xs font-bold">
-                            <span className="text-ui-muted">Utilidad:</span>
-                            <span className={`text-base font-black ${(period.data?.utilities || 0) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
-                              Q{period.data?.utilities?.toFixed(2) || '0.00'}
-                            </span>
+                          <div className="pt-3 border-t border-ui-border/60 space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px] text-ui-muted font-bold">
+                              <span>Utilidad Bruta (caja):</span>
+                              <span>Q{period.data?.utilities?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-ui-muted">Utilidad Neta Ajustada:</span>
+                              <span className={`text-base font-black ${(period.data?.utilidadNetaAjustada || 0) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                                Q{period.data?.utilidadNetaAjustada?.toFixed(2) || '0.00'}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-ui-muted ml-2 -mt-6">* El ISR es un tramo mensual (Régimen Opcional Simplificado) — en Hoy/Esta Semana se omite y se ve reflejado en Este Mes.</p>
+
+                    {/* Costo real (COGS trazado por FIFO de Compras) */}
+                    <div className="space-y-5">
+                      <div>
+                        <h3 className="text-xl font-black text-ui-text ml-2">Costo Real de Ventas (COGS trazado)</h3>
+                        <p className="text-xs text-ui-muted ml-2 mt-1">{financesSummary.notas?.costoReal}</p>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {[
+                          { title: 'Este Mes', data: financesSummary.monthly?.realCogs },
+                          { title: 'Histórico Global', data: financesSummary.global?.realCogs }
+                        ].map((p) => (
+                          <div key={p.title} className="rounded-[2rem] border border-ui-border bg-white p-6 shadow-sm space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-black uppercase tracking-wider text-ui-muted">{p.title}</h4>
+                              <span className="text-base font-black text-ui-text">Q{(p.data?.costoRealTrazado || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="w-full h-2.5 rounded-full bg-ui-bg overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${(p.data?.coberturaTrazabilidadPct || 0) >= 60 ? 'bg-green-500' : (p.data?.coberturaTrazabilidadPct || 0) >= 25 ? 'bg-brand-orange' : 'bg-brand-red'}`}
+                                style={{ width: `${Math.min(100, p.data?.coberturaTrazabilidadPct || 0)}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-ui-muted font-bold">
+                              {p.data?.coberturaTrazabilidadPct || 0}% de las salidas de inventario ({p.data?.movimientosConCostoReal || 0} de {p.data?.movimientosSalida || 0}) tienen costo real trazado a un lote de Compras.
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Valor de inventario en bodega + gasto por proveedor */}
+                    <div className="grid lg:grid-cols-2 gap-6">
+                      <div className="space-y-5">
+                        <h3 className="text-xl font-black text-ui-text ml-2">Valor de Inventario en Bodega</h3>
+                        <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-sm space-y-4">
+                          <div className="flex justify-between items-center border-b border-ui-border/60 pb-3">
+                            <span className="text-xs font-black uppercase tracking-wider text-ui-muted">Valor total (a costo real)</span>
+                            <span className="text-xl font-black text-ui-text">Q{(financesSummary.valorInventario?.valorTotal || 0).toFixed(2)}</span>
+                          </div>
+                          {(!financesSummary.valorInventario?.items || financesSummary.valorInventario.items.length === 0) ? (
+                            <p className="text-xs text-ui-muted font-bold py-4 text-center">Aún no hay lotes de Compras con existencia.</p>
+                          ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                              {financesSummary.valorInventario.items.map((item) => (
+                                <div key={item.ingredientName} className="flex justify-between items-center text-xs">
+                                  <span className="font-bold text-ui-text capitalize">{item.ingredientName}</span>
+                                  <span className="text-ui-muted">{item.remainingQuantity} {item.unit}</span>
+                                  <span className="font-black text-brand-blue">Q{item.valorTotal.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
+                        <h3 className="text-xl font-black text-ui-text ml-2">Gasto por Proveedor</h3>
+                        <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-sm">
+                          {(!financesSummary.gastoPorProveedor || financesSummary.gastoPorProveedor.length === 0) ? (
+                            <p className="text-xs text-ui-muted font-bold py-4 text-center">Aún no hay Compras registradas.</p>
+                          ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                              {financesSummary.gastoPorProveedor.map((g) => (
+                                <div key={g.proveedor} className="flex justify-between items-center text-xs">
+                                  <span className="font-bold text-ui-text">{g.proveedor}</span>
+                                  <span className="text-ui-muted">{g.compras} compra{g.compras === 1 ? '' : 's'}</span>
+                                  <span className="font-black text-brand-blue">Q{g.totalGastado.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Tabla de Historial por Mes */}
@@ -2198,8 +2312,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                 <tr className="bg-ui-bg/60 border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
                                   <th className="py-4 px-6">Mes</th>
                                   <th className="py-4 px-6 text-right">Ventas</th>
-                                  <th className="py-4 px-6 text-right">Costos (Entradas)</th>
-                                  <th className="py-4 px-6 text-right">Utilidades</th>
+                                  <th className="py-4 px-6 text-right">Compras (caja)</th>
+                                  <th className="py-4 px-6 text-right">Comisión Recurrente</th>
+                                  <th className="py-4 px-6 text-right">IVA Neto</th>
+                                  <th className="py-4 px-6 text-right">ISR</th>
+                                  <th className="py-4 px-6 text-right">COGS Real</th>
+                                  <th className="py-4 px-6 text-right">Utilidad Neta Ajustada</th>
                                   <th className="py-4 px-6 text-right">Pedidos</th>
                                 </tr>
                               </thead>
@@ -2209,8 +2327,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                     <td className="py-4 px-6 font-black text-sm text-ui-text">{m.label}</td>
                                     <td className="py-4 px-6 text-right font-bold text-brand-blue">Q{m.revenue.toFixed(2)}</td>
                                     <td className="py-4 px-6 text-right font-bold text-brand-orange">Q{m.costs.toFixed(2)}</td>
-                                    <td className={`py-4 px-6 text-right font-black text-sm ${m.utilities >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
-                                      Q{m.utilities.toFixed(2)}
+                                    <td className="py-4 px-6 text-right text-ui-muted">Q{((m.fiscal?.comisionRecurrente || 0) + (m.fiscal?.facturacionFeeRecurrente || 0)).toFixed(2)}</td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">Q{(m.fiscal?.ivaNetoEstimado || 0).toFixed(2)}</td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">Q{(m.fiscal?.isrEstimado || 0).toFixed(2)}</td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">
+                                      Q{(m.realCogs?.costoRealTrazado || 0).toFixed(2)}
+                                      <span className="block text-[9px] font-bold text-ui-muted/70">{m.realCogs?.coberturaTrazabilidadPct || 0}% trazado</span>
+                                    </td>
+                                    <td className={`py-4 px-6 text-right font-black text-sm ${(m.utilidadNetaAjustada ?? m.utilities) >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                                      Q{(m.utilidadNetaAjustada ?? m.utilities).toFixed(2)}
                                     </td>
                                     <td className="py-4 px-6 text-right text-ui-muted">{m.orderCount}</td>
                                   </tr>
@@ -2253,6 +2378,75 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         )}
                       </div>
                     </div>
+
+                    {/* Parametros fiscales y de pago (editables, sin redeploy) */}
+                    <div className="space-y-5">
+                      <button
+                        type="button"
+                        onClick={() => setTaxConfigOpen((v) => !v)}
+                        className="flex items-center justify-between w-full ml-2 text-left"
+                      >
+                        <div>
+                          <h3 className="text-xl font-black text-ui-text">Parámetros Fiscales y de Pago</h3>
+                          <p className="text-xs text-ui-muted mt-1">Régimen Opcional Simplificado + IVA General (según RTU) y comisión real de Recurrente. Editable si la SAT o Recurrente cambian una tarifa.</p>
+                        </div>
+                        <span className="text-xs font-black text-brand-blue uppercase">{taxConfigOpen ? 'Ocultar' : 'Ver / Editar'}</span>
+                      </button>
+
+                      {taxConfigOpen && taxConfigForm && (
+                        <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-sm space-y-5">
+                          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[
+                              { key: 'ivaRate', label: 'Tasa IVA', step: 0.01, hint: 'ej. 0.12 = 12%' },
+                              { key: 'isrTier1Limit', label: 'ISR - Tope Tramo 1 (Q/mes)', step: 100, hint: 'ej. 30000' },
+                              { key: 'isrTier1Rate', label: 'ISR - Tasa Tramo 1', step: 0.01, hint: 'ej. 0.05 = 5%' },
+                              { key: 'isrTier2Rate', label: 'ISR - Tasa Tramo 2 (excedente)', step: 0.01, hint: 'ej. 0.07 = 7%' },
+                              { key: 'recurrenteFeeFixed', label: 'Recurrente - Fijo por transacción (Q)', step: 0.25, hint: 'ej. 2.00' },
+                              { key: 'recurrenteFeeRate', label: 'Recurrente - % por transacción', step: 0.001, hint: 'ej. 0.045 = 4.5%' },
+                              { key: 'recurrenteIvaRetentionRate', label: 'Recurrente - % retención IVA', step: 0.01, hint: 'ej. 0.15 = 15%' },
+                              { key: 'recurrenteInvoiceFee', label: 'Recurrente - Fee factura electrónica (Q)', step: 0.05, hint: 'ej. 0.25' }
+                            ].map((field) => (
+                              <div key={field.key} className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-wider text-ui-muted">{field.label}</label>
+                                <input
+                                  type="number"
+                                  step={field.step}
+                                  value={taxConfigForm[field.key] ?? ''}
+                                  onChange={(e) => setTaxConfigForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                                  className="w-full px-3 py-2.5 rounded-xl border border-ui-border bg-ui-bg/30 text-sm font-bold text-ui-text focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                                />
+                                <p className="text-[9px] text-ui-muted">{field.hint}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              id="pricesIncludeIva"
+                              checked={!!taxConfigForm.pricesIncludeIva}
+                              onChange={(e) => setTaxConfigForm((prev) => ({ ...prev, pricesIncludeIva: e.target.checked }))}
+                              className="w-4 h-4"
+                            />
+                            <label htmlFor="pricesIncludeIva" className="text-xs font-bold text-ui-text">Los precios al cliente ya incluyen IVA (práctica estándar en Guatemala)</label>
+                          </div>
+                          <div className="flex justify-end pt-2 border-t border-ui-border/60">
+                            <Button onClick={handleSaveTaxConfig} disabled={taxConfigSaving}>
+                              {taxConfigSaving ? 'Guardando...' : 'Guardar parámetros'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Notas metodologicas: transparencia sobre que datos son reales vs. estimados */}
+                    {financesSummary.notas && (
+                      <div className="rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/20 p-6 space-y-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-ui-muted">Cómo se calculan estos números</h4>
+                        {Object.values(financesSummary.notas).map((nota, idx) => (
+                          <p key={idx} className="text-[11px] text-ui-muted leading-relaxed">{nota}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
