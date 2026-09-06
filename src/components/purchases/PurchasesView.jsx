@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Package, Plus, Search, Layers, ChevronDown, ChevronUp } from 'lucide-react'
+import { Package, Plus, Search, Beaker, ChevronDown, ChevronUp } from 'lucide-react'
 import PurchaseFormModal from './PurchaseFormModal.jsx'
-import PurchaseAllocationModal from './PurchaseAllocationModal.jsx'
+import ProductionBatchModal from './ProductionBatchModal.jsx'
 
 const fmtQty = (n) => {
   const num = Number(n)
@@ -12,16 +12,16 @@ const fmtQty = (n) => {
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
 /**
- * Pestaña "Compras" (Operaciones) — Fase 2 de Compras/Lotes.
+ * Pestaña "Compras" (Operaciones) — Fase 2-4 de Compras/Lotes.
  * Aquí se registra el ingrediente EN BRUTO (la Compra = un lote con
- * cantidad restante) y desde cada lote se puede "Transformar" hacia un
- * producto de Stock ya procesado, generando una Asignación con el costo
- * heredado congelado.
+ * cantidad restante) y, con "Producir lote", uno o más ingredientes en
+ * bruto se combinan hacia un producto de Stock ya procesado (una
+ * Asignación con el costo heredado congelado).
  */
-const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocationsByPurchase, onCreatePurchase, onCreateAllocation, onLoadAllocations }) => {
+const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocationsByPurchase, onCreatePurchase, onCreateProductionBatch, onLoadAllocations }) => {
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
-  const [allocationTarget, setAllocationTarget] = useState(null)
+  const [batchModalOpen, setBatchModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
 
   const filtered = useMemo(() => {
@@ -69,6 +69,15 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-ui-border bg-white text-xs font-bold outline-none"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setBatchModalOpen(true)}
+            disabled={knownIngredients.length === 0}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-brand-blue/20 bg-brand-blue/10 text-brand-blue text-[11px] font-black uppercase tracking-widest transition-all hover:bg-brand-blue hover:text-white disabled:opacity-40"
+          >
+            <Beaker size={16} />
+            Producir lote
+          </button>
           <button
             type="button"
             onClick={() => setFormOpen(true)}
@@ -125,14 +134,6 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      disabled={p.isDepleted}
-                      onClick={() => setAllocationTarget(p)}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white disabled:opacity-40 disabled:hover:bg-brand-blue/10 disabled:hover:text-brand-blue"
-                    >
-                      <Layers size={12} /> Transformar
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => toggleExpand(p)}
                       className="inline-flex items-center gap-1 rounded-xl border border-ui-border px-3 py-2 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-ui-bg"
                     >
@@ -146,19 +147,24 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
                     {!allocations ? (
                       <p className="text-xs font-bold text-ui-muted">Cargando...</p>
                     ) : allocations.length === 0 ? (
-                      <p className="text-xs font-bold text-ui-muted">Este lote aún no se ha transformado.</p>
+                      <p className="text-xs font-bold text-ui-muted">Este lote aún no se ha usado en ninguna producción.</p>
                     ) : (
                       <div className="space-y-2">
-                        {allocations.map((a) => (
-                          <div key={a._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white border border-ui-border px-3 py-2 text-xs font-bold">
-                            <span className="text-ui-text">
-                              {fmtQty(a.rawQuantityUsed)} {p.unit} → {fmtQty(a.producedQuantity)} {a.producedUnit} de <span className="font-black">{a.stockItemName}</span>
-                            </span>
-                            <span className="text-ui-muted">
-                              Q{Number(a.inheritedCost).toFixed(2)} total (Q{Number(a.costPerProducedUnit).toFixed(3)}/{a.producedUnit}) · {fmtDate(a.allocationDate)}
-                            </span>
-                          </div>
-                        ))}
+                        {allocations.map((a) => {
+                          const mine = a.rawInputs?.find((r) => (r.purchase?._id || r.purchase) === p._id)
+                          const otherCount = (a.rawInputs?.length || 1) - 1
+                          return (
+                            <div key={a._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white border border-ui-border px-3 py-2 text-xs font-bold">
+                              <span className="text-ui-text">
+                                {mine ? `${fmtQty(mine.quantityUsed)} ${mine.unit}` : '—'} de este lote → {fmtQty(a.producedQuantity)} {a.producedUnit} de <span className="font-black">{a.stockItemName}</span>
+                                {otherCount > 0 && <span className="text-ui-muted font-medium"> (+{otherCount} ingrediente{otherCount > 1 ? 's' : ''} más)</span>}
+                              </span>
+                              <span className="text-ui-muted">
+                                Q{Number(a.inheritedCost).toFixed(2)} total del lote (Q{Number(a.costPerProducedUnit).toFixed(3)}/{a.producedUnit}) · {fmtDate(a.allocationDate)}
+                              </span>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -178,13 +184,13 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
         onSave={onCreatePurchase}
       />
 
-      <PurchaseAllocationModal
-        isOpen={!!allocationTarget}
-        onClose={() => setAllocationTarget(null)}
-        purchase={allocationTarget}
+      <ProductionBatchModal
+        isOpen={batchModalOpen}
+        onClose={() => setBatchModalOpen(false)}
+        knownIngredients={knownIngredients}
         inventoryItems={inventory}
         isSaving={isSaving}
-        onSave={onCreateAllocation}
+        onSave={onCreateProductionBatch}
       />
     </div>
   )

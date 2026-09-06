@@ -15,7 +15,8 @@ const SelectOrNewField = ({
   options = [],
   placeholder = 'Selecciona...',
   newLabel = '+ Nuevo (no esta en la lista)',
-  inputPlaceholder = 'Escribe el nombre'
+  inputPlaceholder = 'Escribe el nombre',
+  allowNew = true
 }) => {
   const [mode, setMode] = useState(() => (value && !options.includes(value) ? 'new' : 'select'))
 
@@ -71,7 +72,7 @@ const SelectOrNewField = ({
       {options.map((opt) => (
         <option key={opt} value={opt}>{opt}</option>
       ))}
-      <option value={NEW_VALUE}>{newLabel}</option>
+      {allowNew && <option value={NEW_VALUE}>{newLabel}</option>}
     </select>
   )
 }

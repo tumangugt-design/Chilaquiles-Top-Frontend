@@ -14,7 +14,7 @@ const toDateInputValue = (d) => {
 /**
  * Modal para registrar una Compra en bruto (Fase 1-2 de Compras/Lotes).
  * Esto NO es una Entrada de Stock — es el ingreso del ingrediente crudo,
- * antes de cualquier transformación (ver PurchaseAllocationModal).
+ * antes de cualquier transformación (ver ProductionBatchModal).
  *
  * `knownIngredients`: nombres de ingredientes en bruto ya usados antes (se
  * repiten casi siempre, salvo que se agregue algo nuevo al menú) — se

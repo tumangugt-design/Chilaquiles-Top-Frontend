@@ -30,7 +30,7 @@ import {
   getPurchases,
   createPurchase,
   getPurchaseAllocations,
-  createPurchaseAllocation,
+  createProductionBatch,
   getAvailablePlates,
   getLastPurchases,
   getInventoryLogs,
@@ -1357,16 +1357,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
-  const handleCreatePurchaseAllocation = async (purchaseId, payload) => {
+  const handleCreateProductionBatch = async (payload) => {
     setIsSaving(true)
     try {
-      await createPurchaseAllocation(purchaseId, payload)
-      toast.success('Transformación registrada correctamente')
+      await createProductionBatch(payload)
+      toast.success('Lote de producción registrado correctamente')
       await loadData()
-      await handleLoadPurchaseAllocations(purchaseId)
       return true
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo registrar la transformación')
+      toast.error(err.response?.data?.message || 'No se pudo registrar el lote de producción')
       return false
     } finally {
       setIsSaving(false)
@@ -2444,7 +2443,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           isSaving={isSaving}
           allocationsByPurchase={allocationsByPurchase}
           onCreatePurchase={handleCreatePurchase}
-          onCreateAllocation={handleCreatePurchaseAllocation}
+          onCreateProductionBatch={handleCreateProductionBatch}
           onLoadAllocations={handleLoadPurchaseAllocations}
         />
       )}
