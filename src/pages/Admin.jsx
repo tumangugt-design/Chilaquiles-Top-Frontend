@@ -81,8 +81,9 @@ import {
   IllustrationVerde,
   IllustrationDivorciados
 } from '../components/illustrations/SauceIllustrations.jsx'
+import InventoryEntriesView from '../components/inventory/InventoryEntriesView.jsx'
+import InventoryStockView from '../components/inventory/InventoryStockView.jsx'
 
-const emptyItem = { name: '', amount: '', unit: '', price: '' }
 
 const SCHEDULE_DAY_INDEX = {
   sunday: 0,
@@ -528,9 +529,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [chefUsers, setChefUsers] = useState([])
   const [driverUsers, setDriverUsers] = useState([])
   const [ordersCache, setOrdersCache] = useState({})
-  const [itemForm, setItemForm] = useState(emptyItem)
-  const [priceEditForm, setPriceEditForm] = useState({ name: null, price: '' })
-  const [stockEditForm, setStockEditForm] = useState({ name: null, stock: '', unit: '' })
   const [staffForm, setStaffForm] = useState({ id: null, name: '', phone: '', username: '', password: '', role: 'CHEF' })
   const [scheduleForm, setScheduleForm] = useState({ 
     weekly: normalizeScheduleWeekly(), 
@@ -1101,126 +1099,81 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
-  const submitInventory = async (e) => {
-    e.preventDefault()
-    if (!itemForm.name || !itemForm.amount) {
-      return toast.error('Selecciona un producto y una cantidad')
+  const submitInventoryEntry = async (values) => {
+    if (!values.name || !values.amount) {
+      toast.error('Selecciona un producto y una cantidad')
+      return false
     }
-    if (!itemForm.price || Number(itemForm.price) <= 0) {
-      return toast.error('Ingresa el costo total de compra para calcular precios correctamente')
+    if (!values.price || Number(values.price) <= 0) {
+      toast.error('Ingresa el costo total de compra para calcular precios correctamente')
+      return false
     }
 
     setIsSaving(true)
 
     try {
-      const product = INVENTORY_PRODUCT_MAP[itemForm.name]
-      const storedAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, product)
+      const product = INVENTORY_PRODUCT_MAP[values.name]
+      const storedAmount = convertInventoryAmountToBaseUnit(values.amount, values.unit, product)
 
       await saveInventoryItem({
-        name: itemForm.name,
-        inputUnit: itemForm.unit,
-        amount: Number(itemForm.amount),
-        totalPrice: itemForm.price === '' ? null : Number(itemForm.price)
+        name: values.name,
+        inputUnit: values.unit,
+        amount: Number(values.amount),
+        totalPrice: values.price === '' ? null : Number(values.price)
       })
 
       toast.success(`Entrada registrada: ${storedAmount.toFixed(2)} ${product?.unit || ''}`)
-      setItemForm(emptyItem)
       loadData()
+      return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo guardar inventario.')
+      return false
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleProductChange = (value) => {
-    const product = INVENTORY_PRODUCT_MAP[value]
-    const allowedUnits = getAllowedInputUnits(product)
-    setItemForm({
-      name: value,
-      amount: itemForm.amount,
-      unit: allowedUnits[0]?.value || product?.unit || '',
-      price: itemForm.price,
-    })
-  }
-
-  const dynamicInventoryOptions = inventory.map((item) => {
-    const catalogItem = INVENTORY_PRODUCT_MAP[item.name]
-    const label = catalogItem?.label || item.name.charAt(0).toUpperCase() + item.name.slice(1)
-    return {
-      value: item.name,
-      label: label,
-      category: item.category || 'Otros',
-      unit: item.unit,
-    }
-  })
-
-  const selectedInventoryProduct = inventory.find(i => i.name === itemForm.name) || INVENTORY_PRODUCT_MAP[itemForm.name]
-  const entryStoredAmount = convertInventoryAmountToBaseUnit(itemForm.amount, itemForm.unit, selectedInventoryProduct)
-  const entryTotalPrice = itemForm.price === '' ? null : Number(itemForm.price)
-
-  const handleStartPriceEdit = (product, currentPrice) => {
-    setPriceEditForm({
-      name: product.value,
-      price: String(Number(currentPrice || 0))
-    })
-  }
-
-  const handleCancelPriceEdit = () => {
-    setPriceEditForm({ name: null, price: '' })
-  }
-
-  const handleSaveProductPrice = async (product) => {
-    const price = Number(priceEditForm.price)
+  const handleSaveProductPrice = async (product, priceValue) => {
+    const price = Number(priceValue)
 
     if (Number.isNaN(price) || price < 0) {
-      return toast.error('Ingresa un precio válido mayor o igual a cero')
+      toast.error('Ingresa un precio válido mayor o igual a cero')
+      return false
     }
 
     setIsSaving(true)
     try {
       await updateInventoryPrice(product.value, price)
       toast.success(`Precio actualizado para ${product.label}`)
-      setPriceEditForm({ name: null, price: '' })
       loadData()
+      return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el precio')
+      return false
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleStartStockEdit = (item) => {
-    const meta = getProductPortionConfig(item.name)
-    const allowedUnits = getAllowedInputUnits(meta)
-    setStockEditForm({
-      name: item.name,
-      stock: String(Number(item.stock || 0)),
-      unit: allowedUnits[0]?.value || meta?.unit || item.unit || ''
-    })
-  }
-
-  const handleCancelStockEdit = () => {
-    setStockEditForm({ name: null, stock: '', unit: '' })
-  }
-
-  const handleSaveStockEdit = async (item) => {
-    const stock = Number(stockEditForm.stock)
+  const handleSaveStockEdit = async (item, stockValue, unitValue) => {
+    const stock = Number(stockValue)
     const meta = getProductPortionConfig(item.name)
 
     if (Number.isNaN(stock) || stock < 0) {
-      return toast.error('Ingresa un stock válido mayor o igual a cero')
+      toast.error('Ingresa un stock válido mayor o igual a cero')
+      return false
     }
 
     setIsSaving(true)
     try {
-      const storedStock = convertInventoryAmountToBaseUnit(stock, stockEditForm.unit, meta)
-      await updateInventoryStock(item.name, stock, stockEditForm.unit)
+      const storedStock = convertInventoryAmountToBaseUnit(stock, unitValue, meta)
+      await updateInventoryStock(item.name, stock, unitValue)
       toast.success(`Stock actualizado para ${meta?.label || item.name}: ${storedStock.toFixed(2)} ${meta?.unit || item.unit}`)
-      setStockEditForm({ name: null, stock: '', unit: '' })
       loadData()
+      return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el stock')
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -2243,412 +2196,29 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       )}
 
       {activeTab === 'entries' && (
-        <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 animate-fade-in min-w-0">
-          <form onSubmit={submitInventory} className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-5 min-w-0">
-            <div className="border-b border-ui-border pb-4 flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-black text-ui-text">Entrada de Inventario</h2>
-                <p className="text-sm text-ui-muted mt-1">Selecciona el producto y registra la cantidad ingresada.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPackagingModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-brand-orange/30 bg-brand-orange/10 text-brand-orange hover:bg-brand-orange/20 transition-all shrink-0"
-              >
-                + Crear Producto
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Producto</label>
-              <select
-                className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
-                value={itemForm.name}
-                onChange={(e) => handleProductChange(e.target.value)}
-              >
-                <option value="">Selecciona un producto</option>
-                {dynamicInventoryOptions.map((product) => (
-                  <option key={product.value} value={product.value}>
-                    {product.category} · {product.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad de entrada</label>
-                <select
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
-                  value={itemForm.unit}
-                  onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
-                  disabled={!itemForm.name}
-                >
-                  {getAllowedInputUnits(selectedInventoryProduct).map((unit) => (
-                    <option key={unit.value} value={unit.value}>{unit.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Cantidad</label>
-                <input
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={itemForm.amount}
-                  onChange={(e) => setItemForm({ ...itemForm, amount: e.target.value })}
-                  placeholder="Ej. 10"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Costo Total de Compra (Q) <span className="text-red-500">*</span></label>
-                <input
-                  className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={itemForm.price}
-                  placeholder="Ej. 100.00"
-                  onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {selectedInventoryProduct && entryStoredAmount > 0 && (
-              <div className="rounded-2xl border border-brand-blue/15 bg-brand-blue/5 px-4 py-3 text-sm font-bold text-ui-muted space-y-1">
-                <div>
-                  Se guardará como <span className="text-brand-blue font-black">{entryStoredAmount.toFixed(2)} {selectedInventoryProduct.unit}</span> en stock.
-                </div>
-                {entryTotalPrice !== null && !Number.isNaN(entryTotalPrice) && (
-                  <div className="text-xs">
-                    Costo de porción calculado: <span className="text-brand-blue font-black">
-                      Q{((entryTotalPrice / entryStoredAmount) * (selectedInventoryProduct.usedPerPlate || 1)).toFixed(2)}
-                    </span> por plato (usando {selectedInventoryProduct.usedPerPlate} {selectedInventoryProduct.unit}).
-                  </div>
-                )}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full !py-5" disabled={isSaving}>
-              {isSaving ? 'Guardando...' : 'Registrar entrada'}
-            </Button>
-          </form>
-
-          <div className="space-y-4 min-w-0">
-            {/* ── Historial de Entradas ── */}
-            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
-              <div className="border-b border-ui-border pb-4">
-                <h3 className="text-xl font-black text-ui-text">Historial de Entradas</h3>
-                <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Últimas entradas registradas al inventario</p>
-              </div>
-
-              <div className="space-y-2 max-h-[22rem] overflow-y-auto pr-1">
-                {inventoryLogs.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <p className="text-ui-muted font-bold text-sm">No hay entradas registradas aún.</p>
-                    <p className="text-ui-muted text-xs mt-1">Las entradas que registres aparecerán aquí.</p>
-                  </div>
-                ) : (
-                  inventoryLogs
-                    .filter((log) => !!getProductPortionConfig(log.ingredientName).label)
-                    .map((log) => {
-                    const product = getProductPortionConfig(log.ingredientName)
-                    const priceFromReason = log.reason?.match(new RegExp('Costo Total\\s*Q\\s*([\\d.]+)', 'i'))
-                    const totalPrice = log.totalPrice !== undefined && log.totalPrice !== null
-                      ? Number(log.totalPrice)
-                      : priceFromReason
-                        ? Number(priceFromReason[1])
-                        : (log.price && log.price > 0 ? Number(log.price) : null)
-                    const amtMatch = log.reason?.match(new RegExp('Entrada de inventario:\\s*([\\d.]+)\\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ]+)', 'i'))
-                    const displayAmount = log.inputAmount !== undefined && log.inputAmount !== null
-                      ? formatInventoryAmount(log.inputAmount)
-                      : amtMatch
-                        ? amtMatch[1]
-                        : formatInventoryAmount(log.amount || log.storedAmount || 0)
-                    const displayUnit = log.inputUnit || amtMatch?.[2] || product?.unit || log.storedUnit || ''
-                    const entryAmt = displayAmount && displayAmount !== '0' ? `${displayAmount} ${displayUnit}`.trim() : ''
-                    const stockAmount = log.storedAmount || log.amount || 0
-                    const stockUnit = log.storedUnit || product?.unit || ''
-                    const dateStr = log.createdAt
-                      ? new Date(log.createdAt).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                      : ''
-                    return (
-                      <div key={log._id} className="rounded-2xl border border-ui-border bg-white/70 px-4 py-3 flex items-start justify-between gap-3 min-w-0">
-                        <div className="min-w-0">
-                          <p className="font-black text-ui-text text-sm leading-tight truncate">
-                            {product?.label || log.ingredientName}
-                          </p>
-                          <p className="text-[10px] font-bold text-ui-muted uppercase tracking-widest mt-0.5">
-                            {product?.category || ''} · {entryAmt}
-                          </p>
-                          <p className="text-[10px] text-ui-muted mt-0.5">{dateStr}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {totalPrice !== null ? (
-                            <p className="text-sm font-black text-green-600">Q{totalPrice.toFixed(2)}</p>
-                          ) : (
-                            <p className="text-[10px] font-bold text-orange-400 italic">Sin costo registrado</p>
-                          )}
-                          <p className="text-[10px] font-bold text-brand-blue mt-0.5">
-                            Stock: +{formatInventoryAmount(stockAmount)} {stockUnit}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* ── Consumo por Plato (referencia) ── */}
-            <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
-              <div className="border-b border-ui-border pb-4">
-                <h3 className="text-xl font-black text-ui-text">Consumo por plato</h3>
-              </div>
-
-              <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-2">
-                {(() => {
-                  const allProductNames = Array.from(new Set([
-                    ...INVENTORY_PRODUCT_OPTIONS.map(p => p.value),
-                    ...inventory.map(i => i.name)
-                  ]))
-                  const dynamicConsumoOptions = allProductNames.map(name => {
-                    const config = getProductPortionConfig(name)
-                    return {
-                      value: config.name,
-                      label: config.label,
-                      category: config.category,
-                      usedPerPlate: config.usedPerPlate,
-                      unit: config.unit
-                    }
-                  })
-                  const sortedConsumoOptions = dynamicConsumoOptions.sort((a, b) => {
-                    if (a.category !== b.category) {
-                      return a.category.localeCompare(b.category)
-                    }
-                    return a.label.localeCompare(b.label)
-                  })
-                  return sortedConsumoOptions.map((product) => {
-                    const inventoryItem = inventory.find(i => i.name === product.value)
-                    const fixedPrice = Number(inventoryItem?.lastPrice || 0)
-                    const isEditingPrice = priceEditForm.name === product.value
-                    return (
-                      <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 min-w-0">
-                          <div className="min-w-0">
-                            <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
-                            <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">
-                              {product.category} · Precio fijo Q{fixedPrice.toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="text-left sm:text-right shrink-0">
-                            <p className="text-sm font-black text-brand-blue break-words">
-                              {product.usedPerPlate} {product.unit}
-                            </p>
-                            <p className="text-[10px] font-black text-green-600 mt-0.5">
-                              Precio fijo Q{fixedPrice.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {isEditingPrice ? (
-                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-2 border-t border-ui-border pt-4">
-                            <input
-                              className="w-full rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={priceEditForm.price}
-                              onChange={(e) => setPriceEditForm({ ...priceEditForm, price: e.target.value })}
-                              placeholder="Precio fijo del producto"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSaveProductPrice(product)}
-                              disabled={isSaving}
-                              className="rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleCancelPriceEdit}
-                              className="rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="mt-4 border-t border-ui-border pt-4 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() => handleStartPriceEdit(product, fixedPrice)}
-                              className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
-                            >
-                              Editar precio
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                })()}
-              </div>
-            </div>
-          </div>
-        </div>
+        <InventoryEntriesView
+          inventory={inventory}
+          inventoryLogs={inventoryLogs}
+          getProductPortionConfig={getProductPortionConfig}
+          isSaving={isSaving}
+          onSubmitEntry={submitInventoryEntry}
+          onSavePrice={handleSaveProductPrice}
+        />
       )}
 
       {activeTab === 'inventory' && (
-        <div className="space-y-6 animate-fade-in min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ui-border pb-4 min-w-0">
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-ui-text">Inventario</h2>
-              <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Estado de stock y catálogo</p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="relative w-full sm:w-64">
-                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
-                <select 
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
-                  value={inventoryCategoryFilter}
-                  onChange={(e) => setInventoryCategoryFilter(e.target.value)}
-                >
-                  <option value="ALL">Todas las categorías</option>
-                  <option value="Ingredientes fijos">Ingredientes fijos</option>
-                  <option value="Base">Bases</option>
-                  <option value="Salsas">Salsas</option>
-                  <option value="Proteínas">Proteínas</option>
-                  <option value="Complementos">Complementos</option>
-                  <option value="Empaque">Empaque</option>
-                </select>
-              </div>
-              <Button variant="secondary" className="w-full sm:w-auto !bg-brand-blue/10 !text-brand-blue !border-brand-blue/20" onClick={handleSyncInventory}>
-                Sincronizar Catálogo
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 min-w-0">
-            {inventory
-              .filter(item => {
-                if (inventoryCategoryFilter === 'ALL') return true
-                const meta = getProductPortionConfig(item.name)
-                return meta?.category === inventoryCategoryFilter
-              })
-              .map((item) => {
-              const meta = getProductPortionConfig(item.name)
-              const isPackaging = meta?.category === 'Empaque'
-              const isActive = isPackaging ? true : item.isActive !== false
-              const stockStoredPreview = stockEditForm.name === item.name
-                ? convertInventoryAmountToBaseUnit(stockEditForm.stock, stockEditForm.unit, meta)
-                : 0
-              return (
-                <div key={item._id} className={`w-full min-w-0 overflow-hidden rounded-[1.75rem] sm:rounded-[2rem] border border-ui-border p-4 sm:p-5 transition-all ${!isActive ? 'bg-black/5 opacity-70 grayscale' : 'bg-ui-bg/40'}`}>
-                  <div className="flex flex-row items-start justify-between gap-3 sm:gap-4 mb-4 min-w-0">
-                    <div className="min-w-0 max-w-full">
-                      <h3 className="font-black text-ui-text capitalize leading-tight break-words">{meta?.label || item.name}</h3>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1 break-words">{meta?.category || 'Inventario'}</p>
-                    </div>
-                    <div className="text-right shrink-0 max-w-[45%]">
-                      <p className={`text-2xl sm:text-xl font-black break-words ${item.stock <= item.minimumStock ? 'text-brand-red' : 'text-brand-blue'}`}>
-                        {Number(item.stock).toFixed(2)}
-                      </p>
-                      <p className="text-[10px] font-bold text-ui-muted uppercase break-words">{item.unit}</p>
-                      {getPlatesByIngredient(item) !== null && (
-                        <p className="mt-1 rounded-full bg-brand-blue/10 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand-blue">
-                          {getPlatesByIngredient(item)} platos
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {stockEditForm.name === item.name ? (
-                    <div className="mt-4 rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-3 sm:p-4 min-w-0">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-ui-muted mb-2">
-                        Nuevo stock
-                      </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-[1fr,0.85fr,auto,auto] gap-2 min-w-0">
-                        <input
-                          className="w-full min-w-0 rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={stockEditForm.stock}
-                          onChange={(e) => setStockEditForm({ ...stockEditForm, stock: e.target.value })}
-                          placeholder="Cantidad"
-                        />
-                        <select
-                          className="w-full min-w-0 rounded-xl border border-brand-blue bg-white px-4 py-3 text-sm font-black text-ui-text outline-none"
-                          value={stockEditForm.unit}
-                          onChange={(e) => setStockEditForm({ ...stockEditForm, unit: e.target.value })}
-                        >
-                          {getAllowedInputUnits(meta).map((unit) => (
-                            <option key={unit.value} value={unit.value}>{unit.label}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveStockEdit(item)}
-                          disabled={isSaving}
-                          className="w-full sm:w-auto rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelStockEdit}
-                          className="w-full sm:w-auto rounded-xl border border-ui-border bg-ui-bg px-4 py-3 text-[10px] font-black uppercase tracking-widest text-ui-muted transition-all hover:bg-white"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                      {stockStoredPreview > 0 && (
-                        <p className="mt-3 text-xs font-bold text-ui-muted">
-                          Se guardará como <span className="font-black text-brand-blue">{stockStoredPreview.toFixed(2)} {meta?.unit || item.unit}</span>.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 gap-3 border-t border-ui-border/60 min-w-0">
-                      <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
-                        {!isActive ? 'Inactivo' : 'Activo'}
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleStartStockEdit(item)}
-                          className="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
-                        >
-                          Editar stock
-                        </button>
-                        {isPackaging ? (
-                          <div className="w-full sm:w-fit text-center text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
-                            Fijo
-                          </div>
-                        ) : (
-                          <button 
-                            type="button"
-                            onClick={() => handleToggleStatus(item.name, item.isActive ?? true)}
-                            className={`w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
-                              item.isActive === false 
-                                ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' 
-                                : 'border-brand-red text-brand-red hover:bg-brand-red/10'
-                            }`}
-                          >
-                            {item.isActive === false ? 'Activar' : 'Desactivar'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <InventoryStockView
+          inventory={inventory}
+          inventoryCategoryFilter={inventoryCategoryFilter}
+          setInventoryCategoryFilter={setInventoryCategoryFilter}
+          getProductPortionConfig={getProductPortionConfig}
+          getPlatesByIngredient={getPlatesByIngredient}
+          isSaving={isSaving}
+          onSaveStock={handleSaveStockEdit}
+          onToggleStatus={handleToggleStatus}
+          onSync={handleSyncInventory}
+          onRequestCreateProduct={() => setPackagingModalOpen(true)}
+        />
       )}
 
 
