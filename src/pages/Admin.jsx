@@ -27,6 +27,10 @@ import {
   updatePromotions,
   getFinancesSummary,
   getIngredientCostHistory,
+  getPurchases,
+  createPurchase,
+  getPurchaseAllocations,
+  createPurchaseAllocation,
   getAvailablePlates,
   getLastPurchases,
   getInventoryLogs,
@@ -93,6 +97,7 @@ import {
 import InventoryEntriesView from '../components/inventory/InventoryEntriesView.jsx'
 import InventoryStockView from '../components/inventory/InventoryStockView.jsx'
 import SuppliersView from '../components/suppliers/SuppliersView.jsx'
+import PurchasesView from '../components/purchases/PurchasesView.jsx'
 import ConfirmReasonModal from '../components/ui/ConfirmReasonModal.jsx'
 
 
@@ -537,6 +542,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [orderFilter, setOrderFilter] = useState('all')
   const [inventory, setInventory] = useState([])
   const [suppliers, setSuppliers] = useState([])
+  const [purchases, setPurchases] = useState([])
+  const [allocationsByPurchase, setAllocationsByPurchase] = useState({})
   const [clientUsers, setClientUsers] = useState([])
   const [chefUsers, setChefUsers] = useState([])
   const [driverUsers, setDriverUsers] = useState([])
@@ -1028,6 +1035,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       } else if (activeTab === 'suppliers') {
         const suppliersResponse = await getSuppliers().catch(() => ({ data: [] }))
         setSuppliers(suppliersResponse.data || [])
+      } else if (activeTab === 'purchases') {
+        const [purchasesResponse, suppliersResponse] = await Promise.all([
+          getPurchases().catch(() => ({ data: [] })),
+          getSuppliers().catch(() => ({ data: [] }))
+        ])
+        setPurchases(purchasesResponse.data || [])
+        setSuppliers(suppliersResponse.data || [])
+        setAllocationsByPurchase({})
       }
     } catch (err) {
       console.error('Error loading Admin data:', err)
@@ -1310,6 +1325,46 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo eliminar el proveedor')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCreatePurchase = async (payload) => {
+    setIsSaving(true)
+    try {
+      await createPurchase(payload)
+      toast.success('Compra registrada correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo registrar la compra')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleLoadPurchaseAllocations = async (purchaseId) => {
+    try {
+      const response = await getPurchaseAllocations(purchaseId)
+      setAllocationsByPurchase((prev) => ({ ...prev, [purchaseId]: response.data || [] }))
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo cargar el historial de este lote')
+    }
+  }
+
+  const handleCreatePurchaseAllocation = async (purchaseId, payload) => {
+    setIsSaving(true)
+    try {
+      await createPurchaseAllocation(purchaseId, payload)
+      toast.success('Transformación registrada correctamente')
+      await loadData()
+      await handleLoadPurchaseAllocations(purchaseId)
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo registrar la transformación')
       return false
     } finally {
       setIsSaving(false)
@@ -2376,6 +2431,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           onCreate={handleCreateSupplier}
           onUpdate={handleUpdateSupplier}
           onDelete={handleDeleteSupplierAction}
+        />
+      )}
+
+      {activeTab === 'purchases' && (
+        <PurchasesView
+          purchases={purchases}
+          suppliers={suppliers}
+          isSaving={isSaving}
+          allocationsByPurchase={allocationsByPurchase}
+          onCreatePurchase={handleCreatePurchase}
+          onCreateAllocation={handleCreatePurchaseAllocation}
+          onLoadAllocations={handleLoadPurchaseAllocations}
         />
       )}
 

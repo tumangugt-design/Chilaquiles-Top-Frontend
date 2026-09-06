@@ -17,7 +17,8 @@ import {
   ChevronRight,
   ChefHat,
   Truck,
-  Building2
+  Building2,
+  Package
 } from 'lucide-react'
 
 const navigationSections = [
@@ -44,6 +45,7 @@ const navigationSections = [
     items: [
       { id: 'entries', label: 'Entradas', icon: PackagePlus },
       { id: 'inventory', label: 'Stock', icon: Box },
+      { id: 'purchases', label: 'Compras', icon: Package },
       { id: 'recipe_book', label: 'Recetario', icon: ClipboardList },
     ],
   },
