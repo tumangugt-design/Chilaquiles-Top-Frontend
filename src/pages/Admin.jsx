@@ -26,6 +26,7 @@ import {
   getPromotions,
   updatePromotions,
   getFinancesSummary,
+  getIngredientCostHistory,
   getAvailablePlates,
   getLastPurchases,
   getInventoryLogs,
@@ -553,6 +554,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [financesSummary, setFinancesSummary] = useState(null)
   const [financesLoading, setFinancesLoading] = useState(false)
+  const [costHistoryIngredient, setCostHistoryIngredient] = useState('')
+  const [costHistoryData, setCostHistoryData] = useState([])
+  const [costHistoryLoading, setCostHistoryLoading] = useState(false)
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('ALL')
   const [historyModal, setHistoryModal] = useState({
     isOpen: false,
@@ -911,6 +915,30 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       setFinancesLoading(false)
     }
   }
+
+  const loadCostHistory = async (ingredientName) => {
+    if (!ingredientName) {
+      setCostHistoryData([])
+      return
+    }
+    setCostHistoryLoading(true)
+    try {
+      const response = await getIngredientCostHistory(ingredientName)
+      setCostHistoryData(response.data?.history || [])
+    } catch (err) {
+      toast.error('No se pudo cargar el historico de costo')
+      setCostHistoryData([])
+    } finally {
+      setCostHistoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'finances' && costHistoryIngredient) {
+      loadCostHistory(costHistoryIngredient)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, costHistoryIngredient])
 
   const loadData = async () => {
     setIsRefreshing(true)
@@ -2117,6 +2145,38 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         </div>
                       </div>
                     )}
+
+                    {/* Fase 4: Fluctuacion de costo por ingrediente (InventoryLog historico) */}
+                    <div className="space-y-5 mt-10">
+                      <div>
+                        <h3 className="text-xl font-black text-ui-text ml-2">Fluctuacion de Costos</h3>
+                        <p className="text-xs text-ui-muted ml-2 mt-1">Historico real de costo por porcion de cada ingrediente, tomado de cada Entrada registrada. Nunca se sustituye, solo se va acumulando.</p>
+                      </div>
+                      <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 shadow-sm space-y-5">
+                        <select
+                          value={costHistoryIngredient}
+                          onChange={(e) => setCostHistoryIngredient(e.target.value)}
+                          className="w-full md:w-80 px-4 py-3 rounded-xl border border-ui-border bg-ui-bg/30 text-sm font-bold text-ui-text focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                        >
+                          <option value="">Selecciona un ingrediente...</option>
+                          {[...inventory]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((item) => (
+                              <option key={item.name} value={item.name}>{item.name}</option>
+                            ))}
+                        </select>
+
+                        {costHistoryLoading ? (
+                          <div className="py-14 text-center text-brand-blue font-black text-xs uppercase animate-pulse">Cargando historico...</div>
+                        ) : !costHistoryIngredient ? (
+                          <div className="py-14 text-center rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/20">
+                            <p className="text-ui-muted font-bold text-sm">Elige un ingrediente para ver su fluctuacion de costo.</p>
+                          </div>
+                        ) : (
+                          <CostHistoryChart data={costHistoryData} />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3808,6 +3868,101 @@ const getIngredientSvg = (name, category = '') => {
       <path d="M40 50 L65 35 L135 35 L160 50 L135 65 L65 65 L40 50 Z" fill="#CBD5E1" />
       <circle cx="100" cy="80" r="15" fill="#94A3B8" />
     </svg>
+  )
+}
+
+// Fase 4 (Finanzas): grafica de fluctuacion de costo por ingrediente.
+// Se alimenta de InventoryLog (historico real, nunca se sobreescribe), asi
+// que cada punto es una Entrada real registrada en su momento.
+const CostHistoryChart = ({ data = [] }) => {
+  const points = data
+    .map((entry) => ({
+      date: entry.date,
+      value: entry.portionPrice ?? entry.unitPrice ?? null
+    }))
+    .filter((entry) => entry.value !== null && entry.value !== undefined)
+
+  if (points.length === 0) {
+    return (
+      <div className="py-14 text-center rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/20">
+        <p className="text-ui-muted font-bold text-sm">Sin historial de costo registrado para este ingrediente todavia.</p>
+      </div>
+    )
+  }
+
+  if (points.length === 1) {
+    return (
+      <div className="py-14 text-center rounded-[2rem] border border-dashed border-ui-border bg-ui-bg/20">
+        <p className="text-ui-muted font-bold text-sm">Solo hay 1 registro (Q{points[0].value.toFixed(2)}). Se necesitan al menos 2 para graficar la fluctuacion.</p>
+      </div>
+    )
+  }
+
+  const width = 760
+  const height = 260
+  const padding = { top: 20, right: 20, bottom: 40, left: 56 }
+  const innerWidth = width - padding.left - padding.right
+  const innerHeight = height - padding.top - padding.bottom
+
+  const values = points.map((p) => p.value)
+  const minValue = Math.min(...values)
+  const maxValue = Math.max(...values)
+  const valueRange = maxValue - minValue || 1
+  const yPad = valueRange * 0.15
+
+  const xFor = (i) => padding.left + (points.length === 1 ? innerWidth / 2 : (i / (points.length - 1)) * innerWidth)
+  const yFor = (v) => padding.top + innerHeight - ((v - (minValue - yPad)) / (valueRange + yPad * 2)) * innerHeight
+
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(i).toFixed(1)} ${yFor(p.value).toFixed(1)}`).join(' ')
+
+  const formatDate = (d) => new Date(d).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })
+
+  const first = points[0].value
+  const last = points[points.length - 1].value
+  const delta = last - first
+  const deltaPct = first > 0 ? (delta / first) * 100 : 0
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 text-xs font-bold">
+        <span className="text-ui-muted">Primer registro: Q{first.toFixed(2)}</span>
+        <span className="text-ui-muted">→</span>
+        <span className="text-ui-muted">Ultimo: Q{last.toFixed(2)}</span>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${delta > 0 ? 'bg-brand-red/10 text-brand-red' : delta < 0 ? 'bg-green-500/10 text-green-700' : 'bg-ui-bg text-ui-muted'}`}>
+          {delta > 0 ? '+' : ''}{delta.toFixed(2)} ({deltaPct > 0 ? '+' : ''}{deltaPct.toFixed(1)}%)
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <svg width={width} height={height} className="min-w-[760px]">
+          {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+            const v = minValue - yPad + (valueRange + yPad * 2) * t
+            const y = yFor(v)
+            return (
+              <g key={t}>
+                <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="currentColor" className="text-ui-border" strokeWidth={1} />
+                <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize={10} className="fill-ui-muted font-bold">
+                  Q{v.toFixed(2)}
+                </text>
+              </g>
+            )
+          })}
+
+          <path d={linePath} fill="none" stroke="currentColor" className="text-brand-blue" strokeWidth={2.5} />
+
+          {points.map((p, i) => (
+            <g key={`${p.date}-${i}`}>
+              <circle cx={xFor(i)} cy={yFor(p.value)} r={4} className="fill-brand-blue" />
+              <title>{`${formatDate(p.date)}: Q${p.value.toFixed(2)}`}</title>
+              {(i === 0 || i === points.length - 1 || points.length <= 8 || i % Math.ceil(points.length / 8) === 0) && (
+                <text x={xFor(i)} y={height - padding.bottom + 16} textAnchor="middle" fontSize={9} className="fill-ui-muted font-bold">
+                  {formatDate(p.date)}
+                </text>
+              )}
+            </g>
+          ))}
+        </svg>
+      </div>
+    </div>
   )
 }
 
