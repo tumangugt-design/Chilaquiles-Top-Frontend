@@ -13,7 +13,6 @@ import {
   getOrders,
   syncInventory,
   toggleInventoryStatus,
-  recalculateInventoryPrice,
   updateInventoryStock,
   deleteInventoryItem,
   renameInventoryItem,
@@ -690,7 +689,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [newPackagingUsedPerPlate, setNewPackagingUsedPerPlate] = useState('1')
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
   const [recipeCategoryFilter, setRecipeCategoryFilter] = useState('ALL')
-  const [recalcTarget, setRecalcTarget] = useState(null) // { name, label }
   const [portionDeleteTarget, setPortionDeleteTarget] = useState(null) // { name, label }
   const [coupons, setCoupons] = useState([])
   const [newCouponCode, setNewCouponCode] = useState('')
@@ -1146,21 +1144,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo guardar inventario.')
-      return false
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleRecalculatePrice = async (name, label, reason) => {
-    setIsSaving(true)
-    try {
-      const response = await recalculateInventoryPrice(name, reason)
-      toast.success(`Costo recalculado para ${label}: Q${Number(response.data.price).toFixed(2)}`)
-      loadData()
-      return true
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo recalcular el costo')
       return false
     } finally {
       setIsSaving(false)
@@ -3608,22 +3591,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                   const product = inventory.find(i => i.name === portion.name)
                   const label = portion.isVirtual ? 'Salsa Divorciados' : config.label
                   const category = portion.isVirtual ? 'Salsas' : config.category
-                  
-                  let lastPurchaseText = ''
-                  if (portion.isVirtual) {
-                    lastPurchaseText = 'Cálculo automático (50% Roja + 50% Verde)'
-                  } else {
-                    const sim = simulatedCosts[portion.name] || {}
-                    lastPurchaseText = sim.qty ? `Última compra: ${sim.qty} ${sim.unit} por Q${Number(sim.price).toFixed(2)}` : 'Sin compras registradas'
-                  }
-                  
+
                   return (
                     <PortionRow
                       key={portion.name}
                       portion={portion}
                       label={label}
                       category={category}
-                      lastPurchaseText={lastPurchaseText}
                       product={product}
                       isReadOnly={portion.isVirtual}
                       onSave={async (qty, unit, consumptionType, reason) => {
@@ -3635,24 +3609,12 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           toast.error(err.response?.data?.message || 'No se pudo actualizar la porción')
                         }
                       }}
-                      onRequestRecalculate={() => setRecalcTarget({ name: portion.name, label })}
                       onRequestDelete={() => setPortionDeleteTarget({ name: portion.name, label })}
                     />
                   )
                 })
             })()}
           </div>
-
-          <ConfirmReasonModal
-            isOpen={!!recalcTarget}
-            onClose={() => setRecalcTarget(null)}
-            title="Recalcular costo de porción"
-            subtitle={recalcTarget ? `Se recalculará el costo de "${recalcTarget.label}" a partir de la última compra registrada.` : ''}
-            confirmLabel="Recalcular"
-            reasonPlaceholder="Ej. Verificación de costos, última compra actualizada..."
-            isSaving={isSaving}
-            onConfirm={(reason) => recalcTarget ? handleRecalculatePrice(recalcTarget.name, recalcTarget.label, reason) : false}
-          />
 
           <ConfirmReasonModal
             isOpen={!!portionDeleteTarget}
@@ -3849,7 +3811,7 @@ const getIngredientSvg = (name, category = '') => {
   )
 }
 
-const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSave, onRequestRecalculate, onRequestDelete, isReadOnly }) => {
+const PortionRow = ({ portion, label, category, product, onSave, onRequestDelete, isReadOnly }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editQty, setEditQty] = useState(portion.usedPerPlate)
   const [editUnit, setEditUnit] = useState(portion.unit)
@@ -3864,9 +3826,10 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
   }, [portion])
 
   const allowedUnits = getAllowedInputUnits(product)
+  const canSave = Number(editQty) > 0 && !!editReason.trim()
 
   const handleSave = () => {
-    if (editQty <= 0) {
+    if (!(Number(editQty) > 0)) {
       toast.error('La porción debe ser mayor a 0')
       return
     }
@@ -3910,10 +3873,6 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
                 {portion.consumptionType === 'order' ? 'Por pedido' : 'Por plato'}
               </span>
             </div>
-
-            <p className="text-xs text-ui-muted font-bold truncate">
-              {lastPurchaseText}
-            </p>
           </div>
         </div>
 
@@ -3968,7 +3927,9 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
                   placeholder="Ej. ajuste de receta, corrección de porción..."
-                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  className={`w-full px-3 py-2 text-sm font-bold bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 ${
+                    !editReason.trim() ? 'border-brand-red/40' : 'border-ui-border'
+                  }`}
                 />
               </div>
             </div>
@@ -3977,23 +3938,6 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
               <div>
                 <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Porción</span>
                 <span className="text-sm font-black text-ui-text">{portion.usedPerPlate} {portion.unit}</span>
-              </div>
-              <div className="border-l border-ui-border/50 h-8 self-center" />
-              <div>
-                <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Costo Porción</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-brand-blue">Q{Number(portion.price || 0).toFixed(2)}</span>
-                  {!isReadOnly && (
-                    <button
-                      type="button"
-                      onClick={onRequestRecalculate}
-                      className="text-[9px] font-black uppercase tracking-wider text-brand-orange underline decoration-dotted"
-                      title="Recalcular a partir de la última compra"
-                    >
-                      Recalcular
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           )}
@@ -4009,7 +3953,8 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
               <button
                 type="button"
                 onClick={handleSave}
-                className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
+                disabled={!canSave}
+                className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 Guardar
               </button>

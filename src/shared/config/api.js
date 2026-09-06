@@ -56,7 +56,6 @@ export const renameInventoryItem = (name, newName, reason) => api.patch(`/invent
 export const updateInventoryDetails = (name, payload) => api.patch(`/inventory/${encodeURIComponent(name)}/details`, payload)
 export const adjustInventoryStock = (name, amount) => api.patch(`/inventory/${name}/stock`, { amount })
 export const toggleInventoryStatus = (name, isActive) => api.patch(`/inventory/${name}/toggle-status`, { isActive })
-export const recalculateInventoryPrice = (name, reason) => api.patch(`/inventory/${encodeURIComponent(name)}/price`, { reason })
 export const updateInventoryStock = (name, stock, inputUnit, reason) => api.patch(`/inventory/${encodeURIComponent(name)}/direct-stock`, { stock, inputUnit, reason })
 export const syncInventory = () => api.post('/inventory/sync')
 
