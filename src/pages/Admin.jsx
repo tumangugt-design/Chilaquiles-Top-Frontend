@@ -945,7 +945,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
     try {
       if (activeTab === 'finances') {
-        await loadFinances()
+        const [, inventoryResponse] = await Promise.all([
+          loadFinances(),
+          getInventory().catch(() => ({ data: [] }))
+        ])
+        setInventory(inventoryResponse.data || [])
       } else if (activeTab === 'orders') {
         const response = await getOrders(orderFilter)
         const orders = response.data
