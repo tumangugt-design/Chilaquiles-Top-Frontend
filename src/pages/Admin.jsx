@@ -31,6 +31,7 @@ import {
   createPurchase,
   getPurchaseAllocations,
   createProductionBatch,
+  getProductionBatches,
   getAvailablePlates,
   getLastPurchases,
   getInventoryLogs,
@@ -53,6 +54,7 @@ import InternalOrder from './InternalOrder.jsx'
 import ContentStudio from './ContentStudio.jsx'
 import { 
   Search,
+  Beaker,
   Settings,
   TrendingUp,
   Calendar,
@@ -98,6 +100,7 @@ import InventoryEntriesView from '../components/inventory/InventoryEntriesView.j
 import InventoryStockView from '../components/inventory/InventoryStockView.jsx'
 import SuppliersView from '../components/suppliers/SuppliersView.jsx'
 import PurchasesView from '../components/purchases/PurchasesView.jsx'
+import ProductionBatchModal from '../components/purchases/ProductionBatchModal.jsx'
 import ConfirmReasonModal from '../components/ui/ConfirmReasonModal.jsx'
 
 
@@ -543,6 +546,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [inventory, setInventory] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [purchases, setPurchases] = useState([])
+  const [productionBatches, setProductionBatches] = useState([])
+  const [productionBatchModalOpen, setProductionBatchModalOpen] = useState(false)
   const [allocationsByPurchase, setAllocationsByPurchase] = useState({})
   const [clientUsers, setClientUsers] = useState([])
   const [chefUsers, setChefUsers] = useState([])
@@ -694,6 +699,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     })
     return allComplements
   }, [inventory])
+
+  // Ingredientes en bruto ya comprados antes - se ofrecen para seleccionar
+  // al producir un lote en Recetario (en vez de escribir cada vez).
+  const knownIngredients = useMemo(
+    () => [...new Set(purchases.map((p) => p.ingredientName))].sort(),
+    [purchases]
+  )
   const [newPackagingName, setNewPackagingName] = useState('')
   const [newPackagingCategory, setNewPackagingCategory] = useState('Empaque')
   const [newPackagingUnit, setNewPackagingUnit] = useState('und')
@@ -1007,14 +1019,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setCampaigns(campaignsResponse.data || [])
         setPromotions(promotionsResponse.data || [])
       } else if (activeTab === 'recipe_book') {
-        const [portionsResponse, inventoryResponse, lastPurchasesResponse] = await Promise.all([
+        const [portionsResponse, inventoryResponse, lastPurchasesResponse, purchasesResponse, productionBatchesResponse] = await Promise.all([
           getPortions().catch(() => ({ data: [] })),
           getInventory(),
-          getLastPurchases().catch(() => ({ data: {} }))
+          getLastPurchases().catch(() => ({ data: {} })),
+          getPurchases().catch(() => ({ data: [] })),
+          getProductionBatches().catch(() => ({ data: [] }))
         ])
         setPortions(portionsResponse.data || [])
         setInventory(inventoryResponse.data || [])
         setSimulatedCosts(lastPurchasesResponse.data || {})
+        setPurchases(purchasesResponse.data || [])
+        setProductionBatches(productionBatchesResponse.data || [])
       } else if (activeTab === 'clients') {
         await loadRoleUsers('CLIENT')
       } else if (activeTab === 'schedule') {
@@ -2443,7 +2459,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           isSaving={isSaving}
           allocationsByPurchase={allocationsByPurchase}
           onCreatePurchase={handleCreatePurchase}
-          onCreateProductionBatch={handleCreateProductionBatch}
           onLoadAllocations={handleLoadPurchaseAllocations}
         />
       )}
@@ -3707,6 +3722,50 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             </div>
           </div>
 
+          <div className="rounded-[2rem] border border-ui-border bg-white p-6 sm:p-8 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black tracking-tight text-ui-text">Producción de lotes</h3>
+                <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">
+                  Combina ingredientes en bruto (Compras) en productos de Stock
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProductionBatchModalOpen(true)}
+                disabled={knownIngredients.length === 0}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-brand-blue text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 hover:shadow-xl transition-all disabled:opacity-40"
+              >
+                <Beaker size={16} />
+                Producir lote
+              </button>
+            </div>
+
+            {knownIngredients.length === 0 ? (
+              <p className="text-xs font-bold text-ui-muted">
+                Registra al menos una Compra (pestaña Compras) antes de poder producir un lote.
+              </p>
+            ) : productionBatches.length === 0 ? (
+              <p className="text-xs font-bold text-ui-muted">Todavía no has producido ningún lote.</p>
+            ) : (
+              <div className="space-y-2">
+                {productionBatches.slice(0, 12).map((batch) => (
+                  <div key={batch._id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-ui-bg/50 border border-ui-border px-4 py-3 text-xs font-bold">
+                    <span className="text-ui-text">
+                      <span className="font-black">{batch.producedQuantity} {batch.producedUnit}</span> de <span className="font-black">{batch.stockItemName}</span>
+                      <span className="text-ui-muted font-medium">
+                        {' '}— de {batch.rawInputs.map((r) => `${r.quantityUsed} ${r.unit} ${r.ingredientName}`).join(' + ')}
+                      </span>
+                    </span>
+                    <span className="text-ui-muted whitespace-nowrap">
+                      Q{Number(batch.inheritedCost).toFixed(2)} total (Q{Number(batch.costPerProducedUnit).toFixed(3)}/{batch.producedUnit}) · {new Date(batch.allocationDate).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-6">
             {(() => {
               const list = [...portions]
@@ -3759,6 +3818,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             reasonPlaceholder="Ej. ingrediente de prueba, ya no se usa..."
             isSaving={isSaving}
             onConfirm={(reason) => portionDeleteTarget ? handleDeleteInventoryItemAction(portionDeleteTarget.name, reason) : false}
+          />
+
+          <ProductionBatchModal
+            isOpen={productionBatchModalOpen}
+            onClose={() => setProductionBatchModalOpen(false)}
+            knownIngredients={knownIngredients}
+            inventoryItems={inventory}
+            isSaving={isSaving}
+            onSave={handleCreateProductionBatch}
           />
         </div>
       )}

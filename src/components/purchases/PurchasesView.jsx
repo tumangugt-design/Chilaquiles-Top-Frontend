@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Package, Plus, Search, Beaker, ChevronDown, ChevronUp } from 'lucide-react'
+import { Package, Plus, Search, ChevronDown, ChevronUp } from 'lucide-react'
 import PurchaseFormModal from './PurchaseFormModal.jsx'
-import ProductionBatchModal from './ProductionBatchModal.jsx'
 
 const fmtQty = (n) => {
   const num = Number(n)
@@ -12,16 +11,15 @@ const fmtQty = (n) => {
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
 /**
- * Pestaña "Compras" (Operaciones) — Fase 2-4 de Compras/Lotes.
- * Aquí se registra el ingrediente EN BRUTO (la Compra = un lote con
- * cantidad restante) y, con "Producir lote", uno o más ingredientes en
- * bruto se combinan hacia un producto de Stock ya procesado (una
- * Asignación con el costo heredado congelado).
+ * Pestaña "Compras" (Operaciones) — registro de ingredientes en bruto.
+ * Aquí se registra la Compra (un lote con cantidad restante); su
+ * transformación hacia productos de Stock ("Producir lote") vive en
+ * Recetario, ya que Compras está pensada para crecer hacia logística de
+ * compra pura (presupuesto, recepción, bodega, fechas).
  */
-const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocationsByPurchase, onCreatePurchase, onCreateProductionBatch, onLoadAllocations }) => {
+const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, onCreatePurchase, onLoadAllocations }) => {
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
-  const [batchModalOpen, setBatchModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
 
   const filtered = useMemo(() => {
@@ -69,15 +67,6 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-ui-border bg-white text-xs font-bold outline-none"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setBatchModalOpen(true)}
-            disabled={knownIngredients.length === 0}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-brand-blue/20 bg-brand-blue/10 text-brand-blue text-[11px] font-black uppercase tracking-widest transition-all hover:bg-brand-blue hover:text-white disabled:opacity-40"
-          >
-            <Beaker size={16} />
-            Producir lote
-          </button>
           <button
             type="button"
             onClick={() => setFormOpen(true)}
@@ -184,14 +173,6 @@ const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocat
         onSave={onCreatePurchase}
       />
 
-      <ProductionBatchModal
-        isOpen={batchModalOpen}
-        onClose={() => setBatchModalOpen(false)}
-        knownIngredients={knownIngredients}
-        inventoryItems={inventory}
-        isSaving={isSaving}
-        onSave={onCreateProductionBatch}
-      />
     </div>
   )
 }

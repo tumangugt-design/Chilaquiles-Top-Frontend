@@ -69,6 +69,7 @@ export const getPurchases = (ingredientName) => api.get(`/purchases?t=${Date.now
 export const createPurchase = (payload) => api.post('/purchases', payload)
 export const getPurchaseAllocations = (purchaseId) => api.get(`/purchases/${purchaseId}/allocations?t=${Date.now()}`)
 export const createProductionBatch = (payload) => api.post('/purchases/production-batches', payload)
+export const getProductionBatches = (limit) => api.get(`/purchases/production-batches?t=${Date.now()}${limit ? `&limit=${limit}` : ''}`)
 export const getOperatingHours = () => api.get(`/settings/operating-hours?t=${Date.now()}`)
 export const trackOrder = (orderNumber) => api.get(`/orders/track/${encodeURIComponent(orderNumber)}?t=${Date.now()}`)
 export const getOrderConfirmation = (orderNumber) => api.get(`/orders/confirmacion/${encodeURIComponent(orderNumber)}?t=${Date.now()}`)
