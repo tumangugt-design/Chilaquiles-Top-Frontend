@@ -36,17 +36,15 @@ const navigationSections = [
     items: [
       { id: 'clients', label: 'Clientes', icon: UserCircle },
       { id: 'promotions', label: 'Promociones', icon: Gift },
-      { id: 'campaigns', label: 'Campañas', icon: Gift },
-      { id: 'content_studio', label: 'Estudio Contenido', icon: LayoutDashboard },
+      { id: 'content_studio', label: 'Marketing', icon: LayoutDashboard },
     ],
   },
   {
     title: 'Operaciones',
     items: [
-      { id: 'entries', label: 'Entradas', icon: PackagePlus },
       { id: 'inventory', label: 'Stock', icon: Box },
       { id: 'purchases', label: 'Compras', icon: Package },
-      { id: 'recipe_book', label: 'Recetario', icon: ClipboardList },
+      { id: 'recipe_book', label: 'Producción', icon: ClipboardList },
     ],
   },
   {
