@@ -59,7 +59,6 @@ const SupplierFormModal = ({ isOpen, onClose, supplier, isSaving, onSave }) => {
             onChange={handleChange('name')}
             placeholder="Ej. Distribuidora El Trigal"
             required
-            autoFocus
             className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
           />
         </div>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Filter, Search, ChevronUp, ChevronDown, AlertTriangle, PackagePlus, Settings2, Trash2 } from 'lucide-react'
+import { Filter, Search, ChevronUp, ChevronDown, AlertTriangle, PackagePlus, Settings2, Trash2, Pencil, Power, Lock } from 'lucide-react'
 import Button from '../ui/Button.jsx'
 import ConfirmReasonModal from '../ui/ConfirmReasonModal.jsx'
 import StockEditModal from './StockEditModal.jsx'
@@ -145,9 +145,9 @@ const InventoryStockView = ({
           </div>
 
           <div className="relative w-full sm:w-52">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={16} />
             <select
-              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+              className="w-full appearance-none pl-11 pr-9 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none cursor-pointer"
               value={inventoryCategoryFilter}
               onChange={(e) => setInventoryCategoryFilter(e.target.value)}
             >
@@ -155,11 +155,12 @@ const InventoryStockView = ({
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={14} />
           </div>
 
           <div className="relative w-full sm:w-48">
             <select
-              className="w-full px-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+              className="w-full appearance-none pl-4 pr-9 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none cursor-pointer"
               value={supplierFilter}
               onChange={(e) => setSupplierFilter(e.target.value)}
             >
@@ -169,6 +170,7 @@ const InventoryStockView = ({
                 <option key={s._id} value={s._id}>{s.name}</option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={14} />
           </div>
 
           <button
@@ -239,40 +241,44 @@ const InventoryStockView = ({
                             type="button"
                             onClick={() => setEditingItem(row.item)}
                             title="Editar stock"
-                            className="text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
                           >
-                            Stock
+                            <Pencil size={14} />
                           </button>
                           <button
                             type="button"
                             onClick={() => setDetailsItem(row.item)}
                             title="Editar detalles"
-                            className="p-2 rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
                           >
                             <Settings2 size={14} />
                           </button>
                           {row.isPackaging ? (
-                            <span className="text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
-                              Fijo
+                            <span
+                              title="Producto fijo del sistema"
+                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl border border-green-500/20 bg-green-500/10 text-green-700"
+                            >
+                              <Lock size={14} />
                             </span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => onToggleStatus(row.item.name, row.item.isActive ?? true)}
-                              className={`text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl transition-all border ${
+                              title={row.item.isActive === false ? 'Activar' : 'Desactivar'}
+                              className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all border ${
                                 row.item.isActive === false
                                   ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10'
                                   : 'border-brand-red text-brand-red hover:bg-brand-red/10'
                               }`}
                             >
-                              {row.item.isActive === false ? 'Activar' : 'Desactivar'}
+                              <Power size={14} />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => setDeletingItem(row.item)}
                             title="Eliminar producto"
-                            className="p-2 rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -317,42 +323,47 @@ const InventoryStockView = ({
                   <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!row.isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
                     {!row.isActive ? 'Inactivo' : 'Activo'}
                   </div>
-                  <div className="flex flex-wrap gap-2 w-full sm:w-auto min-w-0">
+                  <div className="grid grid-cols-4 gap-2 w-full">
                     <button
                       type="button"
                       onClick={() => setEditingItem(row.item)}
-                      className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
                     >
-                      Stock
+                      <Pencil size={14} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Stock</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setDetailsItem(row.item)}
-                      className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
                     >
-                      Detalles
+                      <Settings2 size={14} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Detalles</span>
                     </button>
                     {row.isPackaging ? (
-                      <div className="text-center text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
-                        Fijo
+                      <div className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
+                        <Lock size={14} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Fijo</span>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => onToggleStatus(row.item.name, row.item.isActive ?? true)}
-                        className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
+                        className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all border ${
                           row.item.isActive === false ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' : 'border-brand-red text-brand-red hover:bg-brand-red/10'
                         }`}
                       >
-                        {row.item.isActive === false ? 'Activar' : 'Desactivar'}
+                        <Power size={14} />
+                        <span className="text-[9px] font-black uppercase tracking-widest">{row.item.isActive === false ? 'Activar' : 'Desactivar'}</span>
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => setDeletingItem(row.item)}
-                      className="p-2 rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
                     >
                       <Trash2 size={14} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Eliminar</span>
                     </button>
                   </div>
                 </div>

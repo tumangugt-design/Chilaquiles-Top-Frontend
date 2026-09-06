@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { PlusCircle, Search, ClipboardList, ArrowRight } from 'lucide-react'
+import { PlusCircle, Search } from 'lucide-react'
 import EntryFormModal from './EntryFormModal.jsx'
 import { formatInventoryAmount } from '../../shared/utils/inventoryFormat.js'
 
@@ -30,7 +30,7 @@ const isSameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth(
  * para evitar que el mismo dato (costo de porción) se edite desde dos
  * lugares distintos.
  */
-const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfig, isSaving, onSubmitEntry, onNavigateToRecipeBook }) => {
+const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfig, isSaving, onSubmitEntry }) => {
   const [entryModalOpen, setEntryModalOpen] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
 
@@ -92,7 +92,7 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 sm:gap-6 min-w-0">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 min-w-0">
         {/* Historial de Entradas */}
         <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
           <div className="border-b border-ui-border pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -201,27 +201,6 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
               </div>
             </>
           )}
-        </div>
-
-        {/* Puntero a Recetario — la configuración de porciones y costo vive allá */}
-        <div className="rounded-[2rem] border border-dashed border-brand-blue/30 bg-brand-blue/5 p-6 flex flex-col justify-between gap-4 min-w-0">
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-brand-blue">
-              <ClipboardList size={20} />
-            </div>
-            <h3 className="text-base font-black text-ui-text leading-tight">Consumo por plato y costo por porción</h3>
-            <p className="text-xs text-ui-muted font-bold leading-relaxed">
-              Configura cuánto se consume de cada insumo por plato (o por pedido) y revisa su costo en <span className="text-ui-text">Recetario</span>. El costo por porción se recalcula automáticamente a partir de tus compras — ya no se edita manualmente aquí.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onNavigateToRecipeBook}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-blue text-white text-[10px] font-black uppercase tracking-widest shadow-md hover:shadow-lg transition-all"
-          >
-            Ir a Recetario
-            <ArrowRight size={14} />
-          </button>
         </div>
       </div>
 

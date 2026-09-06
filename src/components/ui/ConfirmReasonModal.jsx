@@ -40,7 +40,6 @@ const ConfirmReasonModal = ({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={reasonPlaceholder}
-            autoFocus
             required
           />
         </div>

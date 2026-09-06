@@ -61,7 +61,6 @@ const EntryFormModal = ({ isOpen, onClose, inventory, isSaving, onSubmit }) => {
             className="w-full p-4 rounded-2xl border border-ui-border bg-ui-bg outline-none transition-all font-bold"
             value={form.name}
             onChange={(e) => handleProductChange(e.target.value)}
-            autoFocus
           >
             <option value="">Selecciona un producto</option>
             {dynamicInventoryOptions.map((product) => (

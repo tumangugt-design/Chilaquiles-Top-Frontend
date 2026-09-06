@@ -45,7 +45,6 @@ const StockEditModal = ({ isOpen, onClose, item, meta, isSaving, onSave }) => {
               value={stock}
               onChange={(e) => setStock(e.target.value)}
               placeholder="Cantidad"
-              autoFocus
             />
           </div>
           <div className="space-y-2">

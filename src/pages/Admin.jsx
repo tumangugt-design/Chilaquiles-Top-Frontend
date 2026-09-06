@@ -66,7 +66,9 @@ import {
   ChefHat,
   Truck,
   PackagePlus,
-  ClipboardList
+  ClipboardList,
+  ChevronDown,
+  Trash2
 } from 'lucide-react'
 import AdminNavbar from '../components/layout/AdminNavbar.jsx'
 import {
@@ -689,6 +691,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
   const [recipeCategoryFilter, setRecipeCategoryFilter] = useState('ALL')
   const [recalcTarget, setRecalcTarget] = useState(null) // { name, label }
+  const [portionDeleteTarget, setPortionDeleteTarget] = useState(null) // { name, label }
   const [coupons, setCoupons] = useState([])
   const [newCouponCode, setNewCouponCode] = useState('')
   const [newCouponDiscountPercent, setNewCouponDiscountPercent] = useState('10')
@@ -2297,7 +2300,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           getProductPortionConfig={getProductPortionConfig}
           isSaving={isSaving}
           onSubmitEntry={submitInventoryEntry}
-          onNavigateToRecipeBook={() => setActiveTab('recipe_book')}
         />
       )}
 
@@ -3571,9 +3573,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Configura las porciones e insumos consumidos por plato y su costo.</p>
             </div>
             <div className="relative w-full sm:w-64">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={16} />
               <select 
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+                className="w-full appearance-none pl-11 pr-9 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none cursor-pointer"
                 value={recipeCategoryFilter}
                 onChange={(e) => setRecipeCategoryFilter(e.target.value)}
               >
@@ -3585,6 +3587,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <option value="Complementos">Complementos</option>
                 <option value="Empaque">Empaque</option>
               </select>
+              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={14} />
             </div>
           </div>
 
@@ -3633,6 +3636,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                         }
                       }}
                       onRequestRecalculate={() => setRecalcTarget({ name: portion.name, label })}
+                      onRequestDelete={() => setPortionDeleteTarget({ name: portion.name, label })}
                     />
                   )
                 })
@@ -3648,6 +3652,18 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             reasonPlaceholder="Ej. Verificación de costos, última compra actualizada..."
             isSaving={isSaving}
             onConfirm={(reason) => recalcTarget ? handleRecalculatePrice(recalcTarget.name, recalcTarget.label, reason) : false}
+          />
+
+          <ConfirmReasonModal
+            isOpen={!!portionDeleteTarget}
+            onClose={() => setPortionDeleteTarget(null)}
+            title="Eliminar ingrediente"
+            subtitle={portionDeleteTarget ? `"${portionDeleteTarget.label}" se eliminará por completo del inventario y del recetario.` : ''}
+            confirmLabel="Eliminar"
+            danger
+            reasonPlaceholder="Ej. ingrediente de prueba, ya no se usa..."
+            isSaving={isSaving}
+            onConfirm={(reason) => portionDeleteTarget ? handleDeleteInventoryItemAction(portionDeleteTarget.name, reason) : false}
           />
         </div>
       )}
@@ -3833,7 +3849,7 @@ const getIngredientSvg = (name, category = '') => {
   )
 }
 
-const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSave, onRequestRecalculate, isReadOnly }) => {
+const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSave, onRequestRecalculate, onRequestDelete, isReadOnly }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editQty, setEditQty] = useState(portion.usedPerPlate)
   const [editUnit, setEditUnit] = useState(portion.unit)
@@ -4012,13 +4028,23 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSav
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="px-5 py-2.5 bg-ui-bg hover:bg-ui-bg/80 text-ui-text border border-ui-border text-[10px] font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95"
-            >
-              Editar
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="px-5 py-2.5 bg-ui-bg hover:bg-ui-bg/80 text-ui-text border border-ui-border text-[10px] font-black uppercase tracking-wider rounded-2xl transition-all active:scale-95"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={onRequestDelete}
+                title="Eliminar ingrediente"
+                className="w-10 h-10 flex items-center justify-center rounded-2xl border border-brand-red/20 text-brand-red hover:bg-brand-red/10 transition-all active:scale-95"
+              >
+                <Trash2 size={15} />
+              </button>
+            </>
           )}
         </div>
 
