@@ -26,6 +26,7 @@ import {
   getPromotions,
   updatePromotions,
   getFinancesSummary,
+  getPromotionsProfitability,
   getTaxConfig,
   updateTaxConfig,
   getIngredientCostHistory,
@@ -42,8 +43,6 @@ import {
   createPackagingProduct,
   getCoupons,
   updateCoupons,
-  sendPromotionBlast,
-  getCampaignHistory,
   generateMarketingMessage
 } from '../shared/config/api.js'
 import { playNotificationSound } from '../shared/utils/notifications.js'
@@ -221,6 +220,10 @@ const resetPromoFormState = () => ({
   startDate: '',
   endDate: '',
   imageUrl: '',
+  // Umbral opcional de alerta (solo visual, nunca pausa nada solo): si el
+  // margen en vivo de esta promo cae bajo este %, se marca en rojo. Vacio =
+  // usa el umbral por defecto (ver DEFAULT_MARGIN_ALERT_PERCENT).
+  minMarginAlertPercent: '',
   constraints: {
     sauce: 'ALL',
     protein: 'ALL',
@@ -544,6 +547,7 @@ const ManagementUserCard = ({ user, titleLabel, subtitleLabel, badgeValue, onOpe
 const AdminPage = ({ authSession, onProfileClick }) => {
   const { session, logout } = authSession
   const [activeTab, setActiveTab] = useState('staff')
+  const [purchasesMode, setPurchasesMode] = useState('materia_prima') // 'materia_prima' (Compras/Lotes, FIFO) | 'directa' (uso inmediato, ex-Entradas)
   const [orderFilter, setOrderFilter] = useState('all')
   const [inventory, setInventory] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -568,6 +572,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [financesSummary, setFinancesSummary] = useState(null)
   const [financesLoading, setFinancesLoading] = useState(false)
+  const [promoProfitability, setPromoProfitability] = useState(null)
   const [taxConfigForm, setTaxConfigForm] = useState(null)
   const [taxConfigOpen, setTaxConfigOpen] = useState(false)
   const [taxConfigSaving, setTaxConfigSaving] = useState(false)
@@ -588,6 +593,11 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [promoForStudio, setPromoForStudio] = useState(null)
   const [zoomedImage, setZoomedImage] = useState(null)
   const [promoForm, setPromoForm] = useState(resetPromoFormState())
+  // 'list' = panel limpio con las promos creadas (vista por defecto);
+  // 'form' = calculadora + formulario de creacion/edicion, a pantalla completa.
+  // Antes ambas convivian siempre en la misma pantalla - esto es lo que
+  // resuelve la queja de "veo lo mismo siempre, todo igual de expandido".
+  const [promoViewMode, setPromoViewMode] = useState('list')
   const [simulatedCosts, setSimulatedCosts] = useState({})
   const defaultCalcPlateConfig = () => ({
     sauce: null,
@@ -602,18 +612,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   
   const [portions, setPortions] = useState([])
   const [packagingModalOpen, setPackagingModalOpen] = useState(false)
-  const [campaigns, setCampaigns] = useState([])
-  const [blastForm, setBlastForm] = useState({ 
-    promotionId: '', 
-    promoName: '',
-    description: '', 
-    price: '',
-    validUntil: '',
-    marketingMessage: '',
-    imageUrl: '' 
-  })
-  const [isSendingBlast, setIsSendingBlast] = useState(false)
-  const [isGeneratingMessage, setIsGeneratingMessage] = useState(false)
   const [isGeneratingPromoMarketing, setIsGeneratingPromoMarketing] = useState(false)
 
   const getDbNameFromValue = (value, category) => {
@@ -767,30 +765,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     setPlatesCountInput('2')
   }
 
-  const handleGenerateMarketingMessage = async (e) => {
-    e.preventDefault()
-    if (!blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil) {
-      toast.error('Llena nombre, descripción, precio y vigencia antes de generar el mensaje.')
-      return
-    }
-
-    setIsGeneratingMessage(true)
-    try {
-      const res = await generateMarketingMessage({
-        promoName: blastForm.promoName,
-        description: blastForm.description,
-        price: blastForm.price,
-        validUntil: blastForm.validUntil
-      })
-      setBlastForm(prev => ({ ...prev, marketingMessage: res.data.marketingMessage }))
-      toast.success('Mensaje generado exitosamente ✨')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al generar el mensaje')
-    } finally {
-      setIsGeneratingMessage(false)
-    }
-  }
-
   const handleAutoGeneratePromoMarketing = async (e) => {
     e.preventDefault()
     const rawPrice = promoForm.promoPrice || calcPromoPrice
@@ -819,47 +793,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       toast.error(err.response?.data?.message || 'Error al generar el mensaje de marketing')
     } finally {
       setIsGeneratingPromoMarketing(false)
-    }
-  }
-
-  const handleSendBlast = async (e) => {
-    e.preventDefault()
-    if (!blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil || !blastForm.marketingMessage || !blastForm.imageUrl) {
-      toast.error('Todos los campos son obligatorios.')
-      return
-    }
-    
-    const confirm = await Swal.fire({
-      title: '¿Enviar a todos?',
-      text: 'Se enviará esta promoción a TODOS los clientes por WhatsApp.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, enviar masivamente',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#3b82f6',
-      cancelButtonColor: '#ef4444'
-    })
-
-    if (!confirm.isConfirmed) return
-
-    setIsSendingBlast(true)
-    try {
-      await sendPromotionBlast(blastForm)
-      toast.success('El envío masivo ha iniciado en segundo plano.')
-      setBlastForm({ 
-        promotionId: '', 
-        promoName: '',
-        description: '', 
-        price: '',
-        validUntil: '',
-        marketingMessage: '',
-        imageUrl: '' 
-      })
-      loadData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al enviar campañas')
-    } finally {
-      setIsSendingBlast(false)
     }
   }
 
@@ -940,6 +873,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     } finally {
       setFinancesLoading(false)
     }
+
+    // Reporte de rentabilidad real por promocion - independiente del resumen
+    // de arriba, para que un error aqui no tumbe el resto de Finanzas.
+    try {
+      const promoResponse = await getPromotionsProfitability()
+      setPromoProfitability(promoResponse.data.data || promoResponse.data)
+    } catch (err) {
+      // silencioso: es una seccion adicional, no bloquea el resto de Finanzas
+    }
   }
 
   const handleSaveTaxConfig = async () => {
@@ -1008,17 +950,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setOrdersCache((prev) => ({ ...prev, [orderFilter]: orders }))
       } else if (activeTab === 'staff') {
         await Promise.all([loadRoleUsers('CHEF'), loadRoleUsers('REPARTIDOR')])
-      } else if (['entries', 'inventory'].includes(activeTab)) {
-        const [inventoryResponse, logsResponse, portionsResponse, suppliersResponse] = await Promise.all([
+      } else if (activeTab === 'inventory') {
+        const [inventoryResponse, portionsResponse, suppliersResponse] = await Promise.all([
           getInventory(),
-          activeTab === 'entries' ? getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
           getPortions().catch(() => ({ data: [] })),
           getSuppliers().catch(() => ({ data: [] }))
         ])
         setInventory(inventoryResponse.data)
         setPortions(portionsResponse.data || [])
         setSuppliers(suppliersResponse.data || [])
-        if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
         const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse, couponsResponse] = await Promise.all([
           getPromotions(),
@@ -1032,13 +972,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         setPortions(portionsResponse.data || [])
         setSimulatedCosts(lastPurchasesResponse.data || {})
         setCoupons(couponsResponse.data || [])
-      } else if (activeTab === 'campaigns') {
-        const [campaignsResponse, promotionsResponse] = await Promise.all([
-          getCampaignHistory().catch(() => ({ data: [] })),
-          getPromotions().catch(() => ({ data: [] }))
-        ])
-        setCampaigns(campaignsResponse.data || [])
-        setPromotions(promotionsResponse.data || [])
       } else if (activeTab === 'recipe_book') {
         const [portionsResponse, inventoryResponse, lastPurchasesResponse, purchasesResponse, productionBatchesResponse] = await Promise.all([
           getPortions().catch(() => ({ data: [] })),
@@ -1073,14 +1006,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         const suppliersResponse = await getSuppliers().catch(() => ({ data: [] }))
         setSuppliers(suppliersResponse.data || [])
       } else if (activeTab === 'purchases') {
-        const [purchasesResponse, suppliersResponse, inventoryResponse] = await Promise.all([
+        // Compras agrupa ambos flujos de adquisicion: materia prima en bruto
+        // (Purchase/FIFO) y compra directa de uso inmediato (ex-Entradas,
+        // saveInventoryItem). Se cargan ambos data sets sin importar el modo
+        // activo para que cambiar el segmentado no dispare otro fetch.
+        const [purchasesResponse, suppliersResponse, inventoryResponse, logsResponse] = await Promise.all([
           getPurchases().catch(() => ({ data: [] })),
           getSuppliers().catch(() => ({ data: [] })),
-          getInventory().catch(() => ({ data: [] }))
+          getInventory().catch(() => ({ data: [] })),
+          getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] }))
         ])
         setPurchases(purchasesResponse.data || [])
         setSuppliers(suppliersResponse.data || [])
         setInventory(inventoryResponse.data || [])
+        setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
         setAllocationsByPurchase({})
       }
     } catch (err) {
@@ -1658,6 +1597,83 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const getPromoTotalCost = () => {
     return calcPlates.reduce((total, plate) => total + calculatePlateRecipeCost(plate), 0)
   }
+
+  // --- Costo EN VIVO para promociones (usa el lote FIFO vigente, no el precio congelado) ---
+  // En promociones no aplican las reglas del menu estandar (sobre-stock,
+  // feriados, etc. - Denilson las disena a mano), asi que este costeo es
+  // deliberadamente independiente del costeo del menu fijo: solo usa
+  // currentBatchCost (el lote FIFO que se consumiria en la proxima venta,
+  // ver getInventoryItems) para reflejar lo que en verdad se pagaria hoy.
+
+  const BASE_KEY_BY_INGREDIENT = { crema: 'cream', cebolla: 'onion', cilantro: 'cilantro' }
+
+  // Convierte el shape guardado de un plato de promo ({sauce, protein, complement, baseRecipe})
+  // al shape que ya entienden getSelectedRecipeRows/getPackagingRows ({..., selectedBases}).
+  const promoPlateToCalcPlate = (plate = {}) => ({
+    sauce: plate.sauce,
+    protein: plate.protein,
+    complement: plate.complement,
+    packagingOverrides: plate.packagingOverrides || null,
+    selectedBases: BASE_INGREDIENT_NAMES.filter((base) => plate.baseRecipe?.[BASE_KEY_BY_INGREDIENT[base]] !== false),
+  })
+
+  const getLiveIngredientUnitCost = (name) => {
+    const normalized = String(name || '').trim().toLowerCase()
+    const product = inventory.find((i) => i.name === normalized)
+    if (product && product.currentBatchCost !== undefined && product.currentBatchCost !== null) {
+      return Number(product.currentBatchCost) || 0
+    }
+    return Number(product?.lastPrice || 0)
+  }
+
+  const calculatePlateRecipeCostLive = (plate) => {
+    const recipeCost = getSelectedRecipeRows(plate).reduce((total, item) => {
+      return total + getLiveIngredientUnitCost(item.name) * Number(item.usedAmount || 0)
+    }, 0)
+    const packagingCost = getPackagingRows(plate).reduce((total, item) => {
+      return total + getLiveIngredientUnitCost(item.name) * Number(item.qty || 0)
+    }, 0)
+    return recipeCost + packagingCost
+  }
+
+  // Utilidad en vivo de una promocion YA GUARDADA (usa promo.plates, el shape
+  // que persiste updatePromotions). Devuelve null cuando es una promo de
+  // formato legado sin plates[] explicito - no se puede recalcular con
+  // certeza y se muestra el valor historico (estimatedMargin) en su lugar.
+  const getPromoLiveProfitability = (promo) => {
+    if (!Array.isArray(promo?.plates) || promo.plates.length === 0) return null
+
+    const currentCost = promo.plates.reduce((total, rawPlate) => {
+      return total + calculatePlateRecipeCostLive(promoPlateToCalcPlate(rawPlate))
+    }, 0)
+
+    const price = Number(promo.promoPrice ?? promo.price ?? 0)
+    if (!price) return { currentCost: Number(currentCost.toFixed(2)), currentProfit: null, currentMargin: null }
+
+    const currentProfit = price - currentCost
+    const currentMargin = (currentProfit / price) * 100
+
+    return {
+      currentCost: Number(currentCost.toFixed(2)),
+      currentProfit: Number(currentProfit.toFixed(2)),
+      currentMargin: Number(currentMargin.toFixed(1)),
+    }
+  }
+
+  const DEFAULT_MARGIN_ALERT_PERCENT = 15
+
+  // Semaforo: nunca pausa nada solo (decision confirmada) - solo determina
+  // el color con el que se muestra el margen en vivo.
+  const getPromoMarginStatus = (promo, live) => {
+    if (!live || live.currentMargin === null || live.currentMargin === undefined) return 'sin-datos'
+    const threshold = (promo.minMarginAlertPercent !== undefined && promo.minMarginAlertPercent !== null && promo.minMarginAlertPercent !== '')
+      ? Number(promo.minMarginAlertPercent)
+      : DEFAULT_MARGIN_ALERT_PERCENT
+    if (live.currentMargin < 0) return 'rojo'
+    if (live.currentMargin < threshold) return 'amarillo'
+    return 'verde'
+  }
+
   const handlePromoImageChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -1780,64 +1796,17 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       setPromotions(updatedPromos)
       toast.success(promoForm.id ? 'Promoción actualizada con éxito' : 'Promoción creada con éxito')
       resetPromoForm()
+      setPromoViewMode('list')
     } catch (err) {
-      toast.error('No se pudo guardar la promoción')
+      const backendErrors = err.response?.data?.errors
+      toast.error(backendErrors?.length ? backendErrors.join(' ') : (err.response?.data?.message || 'No se pudo guardar la promoción'))
     } finally {
       setIsSaving(false)
     }
   }
 
-  const generateAndSetMarketingMessage = async (formState) => {
-    if (!formState.promoName || !formState.description || !formState.price || !formState.validUntil) return;
-    setIsGeneratingMessage(true);
-    try {
-      const res = await generateMarketingMessage({
-        promoName: formState.promoName,
-        description: formState.description,
-        price: formState.price,
-        validUntil: formState.validUntil
-      });
-      setBlastForm(prev => ({ ...prev, marketingMessage: res.data.marketingMessage }));
-      toast.success('Mensaje generado automáticamente ✨');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al auto-generar el mensaje');
-    } finally {
-      setIsGeneratingMessage(false);
-    }
-  };
-
-  const handleSendWhatsAppCampaign = (draft) => {
-    const pid = draft.promotionId || draft.promotionData?.id || '';
-    const promo = promotions.find(p => p.id === pid);
-    
-    let formattedDate = ''
-    if (promo?.endDate) {
-      try {
-        formattedDate = new Date(promo.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
-      } catch(e){}
-    }
-
-    const newState = {
-      promotionId: pid,
-      promoName: promo?.name || draft.promotionData?.name || '',
-      description: promo?.contentDescription || promo?.description || '',
-      price: promo?.promoPrice ? `Q${promo.promoPrice}` : '',
-      validUntil: formattedDate,
-      imageUrl: draft.visual?.imageUrl || '',
-      message: '',
-      marketingMessage: '',
-      scheduledAt: ''
-    };
-
-    setBlastForm(newState);
-    setActiveTab('campaigns');
-
-    if (newState.promoName && newState.description) {
-      generateAndSetMarketingMessage(newState);
-    }
-  }
-
   const handleEditPromotion = (promo) => {
+    setPromoViewMode('form')
     const countVal = String(promo.requestedCount || promo.plates?.length || promo.platesCount || 2)
     setPromoForm({
       ...resetPromoFormState(),
@@ -2150,7 +2119,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
             ) : activeTab === 'content_studio' ? (
               <ContentStudio 
                 initialPromoId={promoForStudio} 
-                onSendWhatsAppCampaign={handleSendWhatsAppCampaign}
               />
             ) : activeTab === 'finances' ? (
               <div className="space-y-8 animate-fade-in">
@@ -2338,6 +2306,57 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                                       Q{(m.utilidadNetaAjustada ?? m.utilities).toFixed(2)}
                                     </td>
                                     <td className="py-4 px-6 text-right text-ui-muted">{m.orderCount}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rentabilidad REAL por promocion: junta Order.appliedPromo(s) con el
+                        costo real trazado (FIFO) de cada orden - responde si la promocion,
+                        en la practica, dio la utilidad que se penso al crearla. */}
+                    {promoProfitability && promoProfitability.promotions && promoProfitability.promotions.length > 0 && (
+                      <div className="space-y-5 mt-10">
+                        <div>
+                          <h3 className="text-xl font-black text-ui-text ml-2">Rentabilidad Real por Promoción</h3>
+                          <p className="text-xs text-ui-muted ml-2 mt-1">{promoProfitability.notas}</p>
+                        </div>
+                        <div className="rounded-[2.5rem] border border-ui-border bg-white overflow-hidden shadow-sm">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-ui-bg/60 border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
+                                  <th className="py-4 px-6">Promoción</th>
+                                  <th className="py-4 px-6 text-right">Pedidos</th>
+                                  <th className="py-4 px-6 text-right">Ventas</th>
+                                  <th className="py-4 px-6 text-right">Costo Real</th>
+                                  <th className="py-4 px-6 text-right">Utilidad Real</th>
+                                  <th className="py-4 px-6 text-right">Margen Real</th>
+                                  <th className="py-4 px-6 text-right">Cobertura</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-ui-border/60 text-xs font-bold text-ui-text">
+                                {promoProfitability.promotions.map((p) => (
+                                  <tr key={p.promotionId} className="hover:bg-ui-bg/10 transition-colors">
+                                    <td className="py-4 px-6 font-black text-sm text-ui-text">
+                                      {p.name}
+                                      {p.ordersShared > 0 && (
+                                        <span className="block text-[9px] font-bold text-ui-muted/70">{p.ordersShared} pedido(s) compartido(s) con otra promo</span>
+                                      )}
+                                    </td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">{p.ordersCount}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-brand-blue">Q{p.revenue.toFixed(2)}</td>
+                                    <td className="py-4 px-6 text-right font-bold text-brand-orange">{p.realCost !== null ? `Q${p.realCost.toFixed(2)}` : '—'}</td>
+                                    <td className={`py-4 px-6 text-right font-black ${p.realProfit === null ? 'text-ui-muted' : p.realProfit >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                                      {p.realProfit !== null ? `Q${p.realProfit.toFixed(2)}` : 'Sin datos'}
+                                    </td>
+                                    <td className={`py-4 px-6 text-right font-black ${p.realMargin === null ? 'text-ui-muted' : p.realMargin >= 0 ? 'text-green-600' : 'text-brand-red'}`}>
+                                      {p.realMargin !== null ? `${p.realMargin.toFixed(1)}%` : '—'}
+                                    </td>
+                                    <td className="py-4 px-6 text-right text-ui-muted">{p.coberturaCostoRealPct}%</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -2606,16 +2625,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         </div>
       )}
 
-      {activeTab === 'entries' && (
-        <InventoryEntriesView
-          inventory={inventory}
-          inventoryLogs={inventoryLogs}
-          getProductPortionConfig={getProductPortionConfig}
-          isSaving={isSaving}
-          onSubmitEntry={submitInventoryEntry}
-        />
-      )}
-
       {activeTab === 'inventory' && (
         <InventoryStockView
           inventory={inventory}
@@ -2646,15 +2655,55 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       )}
 
       {activeTab === 'purchases' && (
-        <PurchasesView
-          purchases={purchases}
-          suppliers={suppliers}
-          inventory={inventory}
-          isSaving={isSaving}
-          allocationsByPurchase={allocationsByPurchase}
-          onCreatePurchase={handleCreatePurchase}
-          onLoadAllocations={handleLoadPurchaseAllocations}
-        />
+        <div className="space-y-6 animate-fade-in min-w-0">
+          {/* Compras registra TODO lo que se adquiere, sin excepcion. El
+              segmentado abajo separa como se registra segun el destino del
+              item (definido por Inventory.sourceType por producto):
+              - Materia prima: ingrediente en bruto que se va a transformar
+                en Producción (Purchase, costeo FIFO por lote).
+              - Compra directa: se guarda y se usa/vende tal cual, sin pasar
+                por una transformación (ex pestaña "Entradas"). */}
+          <div className="flex items-center gap-2 rounded-2xl border border-ui-border bg-white p-1.5 w-full sm:w-fit">
+            <button
+              type="button"
+              onClick={() => setPurchasesMode('materia_prima')}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                purchasesMode === 'materia_prima' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-ui-muted hover:text-ui-text'
+              }`}
+            >
+              Materia prima (a transformar)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPurchasesMode('directa')}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                purchasesMode === 'directa' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'text-ui-muted hover:text-ui-text'
+              }`}
+            >
+              Compra directa (uso inmediato)
+            </button>
+          </div>
+
+          {purchasesMode === 'materia_prima' ? (
+            <PurchasesView
+              purchases={purchases}
+              suppliers={suppliers}
+              inventory={inventory}
+              isSaving={isSaving}
+              allocationsByPurchase={allocationsByPurchase}
+              onCreatePurchase={handleCreatePurchase}
+              onLoadAllocations={handleLoadPurchaseAllocations}
+            />
+          ) : (
+            <InventoryEntriesView
+              inventory={inventory}
+              inventoryLogs={inventoryLogs}
+              getProductPortionConfig={getProductPortionConfig}
+              isSaving={isSaving}
+              onSubmitEntry={submitInventoryEntry}
+            />
+          )}
+        </div>
       )}
 
 
@@ -2807,9 +2856,26 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
       {activeTab === 'promotions' && (
         <div className="space-y-8 animate-fade-in">
-          <div className="grid grid-cols-1 xl:grid-cols-[1.1fr,0.9fr] gap-4 sm:gap-8 min-w-0">
-          
-          {/* Left Column: Calculator & Form */}
+
+          {promoViewMode === 'list' ? (
+            <div className="flex items-center justify-between border-b border-ui-border pb-4">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-ui-text">Promociones</h2>
+                <p className="text-sm text-ui-muted mt-1">Crea, activa y envía promociones rentables.</p>
+              </div>
+              <Button type="button" onClick={() => { resetPromoForm(); setPromoViewMode('form') }}>＋ Nueva Promoción</Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { resetPromoForm(); setPromoViewMode('list') }}
+              className="text-xs font-black uppercase tracking-widest text-brand-blue hover:underline flex items-center gap-1.5"
+            >
+              ← Volver a Promociones
+            </button>
+          )}
+
+          {promoViewMode === 'form' && (
           <div className="space-y-6 sm:space-y-8 min-w-0">
             
             {/* Interactive Cost & Profit Calculator */}
@@ -3289,6 +3355,23 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">
+                  Avisarme si el margen real cae bajo (%, opcional)
+                </label>
+                <input
+                  className="w-full p-3.5 rounded-2xl border border-ui-border bg-white outline-none font-bold"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder={`Por defecto ${DEFAULT_MARGIN_ALERT_PERCENT}%`}
+                  value={promoForm.minMarginAlertPercent}
+                  onChange={(e) => setPromoForm({ ...promoForm, minMarginAlertPercent: e.target.value })}
+                />
+                <p className="text-[10px] text-ui-muted font-bold ml-1">Solo avisa (queda en rojo en la lista) — nunca pausa la promoción sola.</p>
+              </div>
+
               {/* Profit Indicator */}
               {(() => {
                 const totalCost = getPromoTotalCost()
@@ -3317,19 +3400,20 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 <Button type="submit" className="flex-1 !py-4 animate-slide-up" disabled={isSaving}>
                   {isSaving ? 'Guardando...' : promoForm.id ? 'Actualizar Promoción' : 'Crear Promoción'}
                 </Button>
-                {promoForm.id && (
-                  <button
-                    type="button"
-                    onClick={resetPromoForm}
-                    className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
-                  >
-                    Cancelar
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => { resetPromoForm(); setPromoViewMode('list') }}
+                  className="rounded-2xl border border-ui-border bg-white px-5 text-xs font-black uppercase tracking-wider text-ui-muted transition-colors hover:bg-ui-bg"
+                >
+                  Cancelar
+                </button>
               </div>
             </form>
           </div>
+          )}
 
+          {promoViewMode === 'list' && (
+          <>
           {/* Right Column: List of Promotions */}
           <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
             <div className="border-b border-ui-border pb-3">
@@ -3427,7 +3511,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
 
                           {promo.estimatedTotalCost !== undefined && promo.estimatedTotalCost !== null && (
                             <div className="mt-3 rounded-xl border border-ui-border bg-ui-bg/60 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-black uppercase tracking-wider">
-                              <span className="text-ui-muted">Costo: <b className="text-ui-text">Q{Number(promo.estimatedTotalCost || 0).toFixed(2)}</b></span>
+                              <span className="text-ui-muted">Costo al crearla: <b className="text-ui-text">Q{Number(promo.estimatedTotalCost || 0).toFixed(2)}</b></span>
                               {promo.estimatedProfit !== null && promo.estimatedProfit !== undefined && (
                                 <span className={Number(promo.estimatedProfit) >= 0 ? 'text-green-700' : 'text-brand-red'}>
                                   Ganancia: Q{Number(promo.estimatedProfit || 0).toFixed(2)}
@@ -3438,19 +3522,45 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                               )}
                             </div>
                           )}
+
+                          {(() => {
+                            const live = getPromoLiveProfitability(promo)
+                            if (!live || live.currentMargin === null || live.currentMargin === undefined) return null
+                            const status = getPromoMarginStatus(promo, live)
+                            const styles = {
+                              verde: 'border-green-200 bg-green-50 text-green-700',
+                              amarillo: 'border-amber-200 bg-amber-50 text-amber-700',
+                              rojo: 'border-red-200 bg-red-50 text-brand-red',
+                            }[status] || 'border-ui-border bg-ui-bg text-ui-muted'
+                            const icon = { verde: '✅', amarillo: '⚠️', rojo: '🔴' }[status] || 'ℹ️'
+                            return (
+                              <div className={`mt-2 rounded-xl border p-3 flex items-center justify-between text-[10px] font-black uppercase tracking-wider ${styles}`}>
+                                <span>{icon} Margen real ahora mismo (lote vigente):</span>
+                                <span className="text-xs">Q{live.currentCost.toFixed(2)} costo · {live.currentMargin.toFixed(1)}%</span>
+                              </div>
+                            )
+                          })()}
                         </div>
                         
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePromoStatus(promo.id, promo.isActive)}
-                          className={`shrink-0 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
-                            promo.isActive
-                              ? 'bg-green-500/10 text-green-700 border-green-500/30'
-                              : 'bg-ui-bg text-ui-muted border-ui-border'
-                          }`}
-                        >
-                          {promo.isActive ? 'Activo' : 'Inactivo'}
-                        </button>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          {promo.deactivatedReason === 'expired' ? (
+                            <span className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border bg-ui-bg text-ui-muted border-ui-border">
+                              Vencida
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePromoStatus(promo.id, promo.isActive)}
+                              className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-colors ${
+                                promo.isActive
+                                  ? 'bg-green-500/10 text-green-700 border-green-500/30'
+                                  : 'bg-ui-bg text-ui-muted border-ui-border'
+                              }`}
+                            >
+                              {promo.isActive ? 'Activo' : 'Pausada'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -3475,7 +3585,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                           }}
                           className="text-brand-blue hover:underline font-black"
                         >
-                          Generar Arte
+                          Crear Pieza
                         </button>
                         <button
                           type="button"
@@ -3504,8 +3614,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               )}
             </div>
           </div>
-        </div>
-          
+
           {/* Coupon Management Panel */}
           <div className="rounded-[2.5rem] border border-ui-border bg-white p-6 sm:p-8 shadow-sm space-y-6">
             <div className="border-b border-ui-border pb-4">
@@ -3654,184 +3763,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {activeTab === 'campaigns' && (
-        <div className="space-y-8 animate-fade-in">
-          <div className="border-b border-ui-border pb-4">
-            <h2 className="text-2xl font-black tracking-tight text-ui-text">Campañas de WhatsApp</h2>
-            <p className="text-sm text-ui-muted mt-1">Envía promociones masivas a todos los clientes registrados.</p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
-              <h3 className="text-xl font-black text-ui-text">Nueva Campaña</h3>
-              <form onSubmit={handleSendBlast} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">Promoción (Opcional)</label>
-                  <select
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text font-bold"
-                    value={blastForm.promotionId}
-                    onChange={(e) => {
-                      const promo = promotions.find(p => p.id === e.target.value)
-                      let formattedDate = ''
-                      if (promo?.endDate) {
-                        try {
-                          formattedDate = new Date(promo.endDate).toLocaleDateString('es-GT', { timeZone: 'America/Guatemala' })
-                        } catch(e){}
-                      }
-                      const newState = { 
-                        ...blastForm, 
-                        promotionId: e.target.value,
-                        promoName: promo?.name || '',
-                        description: promo?.contentDescription || promo?.description || '',
-                        price: promo?.promoPrice ? `Q${promo.promoPrice}` : '',
-                        validUntil: formattedDate
-                      };
-                      setBlastForm(newState);
-                      if (newState.promoName && newState.description) {
-                        generateAndSetMarketingMessage(newState);
-                      }
-                    }}
-                  >
-                    <option value="">-- Seleccionar promoción --</option>
-                    {promotions.filter(p => p.isActive).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">Nombre de la promoción {'{{1}}'}</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
-                    value={blastForm.promoName}
-                    onChange={(e) => setBlastForm({ ...blastForm, promoName: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">Descripción (Ingredientes/Cantidades) {'{{2}}'}</label>
-                  <textarea
-                    required
-                    rows={2}
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
-                    value={blastForm.description}
-                    onChange={(e) => setBlastForm({ ...blastForm, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-ui-text mb-1.5">Precio {'{{3}}'}</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
-                      value={blastForm.price}
-                      onChange={(e) => setBlastForm({ ...blastForm, price: e.target.value })}
-                      placeholder="Ej. Q55"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-ui-text mb-1.5">Vigencia {'{{4}}'}</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
-                      value={blastForm.validUntil}
-                      onChange={(e) => setBlastForm({ ...blastForm, validUntil: e.target.value })}
-                      placeholder="Ej. 15 de Mayo"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="block text-sm font-bold text-ui-text">Mensaje de Marketing {'{{5}}'}</label>
-                    <button 
-                      type="button" 
-                      onClick={handleGenerateMarketingMessage}
-                      disabled={isGeneratingMessage || !blastForm.promoName || !blastForm.description || !blastForm.price || !blastForm.validUntil}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-                    >
-                      {isGeneratingMessage ? 'Generando...' : '✨ Generar con IA'}
-                    </button>
-                  </div>
-                  <textarea
-                    required
-                    rows={3}
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text resize-none"
-                    value={blastForm.marketingMessage}
-                    onChange={(e) => setBlastForm({ ...blastForm, marketingMessage: e.target.value })}
-                    placeholder="Genera un mensaje atractivo usando el botón de arriba, o escríbelo tú mismo."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-ui-text mb-1.5">URL de Imagen (Para el Header)</label>
-                  <input
-                    type="url"
-                    required
-                    className="w-full p-3 rounded-xl border border-ui-border bg-white text-ui-text"
-                    value={blastForm.imageUrl}
-                    onChange={(e) => setBlastForm({ ...blastForm, imageUrl: e.target.value })}
-                    placeholder="https://ejemplo.com/imagen.jpg (Debe ser pública)"
-                  />
-                </div>
-                
-                <Button type="submit" disabled={isSendingBlast || !blastForm.imageUrl || !blastForm.description || !blastForm.promoName || !blastForm.price || !blastForm.validUntil || !blastForm.marketingMessage} className="w-full !py-4 !text-lg mt-4">
-                  {isSendingBlast ? 'Iniciando...' : 'Enviar Promoción Masiva'}
-                </Button>
-              </form>
-            </div>
-
-            <div className="space-y-8">
-              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6">
-                <h3 className="text-xl font-black text-ui-text">Vista Previa</h3>
-                <div className="rounded-2xl border border-[#d1d7db] bg-[#efeae2] p-4 font-sans text-sm shadow-inner max-w-sm mx-auto overflow-hidden relative">
-                  <div className="absolute inset-0 opacity-10 bg-[url('https://static.whatsapp.net/rsrc.php/v3/yO/r/Fs5XhLpYtEE.png')] bg-repeat" />
-                  <div className="bg-white rounded-xl p-2 shadow-sm rounded-tl-none relative z-10 w-11/12 ml-2">
-                    {blastForm.imageUrl ? (
-                      <img src={blastForm.imageUrl} alt="Promo" className="w-full h-auto rounded-lg mb-2 object-cover max-h-48" onError={(e) => e.target.src = 'https://placehold.co/400x300?text=Imagen+Inv%C3%A1lida'} />
-                    ) : (
-                      <div className="w-full h-32 bg-gray-200 rounded-lg mb-2 flex items-center justify-center text-gray-400 font-bold">Imagen</div>
-                    )}
-                    <p className="font-bold text-gray-800 mb-1">*Chilaquiles Top* 🧑🏻‍🍳</p>
-                    <p className="text-gray-800 whitespace-pre-wrap mt-2">🔥 {blastForm.promoName || '{{1}}'}</p>
-                    <p className="text-gray-800 whitespace-pre-wrap mt-2">✨ {blastForm.marketingMessage || '{{5}}'}</p>
-                    <p className="text-gray-800 whitespace-pre-wrap mt-2">🍽️ {blastForm.description || '{{2}}'}</p>
-                    <p className="text-gray-800 mt-2">💰 Solo por: {blastForm.price || '{{3}}'}</p>
-                    <p className="text-gray-800">⏰ Válido hasta: {blastForm.validUntil || '{{4}}'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[2.5rem] border border-ui-border bg-ui-bg/40 p-6 sm:p-8 space-y-6 max-h-96 overflow-y-auto">
-                <h3 className="text-xl font-black text-ui-text">Historial de Campañas</h3>
-                {campaigns.length === 0 ? (
-                  <p className="text-ui-muted text-sm font-bold text-center">No hay campañas enviadas.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {campaigns.map(c => (
-                      <div key={c._id} className="p-4 rounded-xl bg-white border border-ui-border shadow-sm flex flex-col">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-xs font-black text-ui-muted uppercase tracking-widest">{formatDate(c.createdAt)}</span>
-                          <StatusBadge value={c.status} />
-                        </div>
-                        <p className="text-sm font-bold text-ui-text line-clamp-2">{c.description}</p>
-                        <div className="text-xs font-bold mt-2 flex gap-3 text-ui-muted">
-                          <span className="text-blue-600">Total: {c.totalTarget}</span>
-                          <span className="text-green-600">Enviados: {c.sentCount}</span>
-                          <span className="text-red-600">Fallidos: {c.failedCount}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          </>
+          )}
         </div>
       )}
 
@@ -3894,8 +3827,8 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         <div className="space-y-8 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-ui-border pb-6 gap-4">
             <div>
-              <h2 className="text-3xl font-black tracking-tight text-ui-text">Recetario</h2>
-              <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Configura las porciones e insumos consumidos por plato y su costo.</p>
+              <h2 className="text-3xl font-black tracking-tight text-ui-text">Producción</h2>
+              <p className="text-sm text-ui-muted mt-1 font-bold uppercase tracking-widest">Transformación de materia prima en productos de Stock, y recetario de ensamblaje por plato.</p>
             </div>
             <div className="relative w-full sm:w-64">
               <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted pointer-events-none" size={16} />
@@ -3919,9 +3852,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           <div className="rounded-[2rem] border border-ui-border bg-white p-6 sm:p-8 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-xl font-black tracking-tight text-ui-text">Producción de lotes</h3>
+                <h3 className="text-xl font-black tracking-tight text-ui-text">Transformación (Producción de lotes)</h3>
                 <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">
-                  Combina ingredientes en bruto (Compras) en productos de Stock
+                  Combina materia prima (Compras) en un producto de Stock — el resultado se acredita automáticamente al Stock disponible
                 </p>
               </div>
               <button
@@ -3958,6 +3891,13 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                 ))}
               </div>
             )}
+          </div>
+
+          <div>
+            <h3 className="text-xl font-black tracking-tight text-ui-text">Ensamblaje (Recetario de platos)</h3>
+            <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1 mb-5">
+              Cuánto de cada producto de Stock (directo o transformado) se usa por plato u orden
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
