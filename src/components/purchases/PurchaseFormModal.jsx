@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Modal from '../ui/Modal.jsx'
+import SelectOrNewField from './SelectOrNewField.jsx'
+import { STANDARD_UNITS } from '../../shared/constants/units.js'
 
-const emptyForm = { ingredientName: '', quantity: '', unit: '', totalCost: '', supplier: '', purchaseDate: '', notes: '' }
+const emptyForm = { ingredientName: '', quantity: '', unit: '', totalCost: '', supplier: '', contactName: '', purchaseDate: '', notes: '' }
 
 const toDateInputValue = (d) => {
   const date = d ? new Date(d) : new Date()
@@ -13,8 +15,12 @@ const toDateInputValue = (d) => {
  * Modal para registrar una Compra en bruto (Fase 1-2 de Compras/Lotes).
  * Esto NO es una Entrada de Stock — es el ingreso del ingrediente crudo,
  * antes de cualquier transformación (ver PurchaseAllocationModal).
+ *
+ * `knownIngredients`: nombres de ingredientes en bruto ya usados antes (se
+ * repiten casi siempre, salvo que se agregue algo nuevo al menú) — se
+ * ofrecen para seleccionar en vez de escribir cada vez.
  */
-const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }) => {
+const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], knownIngredients = [], isSaving, onSave }) => {
   const [form, setForm] = useState(emptyForm)
 
   useEffect(() => {
@@ -24,6 +30,16 @@ const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }
   }, [isOpen])
 
   const handleChange = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const selectedSupplier = useMemo(
+    () => suppliers.find((s) => s._id === form.supplier) || null,
+    [suppliers, form.supplier]
+  )
+  const supplierContacts = selectedSupplier?.contacts || []
+
+  const handleSupplierChange = (e) => {
+    setForm((prev) => ({ ...prev, supplier: e.target.value, contactName: '' }))
+  }
 
   const canSave = form.ingredientName.trim() && Number(form.quantity) > 0 && form.unit.trim() && form.totalCost !== '' && Number(form.totalCost) >= 0
 
@@ -36,6 +52,7 @@ const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }
       unit: form.unit.trim(),
       totalCost: Number(form.totalCost),
       supplier: form.supplier || null,
+      contactName: form.contactName.trim(),
       purchaseDate: form.purchaseDate || undefined,
       notes: form.notes.trim()
     })
@@ -47,13 +64,13 @@ const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Ingrediente en bruto</label>
-          <input
-            type="text"
+          <SelectOrNewField
             value={form.ingredientName}
-            onChange={handleChange('ingredientName')}
-            placeholder="Ej. cebolla"
-            required
-            className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
+            onChange={(val) => setForm((prev) => ({ ...prev, ingredientName: val }))}
+            options={knownIngredients}
+            placeholder="Selecciona un ingrediente..."
+            newLabel="+ Nuevo ingrediente"
+            inputPlaceholder="Ej. cebolla"
           />
         </div>
 
@@ -73,14 +90,17 @@ const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad</label>
-            <input
-              type="text"
+            <select
               value={form.unit}
               onChange={handleChange('unit')}
-              placeholder="lb, kg, und..."
               required
               className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
-            />
+            >
+              <option value="" disabled>Selecciona...</option>
+              {STANDARD_UNITS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -109,18 +129,36 @@ const PurchaseFormModal = ({ isOpen, onClose, suppliers = [], isSaving, onSave }
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proveedor</label>
-          <select
-            value={form.supplier}
-            onChange={handleChange('supplier')}
-            className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
-          >
-            <option value="">Sin especificar</option>
-            {suppliers.map((s) => (
-              <option key={s._id} value={s._id}>{s.name}</option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Proveedor</label>
+            <select
+              value={form.supplier}
+              onChange={handleSupplierChange}
+              className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
+            >
+              <option value="">Sin especificar</option>
+              {suppliers.map((s) => (
+                <option key={s._id} value={s._id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Contacto</label>
+            <select
+              value={form.contactName}
+              onChange={handleChange('contactName')}
+              disabled={supplierContacts.length === 0}
+              className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none disabled:opacity-50"
+            >
+              <option value="">{supplierContacts.length === 0 ? 'Sin contactos' : 'Sin especificar'}</option>
+              {supplierContacts.map((c) => (
+                <option key={c._id || c.name} value={c.name}>
+                  {c.name}{c.phone ? ` · ${c.phone}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="space-y-2">

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Modal from '../ui/Modal.jsx'
+import SelectOrNewField from './SelectOrNewField.jsx'
+import { getCompatibleUnits } from '../../shared/constants/units.js'
 
 const emptyForm = { rawQuantityUsed: '', stockItemName: '', producedQuantity: '', producedUnit: '', notes: '' }
 
@@ -9,8 +11,12 @@ const emptyForm = { rawQuantityUsed: '', stockItemName: '', producedQuantity: ''
  * cebolla caramelizada). El costo se calcula UNA sola vez aqui y queda
  * congelado (inheritedCost / costPerProducedUnit), igual que el precio
  * de una Porcion en Entradas.
+ *
+ * `inventoryItems`: catalogo de productos de Stock ya existentes — se
+ * seleccionan de ahi para trazabilidad (en vez de escribir el nombre cada
+ * vez, lo que generaria duplicados por typos).
  */
-const PurchaseAllocationModal = ({ isOpen, onClose, purchase, isSaving, onSave }) => {
+const PurchaseAllocationModal = ({ isOpen, onClose, purchase, inventoryItems = [], isSaving, onSave }) => {
   const [form, setForm] = useState(emptyForm)
 
   useEffect(() => {
@@ -20,6 +26,24 @@ const PurchaseAllocationModal = ({ isOpen, onClose, purchase, isSaving, onSave }
   }, [isOpen, purchase])
 
   const handleChange = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const stockItemNames = useMemo(() => inventoryItems.map((i) => i.name).sort(), [inventoryItems])
+
+  const matchedInventoryItem = useMemo(
+    () => inventoryItems.find((i) => i.name === form.stockItemName) || null,
+    [inventoryItems, form.stockItemName]
+  )
+  const compatibleUnits = getCompatibleUnits(matchedInventoryItem?.unit || null)
+
+  // Si el producto de Stock elegido cambia y la unidad ya no es compatible
+  // con su unidad catalogo, la limpiamos para evitar guardar un costeo FIFO
+  // que despues no se pueda convertir.
+  useEffect(() => {
+    if (form.producedUnit && !compatibleUnits.includes(form.producedUnit)) {
+      setForm((prev) => ({ ...prev, producedUnit: '' }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedInventoryItem])
 
   const remaining = purchase ? Number(purchase.remainingQuantity) : 0
   const rawQty = Number(form.rawQuantityUsed)
@@ -70,13 +94,13 @@ const PurchaseAllocationModal = ({ isOpen, onClose, purchase, isSaving, onSave }
 
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Producto de Stock resultante</label>
-          <input
-            type="text"
+          <SelectOrNewField
             value={form.stockItemName}
-            onChange={handleChange('stockItemName')}
-            placeholder="Ej. cebolla caramelizada"
-            required
-            className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
+            onChange={(val) => setForm((prev) => ({ ...prev, stockItemName: val }))}
+            options={stockItemNames}
+            placeholder="Selecciona un producto de Stock..."
+            newLabel="+ Nuevo producto de Stock"
+            inputPlaceholder="Ej. cebolla caramelizada"
           />
         </div>
 
@@ -96,16 +120,24 @@ const PurchaseAllocationModal = ({ isOpen, onClose, purchase, isSaving, onSave }
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Unidad producida</label>
-            <input
-              type="text"
+            <select
               value={form.producedUnit}
               onChange={handleChange('producedUnit')}
-              placeholder="lb, kg, und..."
               required
               className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none"
-            />
+            >
+              <option value="" disabled>Selecciona...</option>
+              {compatibleUnits.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
           </div>
         </div>
+        {matchedInventoryItem && (
+          <p className="text-[10px] font-bold text-ui-muted -mt-2 ml-1">
+            "{matchedInventoryItem.name}" se mide en {matchedInventoryItem.unit} en Stock — solo se muestran unidades convertibles.
+          </p>
+        )}
 
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Notas</label>

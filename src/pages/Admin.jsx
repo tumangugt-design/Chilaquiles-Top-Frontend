@@ -1036,12 +1036,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         const suppliersResponse = await getSuppliers().catch(() => ({ data: [] }))
         setSuppliers(suppliersResponse.data || [])
       } else if (activeTab === 'purchases') {
-        const [purchasesResponse, suppliersResponse] = await Promise.all([
+        const [purchasesResponse, suppliersResponse, inventoryResponse] = await Promise.all([
           getPurchases().catch(() => ({ data: [] })),
-          getSuppliers().catch(() => ({ data: [] }))
+          getSuppliers().catch(() => ({ data: [] })),
+          getInventory().catch(() => ({ data: [] }))
         ])
         setPurchases(purchasesResponse.data || [])
         setSuppliers(suppliersResponse.data || [])
+        setInventory(inventoryResponse.data || [])
         setAllocationsByPurchase({})
       }
     } catch (err) {
@@ -2438,6 +2440,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         <PurchasesView
           purchases={purchases}
           suppliers={suppliers}
+          inventory={inventory}
           isSaving={isSaving}
           allocationsByPurchase={allocationsByPurchase}
           onCreatePurchase={handleCreatePurchase}

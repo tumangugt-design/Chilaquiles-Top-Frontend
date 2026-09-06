@@ -18,7 +18,7 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('es-GT', { day: '2-di
  * producto de Stock ya procesado, generando una Asignación con el costo
  * heredado congelado.
  */
-const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, onCreatePurchase, onCreateAllocation, onLoadAllocations }) => {
+const PurchasesView = ({ purchases, suppliers, inventory = [], isSaving, allocationsByPurchase, onCreatePurchase, onCreateAllocation, onLoadAllocations }) => {
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [allocationTarget, setAllocationTarget] = useState(null)
@@ -29,6 +29,14 @@ const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, 
     const q = search.trim().toLowerCase()
     return purchases.filter((p) => p.ingredientName.toLowerCase().includes(q))
   }, [purchases, search])
+
+  // Los ingredientes en bruto se repiten casi siempre (salvo que se agregue
+  // algo nuevo al menu) - se ofrecen para seleccionar en vez de escribir
+  // cada vez el nombre.
+  const knownIngredients = useMemo(
+    () => [...new Set(purchases.map((p) => p.ingredientName))].sort(),
+    [purchases]
+  )
 
   const toggleExpand = (purchase) => {
     if (expandedId === purchase._id) {
@@ -95,7 +103,7 @@ const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, 
                       )}
                     </div>
                     <p className="text-[10px] text-ui-muted font-bold uppercase tracking-widest mt-1">
-                      {fmtDate(p.purchaseDate)}{p.supplier?.name ? ` · ${p.supplier.name}` : ''}
+                      {fmtDate(p.purchaseDate)}{p.supplier?.name ? ` · ${p.supplier.name}` : ''}{p.contactName ? ` (${p.contactName})` : ''}
                     </p>
                   </div>
 
@@ -165,6 +173,7 @@ const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, 
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
         suppliers={suppliers}
+        knownIngredients={knownIngredients}
         isSaving={isSaving}
         onSave={onCreatePurchase}
       />
@@ -173,6 +182,7 @@ const PurchasesView = ({ purchases, suppliers, isSaving, allocationsByPurchase, 
         isOpen={!!allocationTarget}
         onClose={() => setAllocationTarget(null)}
         purchase={allocationTarget}
+        inventoryItems={inventory}
         isSaving={isSaving}
         onSave={onCreateAllocation}
       />

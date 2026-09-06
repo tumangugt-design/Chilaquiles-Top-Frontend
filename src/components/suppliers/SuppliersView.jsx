@@ -7,6 +7,17 @@ import SupplierFormModal from './SupplierFormModal.jsx'
  * crear/editar/eliminar. La eliminación queda bloqueada por el backend si el
  * proveedor sigue asignado a algún ingrediente en Stock.
  */
+// Compatibilidad: proveedores creados antes de contactos multiples solo
+// tienen contactName/phone/email sueltos. Los mostramos igual como si fueran
+// "un contacto".
+const getContacts = (s) => {
+  if (Array.isArray(s.contacts) && s.contacts.length > 0) return s.contacts
+  if (s.contactName || s.phone || s.email) {
+    return [{ name: s.contactName || '', phone: s.phone || '', email: s.email || '' }]
+  }
+  return []
+}
+
 const SuppliersView = ({ suppliers, isSaving, onCreate, onUpdate, onDelete }) => {
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -87,9 +98,7 @@ const SuppliersView = ({ suppliers, isSaving, onCreate, onUpdate, onDelete }) =>
               <thead>
                 <tr className="bg-ui-bg/80 border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
                   <th className="py-3 px-4">Proveedor</th>
-                  <th className="py-3 px-4">Contacto</th>
-                  <th className="py-3 px-4">Teléfono</th>
-                  <th className="py-3 px-4">Correo</th>
+                  <th className="py-3 px-4">Contactos</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -97,9 +106,21 @@ const SuppliersView = ({ suppliers, isSaving, onCreate, onUpdate, onDelete }) =>
                 {filtered.map((s) => (
                   <tr key={s._id} className="hover:bg-ui-bg/10 transition-colors">
                     <td className="py-3 px-4 font-black">{s.name}</td>
-                    <td className="py-3 px-4 text-ui-muted">{s.contactName || '—'}</td>
-                    <td className="py-3 px-4 text-ui-muted">{s.phone || '—'}</td>
-                    <td className="py-3 px-4 text-ui-muted">{s.email || '—'}</td>
+                    <td className="py-3 px-4 text-ui-muted">
+                      {getContacts(s).length === 0 ? (
+                        '—'
+                      ) : (
+                        <div className="space-y-0.5">
+                          {getContacts(s).map((c, i) => (
+                            <div key={i}>
+                              <span className="font-bold text-ui-text">{c.name || 'Sin nombre'}</span>
+                              {c.phone ? ` · ${c.phone}` : ''}
+                              {c.email ? ` · ${c.email}` : ''}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2">
                         {pendingDeleteId === s._id ? (
@@ -153,18 +174,26 @@ const SuppliersView = ({ suppliers, isSaving, onCreate, onUpdate, onDelete }) =>
               <div key={s._id} className="rounded-2xl border border-ui-border bg-white p-4 space-y-3 min-w-0">
                 <div>
                   <p className="font-black text-ui-text text-sm leading-tight">{s.name}</p>
-                  {s.contactName && <p className="text-[10px] text-ui-muted font-bold uppercase tracking-widest mt-0.5">{s.contactName}</p>}
                 </div>
-                <div className="flex flex-col gap-1 text-xs font-bold text-ui-muted">
-                  {s.phone && (
-                    <span className="flex items-center gap-1.5">
-                      <Phone size={12} /> {s.phone}
-                    </span>
-                  )}
-                  {s.email && (
-                    <span className="flex items-center gap-1.5">
-                      <Mail size={12} /> {s.email}
-                    </span>
+                <div className="flex flex-col gap-2">
+                  {getContacts(s).length === 0 ? (
+                    <p className="text-xs font-bold text-ui-muted">Sin contactos registrados</p>
+                  ) : (
+                    getContacts(s).map((c, i) => (
+                      <div key={i} className="text-xs font-bold text-ui-muted">
+                        {c.name && <p className="text-ui-text font-black">{c.name}</p>}
+                        {c.phone && (
+                          <span className="flex items-center gap-1.5">
+                            <Phone size={12} /> {c.phone}
+                          </span>
+                        )}
+                        {c.email && (
+                          <span className="flex items-center gap-1.5">
+                            <Mail size={12} /> {c.email}
+                          </span>
+                        )}
+                      </div>
+                    ))
                   )}
                 </div>
                 <div className="border-t border-ui-border pt-3 flex items-center justify-end gap-2">
