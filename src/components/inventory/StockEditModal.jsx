@@ -3,18 +3,20 @@ import Modal from '../ui/Modal.jsx'
 import { getAllowedInputUnits, convertInventoryAmountToBaseUnit } from '../../shared/constants/index.jsx'
 
 /**
- * Modal para editar el stock de un producto. Reemplaza el formulario inline
- * que antes se expandía dentro de la tarjeta/fila y desordenaba el layout.
+ * Modal para editar el stock de un producto. Cada ajuste requiere un motivo
+ * (conteo físico, merma, corrección de error, etc.) que queda en el historial.
  */
 const StockEditModal = ({ isOpen, onClose, item, meta, isSaving, onSave }) => {
   const [stock, setStock] = useState('')
   const [unit, setUnit] = useState('')
+  const [reason, setReason] = useState('')
 
   useEffect(() => {
     if (isOpen && item) {
       const allowedUnits = getAllowedInputUnits(meta)
       setStock(String(Number(item.stock || 0)))
       setUnit(allowedUnits[0]?.value || meta?.unit || item.unit || '')
+      setReason('')
     }
   }, [isOpen, item, meta])
 
@@ -24,7 +26,8 @@ const StockEditModal = ({ isOpen, onClose, item, meta, isSaving, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const ok = await onSave(item, stock, unit)
+    if (!reason.trim()) return
+    const ok = await onSave(item, stock, unit, reason.trim())
     if (ok) onClose()
   }
 
@@ -65,6 +68,18 @@ const StockEditModal = ({ isOpen, onClose, item, meta, isSaving, onSave }) => {
           </p>
         )}
 
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase text-ui-muted ml-1 tracking-widest">Motivo del ajuste (requerido)</label>
+          <textarea
+            className="w-full rounded-xl border border-ui-border bg-white px-4 py-3 text-sm font-bold text-ui-text outline-none resize-none"
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Ej. conteo físico, merma, corrección de error..."
+            required
+          />
+        </div>
+
         <div className="flex gap-2 pt-2">
           <button
             type="button"
@@ -75,7 +90,7 @@ const StockEditModal = ({ isOpen, onClose, item, meta, isSaving, onSave }) => {
           </button>
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={isSaving || !reason.trim()}
             className="flex-1 rounded-xl bg-brand-blue px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:shadow-lg disabled:opacity-60"
           >
             {isSaving ? 'Guardando...' : 'Guardar'}

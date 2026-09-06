@@ -14,35 +14,46 @@ import {
   X,
   TrendingUp,
   Gift,
-  ChevronRight
+  ChevronRight,
+  ChefHat,
+  Truck,
+  Building2
 } from 'lucide-react'
 
 const navigationSections = [
   {
-    title: 'Ventas',
+    title: 'Distribución',
     items: [
-      { id: 'orders', label: 'Pedidos', icon: ClipboardList },
       { id: 'internal_order', label: 'Nuevo Pedido', icon: PlusCircle },
+      { id: 'orders', label: 'Pedidos', icon: ClipboardList },
+      { id: 'chefs', label: 'Cocineros', icon: ChefHat },
+      { id: 'drivers', label: 'Repartidores', icon: Truck },
+    ],
+  },
+  {
+    title: 'Marketing',
+    items: [
+      { id: 'clients', label: 'Clientes', icon: UserCircle },
+      { id: 'promotions', label: 'Promociones', icon: Gift },
+      { id: 'campaigns', label: 'Campañas', icon: Gift },
+      { id: 'content_studio', label: 'Estudio Contenido', icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: 'Operaciones',
+    items: [
+      { id: 'entries', label: 'Entradas', icon: PackagePlus },
+      { id: 'inventory', label: 'Stock', icon: Box },
+      { id: 'recipe_book', label: 'Recetario', icon: ClipboardList },
     ],
   },
   {
     title: 'Gestión',
     items: [
       { id: 'staff', label: 'Personal', icon: Users },
-      { id: 'clients', label: 'Clientes', icon: UserCircle },
-      { id: 'promotions', label: 'Promociones', icon: Gift },
-      { id: 'campaigns', label: 'Campañas', icon: Gift },
-      { id: 'content_studio', label: 'Estudio Contenido', icon: LayoutDashboard },
-      { id: 'finances', label: 'Finanzas', icon: TrendingUp },
-    ],
-  },
-  {
-    title: 'Inventario',
-    items: [
-      { id: 'entries', label: 'Entradas', icon: PackagePlus },
-      { id: 'inventory', label: 'Stock', icon: Box },
-      { id: 'recipe_book', label: 'Recetario', icon: ClipboardList },
       { id: 'schedule', label: 'Horario', icon: Clock },
+      { id: 'finances', label: 'Finanzas', icon: TrendingUp },
+      { id: 'suppliers', label: 'Proveedores', icon: Building2 },
     ],
   },
 ]

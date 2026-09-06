@@ -13,8 +13,15 @@ import {
   getOrders,
   syncInventory,
   toggleInventoryStatus,
-  updateInventoryPrice,
+  recalculateInventoryPrice,
   updateInventoryStock,
+  deleteInventoryItem,
+  renameInventoryItem,
+  updateInventoryDetails,
+  getSuppliers,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier,
   getOperatingHours,
   updateOperatingHours,
   getPromotions,
@@ -83,6 +90,8 @@ import {
 } from '../components/illustrations/SauceIllustrations.jsx'
 import InventoryEntriesView from '../components/inventory/InventoryEntriesView.jsx'
 import InventoryStockView from '../components/inventory/InventoryStockView.jsx'
+import SuppliersView from '../components/suppliers/SuppliersView.jsx'
+import ConfirmReasonModal from '../components/ui/ConfirmReasonModal.jsx'
 
 
 const SCHEDULE_DAY_INDEX = {
@@ -525,6 +534,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [activeTab, setActiveTab] = useState('staff')
   const [orderFilter, setOrderFilter] = useState('all')
   const [inventory, setInventory] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [clientUsers, setClientUsers] = useState([])
   const [chefUsers, setChefUsers] = useState([])
   const [driverUsers, setDriverUsers] = useState([])
@@ -678,6 +688,7 @@ const AdminPage = ({ authSession, onProfileClick }) => {
   const [newPackagingUsedPerPlate, setNewPackagingUsedPerPlate] = useState('1')
   const [isCreatingPackaging, setIsCreatingPackaging] = useState(false)
   const [recipeCategoryFilter, setRecipeCategoryFilter] = useState('ALL')
+  const [recalcTarget, setRecalcTarget] = useState(null) // { name, label }
   const [coupons, setCoupons] = useState([])
   const [newCouponCode, setNewCouponCode] = useState('')
   const [newCouponDiscountPercent, setNewCouponDiscountPercent] = useState('10')
@@ -925,13 +936,15 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       } else if (activeTab === 'staff') {
         await Promise.all([loadRoleUsers('CHEF'), loadRoleUsers('REPARTIDOR')])
       } else if (['entries', 'inventory'].includes(activeTab)) {
-        const [inventoryResponse, logsResponse, portionsResponse] = await Promise.all([
+        const [inventoryResponse, logsResponse, portionsResponse, suppliersResponse] = await Promise.all([
           getInventory(),
           activeTab === 'entries' ? getInventoryLogs({ type: 'IN', limit: 100 }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-          getPortions().catch(() => ({ data: [] }))
+          getPortions().catch(() => ({ data: [] })),
+          getSuppliers().catch(() => ({ data: [] }))
         ])
         setInventory(inventoryResponse.data)
         setPortions(portionsResponse.data || [])
+        setSuppliers(suppliersResponse.data || [])
         if (activeTab === 'entries') setInventoryLogs(Array.isArray(logsResponse.data) ? logsResponse.data : [])
       } else if (activeTab === 'promotions') {
         const [promotionsResponse, inventoryResponse, lastPurchasesResponse, portionsResponse, couponsResponse] = await Promise.all([
@@ -979,6 +992,9 @@ const AdminPage = ({ authSession, onProfileClick }) => {
         await loadRoleUsers('CHEF')
       } else if (activeTab === 'drivers') {
         await loadRoleUsers('REPARTIDOR')
+      } else if (activeTab === 'suppliers') {
+        const suppliersResponse = await getSuppliers().catch(() => ({ data: [] }))
+        setSuppliers(suppliersResponse.data || [])
       }
     } catch (err) {
       console.error('Error loading Admin data:', err)
@@ -1133,29 +1149,22 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
-  const handleSaveProductPrice = async (product, priceValue) => {
-    const price = Number(priceValue)
-
-    if (Number.isNaN(price) || price < 0) {
-      toast.error('Ingresa un precio válido mayor o igual a cero')
-      return false
-    }
-
+  const handleRecalculatePrice = async (name, label, reason) => {
     setIsSaving(true)
     try {
-      await updateInventoryPrice(product.value, price)
-      toast.success(`Precio actualizado para ${product.label}`)
+      const response = await recalculateInventoryPrice(name, reason)
+      toast.success(`Costo recalculado para ${label}: Q${Number(response.data.price).toFixed(2)}`)
       loadData()
       return true
     } catch (err) {
-      toast.error(err.response?.data?.message || 'No se pudo actualizar el precio')
+      toast.error(err.response?.data?.message || 'No se pudo recalcular el costo')
       return false
     } finally {
       setIsSaving(false)
     }
   }
 
-  const handleSaveStockEdit = async (item, stockValue, unitValue) => {
+  const handleSaveStockEdit = async (item, stockValue, unitValue, reason) => {
     const stock = Number(stockValue)
     const meta = getProductPortionConfig(item.name)
 
@@ -1163,16 +1172,126 @@ const AdminPage = ({ authSession, onProfileClick }) => {
       toast.error('Ingresa un stock válido mayor o igual a cero')
       return false
     }
+    if (!reason || !reason.trim()) {
+      toast.error('El motivo del ajuste es requerido')
+      return false
+    }
 
     setIsSaving(true)
     try {
       const storedStock = convertInventoryAmountToBaseUnit(stock, unitValue, meta)
-      await updateInventoryStock(item.name, stock, unitValue)
+      await updateInventoryStock(item.name, stock, unitValue, reason.trim())
       toast.success(`Stock actualizado para ${meta?.label || item.name}: ${storedStock.toFixed(2)} ${meta?.unit || item.unit}`)
       loadData()
       return true
     } catch (err) {
       toast.error(err.response?.data?.message || 'No se pudo actualizar el stock')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleUpdateInventoryDetails = async (name, payload) => {
+    if (!payload.reason || !payload.reason.trim()) {
+      toast.error('El motivo del cambio es requerido')
+      return false
+    }
+    setIsSaving(true)
+    try {
+      await updateInventoryDetails(name, payload)
+      toast.success('Detalles actualizados correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudieron actualizar los detalles')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleRenameInventoryItemAction = async (name, newName, reason) => {
+    if (!newName || !newName.trim()) {
+      toast.error('El nuevo nombre es requerido')
+      return false
+    }
+    if (!reason || !reason.trim()) {
+      toast.error('El motivo del cambio es requerido')
+      return false
+    }
+    setIsSaving(true)
+    try {
+      await renameInventoryItem(name, newName.trim(), reason.trim())
+      toast.success('Producto renombrado correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo renombrar el producto')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteInventoryItemAction = async (name, reason) => {
+    if (!reason || !reason.trim()) {
+      toast.error('El motivo de la eliminación es requerido')
+      return false
+    }
+    setIsSaving(true)
+    try {
+      await deleteInventoryItem(name, reason.trim())
+      toast.success('Producto eliminado del inventario')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo eliminar el producto')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCreateSupplier = async (payload) => {
+    setIsSaving(true)
+    try {
+      await createSupplier(payload)
+      toast.success('Proveedor creado correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo crear el proveedor')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleUpdateSupplier = async (id, payload) => {
+    setIsSaving(true)
+    try {
+      await updateSupplier(id, payload)
+      toast.success('Proveedor actualizado correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo actualizar el proveedor')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteSupplierAction = async (id) => {
+    setIsSaving(true)
+    try {
+      await deleteSupplier(id)
+      toast.success('Proveedor eliminado correctamente')
+      loadData()
+      return true
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'No se pudo eliminar el proveedor')
       return false
     } finally {
       setIsSaving(false)
@@ -1847,30 +1966,6 @@ const AdminPage = ({ authSession, onProfileClick }) => {
     }
   }
 
-  const handleCalculateAutoPortionPrice = (name, qty, unit) => {
-    const sim = simulatedCosts[name] || {}
-    const product = inventory.find(i => i.name === name)
-    const qtyVal = sim?.qty !== undefined && sim?.qty !== '' ? Number(sim.qty) : 0
-    const priceVal = sim?.price !== undefined && sim?.price !== '' ? Number(sim.price) : 0
-    const purchaseUnit = sim?.unit || product?.unit || ''
-
-    if (!product || qtyVal <= 0 || priceVal <= 0) {
-      toast.error('No hay compras registradas para calcular costo de este producto en automático.')
-      return null
-    }
-
-    try {
-      const baseQty = convertInventoryAmountToBaseUnit(qtyVal, purchaseUnit, product)
-      const costPerBaseUnit = priceVal / baseQty
-      const portionInBaseUnit = convertInventoryAmountToBaseUnit(Number(qty), unit, product)
-      const calculatedPrice = costPerBaseUnit * portionInBaseUnit
-      return Number(calculatedPrice.toFixed(2))
-    } catch (e) {
-      toast.error('Error al realizar conversión de unidades.')
-      return null
-    }
-  }
-
   if (!session || session.role !== 'ADMIN') {
     return (
       <StaffAccessCard
@@ -2202,13 +2297,14 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           getProductPortionConfig={getProductPortionConfig}
           isSaving={isSaving}
           onSubmitEntry={submitInventoryEntry}
-          onSavePrice={handleSaveProductPrice}
+          onNavigateToRecipeBook={() => setActiveTab('recipe_book')}
         />
       )}
 
       {activeTab === 'inventory' && (
         <InventoryStockView
           inventory={inventory}
+          suppliers={suppliers}
           inventoryCategoryFilter={inventoryCategoryFilter}
           setInventoryCategoryFilter={setInventoryCategoryFilter}
           getProductPortionConfig={getProductPortionConfig}
@@ -2216,8 +2312,21 @@ const AdminPage = ({ authSession, onProfileClick }) => {
           isSaving={isSaving}
           onSaveStock={handleSaveStockEdit}
           onToggleStatus={handleToggleStatus}
+          onUpdateDetails={handleUpdateInventoryDetails}
+          onRename={handleRenameInventoryItemAction}
+          onDelete={handleDeleteInventoryItemAction}
           onSync={handleSyncInventory}
           onRequestCreateProduct={() => setPackagingModalOpen(true)}
+        />
+      )}
+
+      {activeTab === 'suppliers' && (
+        <SuppliersView
+          suppliers={suppliers}
+          isSaving={isSaving}
+          onCreate={handleCreateSupplier}
+          onUpdate={handleUpdateSupplier}
+          onDelete={handleDeleteSupplierAction}
         />
       )}
 
@@ -3512,24 +3621,34 @@ const AdminPage = ({ authSession, onProfileClick }) => {
                       label={label}
                       category={category}
                       lastPurchaseText={lastPurchaseText}
-                      sim={simulatedCosts[portion.name] || {}}
                       product={product}
                       isReadOnly={portion.isVirtual}
-                      onSave={async (qty, unit, price) => {
+                      onSave={async (qty, unit, consumptionType, reason) => {
                         try {
-                          await updatePortion(portion.name, { usedPerPlate: qty, unit, price })
+                          await updatePortion(portion.name, { usedPerPlate: qty, unit, consumptionType, reason })
                           toast.success(`Porción de ${label} actualizada exitosamente`)
                           loadData()
                         } catch (err) {
-                          toast.error('No se pudo actualizar la porción')
+                          toast.error(err.response?.data?.message || 'No se pudo actualizar la porción')
                         }
                       }}
-                      onCalculateAuto={(qty, unit) => handleCalculateAutoPortionPrice(portion.name, qty, unit)}
+                      onRequestRecalculate={() => setRecalcTarget({ name: portion.name, label })}
                     />
                   )
                 })
             })()}
           </div>
+
+          <ConfirmReasonModal
+            isOpen={!!recalcTarget}
+            onClose={() => setRecalcTarget(null)}
+            title="Recalcular costo de porción"
+            subtitle={recalcTarget ? `Se recalculará el costo de "${recalcTarget.label}" a partir de la última compra registrada.` : ''}
+            confirmLabel="Recalcular"
+            reasonPlaceholder="Ej. Verificación de costos, última compra actualizada..."
+            isSaving={isSaving}
+            onConfirm={(reason) => recalcTarget ? handleRecalculatePrice(recalcTarget.name, recalcTarget.label, reason) : false}
+          />
         </div>
       )}
               </>
@@ -3714,16 +3833,18 @@ const getIngredientSvg = (name, category = '') => {
   )
 }
 
-const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, onSave, onCalculateAuto, isReadOnly }) => {
+const PortionRow = ({ portion, label, category, lastPurchaseText, product, onSave, onRequestRecalculate, isReadOnly }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editQty, setEditQty] = useState(portion.usedPerPlate)
   const [editUnit, setEditUnit] = useState(portion.unit)
-  const [editPrice, setEditPrice] = useState(portion.price)
+  const [editConsumptionType, setEditConsumptionType] = useState(portion.consumptionType || 'plate')
+  const [editReason, setEditReason] = useState('')
 
   useEffect(() => {
     setEditQty(portion.usedPerPlate)
     setEditUnit(portion.unit)
-    setEditPrice(portion.price)
+    setEditConsumptionType(portion.consumptionType || 'plate')
+    setEditReason('')
   }, [portion])
 
   const allowedUnits = getAllowedInputUnits(product)
@@ -3733,20 +3854,12 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
       toast.error('La porción debe ser mayor a 0')
       return
     }
-    if (editPrice < 0) {
-      toast.error('El costo de la porción no puede ser negativo')
+    if (!editReason.trim()) {
+      toast.error('El motivo del cambio es requerido')
       return
     }
-    onSave(editQty, editUnit, editPrice)
+    onSave(editQty, editUnit, editConsumptionType, editReason.trim())
     setIsEditing(false)
-  }
-
-  const handleAuto = () => {
-    const calculated = onCalculateAuto(editQty, editUnit)
-    if (calculated !== null && calculated !== undefined) {
-      setEditPrice(calculated)
-      toast.success(`Costo autocalculado: Q${calculated}`)
-    }
   }
 
   const getCategoryBadgeClass = (cat) => {
@@ -3763,12 +3876,12 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
   return (
     <div className="bg-white rounded-3xl border border-ui-border shadow-sm p-6 hover:shadow-md transition-all duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        
+
         <div className="flex items-center gap-4 flex-1">
           <div className="w-20 h-20 rounded-2xl bg-ui-bg overflow-hidden flex items-center justify-center shrink-0 border border-ui-border/50">
             {getIngredientSvg(portion.name, category)}
           </div>
-          
+
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-black text-ui-text capitalize leading-none">
@@ -3777,8 +3890,11 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
               <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${getCategoryBadgeClass(category)}`}>
                 {category}
               </span>
+              <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${portion.consumptionType === 'order' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                {portion.consumptionType === 'order' ? 'Por pedido' : 'Por plato'}
+              </span>
             </div>
-            
+
             <p className="text-xs text-ui-muted font-bold truncate">
               {lastPurchaseText}
             </p>
@@ -3787,70 +3903,81 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
 
         <div className="flex flex-wrap items-center gap-6 md:gap-8 bg-ui-bg/30 border border-ui-border/40 rounded-2xl p-4 md:p-5 shrink-0">
           {isEditing ? (
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="space-y-1.5 w-24">
-                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Porción</label>
-                <input
-                  type="number"
-                  min="0.001"
-                  step="any"
-                  value={editQty}
-                  onChange={(e) => setEditQty(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-                />
-              </div>
-
-              <div className="space-y-1.5 w-20">
-                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Unidad</label>
-                <select
-                  value={editUnit}
-                  onChange={(e) => setEditUnit(e.target.value)}
-                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
-                >
-                  {allowedUnits.map((u) => (
-                    <option key={u.value} value={u.value}>
-                      {u.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5 w-32 relative">
-                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Costo Porción</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-ui-muted font-bold">Q</span>
+            <div className="flex flex-col gap-3 w-full">
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="space-y-1.5 w-24">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Porción</label>
                   <input
                     type="number"
-                    min="0"
-                    step="0.01"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full pl-7 pr-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                    min="0.001"
+                    step="any"
+                    value={editQty}
+                    onChange={(e) => setEditQty(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
                   />
+                </div>
+
+                <div className="space-y-1.5 w-20">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Unidad</label>
+                  <select
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  >
+                    {allowedUnits.map((u) => (
+                      <option key={u.value} value={u.value}>
+                        {u.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5 w-36">
+                  <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Se consume</label>
+                  <select
+                    value={editConsumptionType}
+                    onChange={(e) => setEditConsumptionType(e.target.value)}
+                    className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                  >
+                    <option value="plate">Por plato</option>
+                    <option value="order">Por pedido</option>
+                  </select>
                 </div>
               </div>
 
-              {sim.qty && (
-                <button
-                  type="button"
-                  onClick={handleAuto}
-                  className="px-3 py-2 rounded-xl bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange text-[10px] font-black uppercase tracking-wider border border-brand-orange/25 transition-colors h-[38px] active:scale-95"
-                  title="Calcular a partir de última compra"
-                >
-                  💡 Autocalcular
-                </button>
-              )}
+              <div className="space-y-1.5 w-full">
+                <label className="text-[9px] font-black uppercase text-ui-muted tracking-wider block ml-1">Motivo del cambio (requerido)</label>
+                <input
+                  type="text"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  placeholder="Ej. ajuste de receta, corrección de porción..."
+                  className="w-full px-3 py-2 text-sm font-bold bg-white border border-ui-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+                />
+              </div>
             </div>
           ) : (
-            <div className="flex gap-6 md:gap-8 select-none">
+            <div className="flex gap-6 md:gap-8 select-none flex-wrap">
               <div>
-                <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Porción del Plato</span>
+                <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Porción</span>
                 <span className="text-sm font-black text-ui-text">{portion.usedPerPlate} {portion.unit}</span>
               </div>
               <div className="border-l border-ui-border/50 h-8 self-center" />
               <div>
                 <span className="text-[9px] text-ui-muted uppercase tracking-wider font-bold block">Costo Porción</span>
-                <span className="text-sm font-black text-brand-blue">Q{Number(portion.price || 0).toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-brand-blue">Q{Number(portion.price || 0).toFixed(2)}</span>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={onRequestRecalculate}
+                      className="text-[9px] font-black uppercase tracking-wider text-brand-orange underline decoration-dotted"
+                      title="Recalcular a partir de la última compra"
+                    >
+                      Recalcular
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -3875,7 +4002,8 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
                 onClick={() => {
                   setEditQty(portion.usedPerPlate)
                   setEditUnit(portion.unit)
-                  setEditPrice(portion.price)
+                  setEditConsumptionType(portion.consumptionType || 'plate')
+                  setEditReason('')
                   setIsEditing(false)
                 }}
                 className="px-4 py-2 border border-ui-border bg-white text-ui-muted hover:text-ui-text text-[10px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95"
@@ -3898,5 +4026,4 @@ const PortionRow = ({ portion, label, category, lastPurchaseText, sim, product, 
     </div>
   )
 }
-
 export default AdminPage

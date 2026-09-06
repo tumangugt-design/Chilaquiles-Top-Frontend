@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
-import { PlusCircle, Search, Pencil } from 'lucide-react'
+import { PlusCircle, Search, ClipboardList, ArrowRight } from 'lucide-react'
 import EntryFormModal from './EntryFormModal.jsx'
-import PriceEditModal from './PriceEditModal.jsx'
-import { INVENTORY_PRODUCT_OPTIONS } from '../../shared/constants/index.jsx'
 import { formatInventoryAmount } from '../../shared/utils/inventoryFormat.js'
 
 const getLogTotalPrice = (log) => {
@@ -26,14 +24,15 @@ const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() 
 const isSameMonth = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()
 
 /**
- * Pestaña "Entradas". Antes: formulario siempre abierto ocupando media pantalla.
- * Ahora: la vista se enfoca en mostrar los datos (KPIs, historial, consumo por
- * plato) y el registro de una entrada se hace en un modal bajo demanda.
+ * Pestaña "Entradas". Se enfoca exclusivamente en el registro y la
+ * trazabilidad de compras (KPIs + historial). La configuración de porciones,
+ * consumo por plato/pedido y costo por porción vive únicamente en Recetario
+ * para evitar que el mismo dato (costo de porción) se edite desde dos
+ * lugares distintos.
  */
-const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfig, isSaving, onSubmitEntry, onSavePrice }) => {
+const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfig, isSaving, onSubmitEntry, onNavigateToRecipeBook }) => {
   const [entryModalOpen, setEntryModalOpen] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
-  const [editingPrice, setEditingPrice] = useState(null) // { value, label, currentPrice }
 
   const validLogs = useMemo(
     () => inventoryLogs.filter((log) => !!getProductPortionConfig(log.ingredientName).label),
@@ -61,33 +60,12 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
     }
   }, [validLogs])
 
-  const consumoOptions = useMemo(() => {
-    const allProductNames = Array.from(new Set([
-      ...INVENTORY_PRODUCT_OPTIONS.map((p) => p.value),
-      ...inventory.map((i) => i.name),
-    ]))
-    return allProductNames
-      .map((name) => {
-        const config = getProductPortionConfig(name)
-        const inventoryItem = inventory.find((i) => i.name === config.name)
-        return {
-          value: config.name,
-          label: config.label,
-          category: config.category,
-          usedPerPlate: config.usedPerPlate,
-          unit: config.unit,
-          fixedPrice: Number(inventoryItem?.lastPrice || 0),
-        }
-      })
-      .sort((a, b) => (a.category !== b.category ? a.category.localeCompare(b.category) : a.label.localeCompare(b.label)))
-  }, [inventory, getProductPortionConfig])
-
   return (
     <div className="space-y-6 animate-fade-in min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-ui-border pb-4">
         <div>
           <h2 className="text-xl font-black tracking-tight text-ui-text">Entradas de Inventario</h2>
-          <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Registro de compras y consumo por plato</p>
+          <p className="text-xs text-ui-muted font-bold uppercase tracking-widest mt-1">Registro de compras</p>
         </div>
         <button
           type="button"
@@ -114,7 +92,7 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 min-w-0">
+      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4 sm:gap-6 min-w-0">
         {/* Historial de Entradas */}
         <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
           <div className="border-b border-ui-border pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -145,7 +123,7 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
             <>
               {/* Tabla — laptop */}
               <div className="hidden xl:block rounded-2xl border border-ui-border bg-white overflow-hidden">
-                <div className="overflow-x-auto max-h-[26rem] overflow-y-auto">
+                <div className="overflow-x-auto max-h-[30rem] overflow-y-auto">
                   <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0">
                       <tr className="bg-ui-bg/80 backdrop-blur border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
@@ -192,7 +170,7 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
               </div>
 
               {/* Tarjetas — iPad / móvil */}
-              <div className="xl:hidden space-y-2 max-h-[26rem] overflow-y-auto pr-1">
+              <div className="xl:hidden space-y-2 max-h-[30rem] overflow-y-auto pr-1">
                 {filteredLogs.map((log) => {
                   const product = getProductPortionConfig(log.ingredientName)
                   const totalPrice = getLogTotalPrice(log)
@@ -225,76 +203,25 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
           )}
         </div>
 
-        {/* Consumo por plato */}
-        <div className="rounded-[2rem] border border-ui-border bg-ui-bg/40 p-4 sm:p-6 space-y-4 min-w-0">
-          <div className="border-b border-ui-border pb-4">
-            <h3 className="text-lg font-black text-ui-text">Consumo por plato</h3>
-            <p className="text-[10px] text-ui-muted font-bold uppercase tracking-widest mt-1">Referencia de porciones y precio fijo</p>
-          </div>
-
-          {/* Tabla — laptop */}
-          <div className="hidden xl:block rounded-2xl border border-ui-border bg-white overflow-hidden">
-            <div className="overflow-x-auto max-h-[28rem] overflow-y-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0">
-                  <tr className="bg-ui-bg/80 backdrop-blur border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
-                    <th className="py-3 px-4">Producto</th>
-                    <th className="py-3 px-4 text-right">Consumo/plato</th>
-                    <th className="py-3 px-4 text-right">Precio fijo</th>
-                    <th className="py-3 px-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-ui-border/60 text-xs font-bold text-ui-text">
-                  {consumoOptions.map((product) => (
-                    <tr key={product.value} className="hover:bg-ui-bg/10 transition-colors">
-                      <td className="py-3 px-4">
-                        <p className="font-black text-ui-text">{product.label}</p>
-                        <p className="text-[10px] text-ui-muted uppercase tracking-wide font-black">{product.category}</p>
-                      </td>
-                      <td className="py-3 px-4 text-right text-brand-blue font-black">{product.usedPerPlate} {product.unit}</td>
-                      <td className="py-3 px-4 text-right text-green-600 font-black">Q{product.fixedPrice.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setEditingPrice(product)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
-                        >
-                          <Pencil size={12} /> Editar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Puntero a Recetario — la configuración de porciones y costo vive allá */}
+        <div className="rounded-[2rem] border border-dashed border-brand-blue/30 bg-brand-blue/5 p-6 flex flex-col justify-between gap-4 min-w-0">
+          <div className="space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-brand-blue">
+              <ClipboardList size={20} />
             </div>
+            <h3 className="text-base font-black text-ui-text leading-tight">Consumo por plato y costo por porción</h3>
+            <p className="text-xs text-ui-muted font-bold leading-relaxed">
+              Configura cuánto se consume de cada insumo por plato (o por pedido) y revisa su costo en <span className="text-ui-text">Recetario</span>. El costo por porción se recalcula automáticamente a partir de tus compras — ya no se edita manualmente aquí.
+            </p>
           </div>
-
-          {/* Tarjetas — iPad / móvil */}
-          <div className="xl:hidden space-y-3 max-h-[28rem] overflow-y-auto pr-1">
-            {consumoOptions.map((product) => (
-              <div key={product.value} className="rounded-2xl border border-ui-border bg-white/60 p-4 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
-                  <div className="min-w-0">
-                    <p className="font-black text-ui-text break-words leading-tight">{product.label}</p>
-                    <p className="text-[10px] uppercase tracking-widest text-ui-muted font-black mt-1">{product.category}</p>
-                  </div>
-                  <div className="text-left sm:text-right shrink-0">
-                    <p className="text-sm font-black text-brand-blue break-words">{product.usedPerPlate} {product.unit}</p>
-                    <p className="text-[10px] font-black text-green-600 mt-0.5">Precio fijo Q{product.fixedPrice.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="mt-3 border-t border-ui-border pt-3 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setEditingPrice(product)}
-                    className="rounded-xl border border-brand-blue/20 bg-brand-blue/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-blue transition-all hover:bg-brand-blue hover:text-white"
-                  >
-                    Editar precio
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={onNavigateToRecipeBook}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-blue text-white text-[10px] font-black uppercase tracking-widest shadow-md hover:shadow-lg transition-all"
+          >
+            Ir a Recetario
+            <ArrowRight size={14} />
+          </button>
         </div>
       </div>
 
@@ -304,15 +231,6 @@ const InventoryEntriesView = ({ inventory, inventoryLogs, getProductPortionConfi
         inventory={inventory}
         isSaving={isSaving}
         onSubmit={onSubmitEntry}
-      />
-
-      <PriceEditModal
-        isOpen={!!editingPrice}
-        onClose={() => setEditingPrice(null)}
-        product={editingPrice}
-        currentPrice={editingPrice?.fixedPrice}
-        isSaving={isSaving}
-        onSave={onSavePrice}
       />
     </div>
   )

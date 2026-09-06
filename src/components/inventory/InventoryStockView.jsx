@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Filter, Search, ChevronUp, ChevronDown, AlertTriangle, PackagePlus } from 'lucide-react'
+import { Filter, Search, ChevronUp, ChevronDown, AlertTriangle, PackagePlus, Settings2, Trash2 } from 'lucide-react'
 import Button from '../ui/Button.jsx'
+import ConfirmReasonModal from '../ui/ConfirmReasonModal.jsx'
 import StockEditModal from './StockEditModal.jsx'
+import ProductDetailsModal from './ProductDetailsModal.jsx'
+import { INVENTORY_PRODUCT_MAP } from '../../shared/constants/index.jsx'
 
 const CATEGORY_OPTIONS = [
   { value: 'ALL', label: 'Todas las categorías' },
@@ -26,12 +29,14 @@ const SortHeader = ({ label, sortKey, activeKey, dir, onSort, align = 'left' }) 
 )
 
 /**
- * Pestaña "Stock". Antes: grilla de tarjetas siempre, sin buscador ni orden.
- * Ahora: tabla ordenable de alta densidad en laptop, tarjetas táctiles en
- * iPad/móvil, con búsqueda y filtro rápido de bajo stock.
+ * Pestaña "Stock": tabla ordenable de alta densidad en laptop, tarjetas
+ * táctiles en iPad/móvil, con búsqueda, filtro de categoría y de proveedor,
+ * y acciones de edición de stock, detalles (proveedor/origen/umbral) y
+ * eliminación — todas con motivo obligatorio.
  */
 const InventoryStockView = ({
   inventory,
+  suppliers,
   inventoryCategoryFilter,
   setInventoryCategoryFilter,
   getProductPortionConfig,
@@ -39,14 +44,22 @@ const InventoryStockView = ({
   isSaving,
   onSaveStock,
   onToggleStatus,
+  onUpdateDetails,
+  onRename,
+  onDelete,
   onSync,
   onRequestCreateProduct,
 }) => {
   const [search, setSearch] = useState('')
   const [lowStockOnly, setLowStockOnly] = useState(false)
+  const [supplierFilter, setSupplierFilter] = useState('ALL')
   const [sortKey, setSortKey] = useState('label')
   const [sortDir, setSortDir] = useState('asc')
   const [editingItem, setEditingItem] = useState(null)
+  const [detailsItem, setDetailsItem] = useState(null)
+  const [deletingItem, setDeletingItem] = useState(null)
+
+  const supplierById = useMemo(() => Object.fromEntries(suppliers.map((s) => [s._id, s])), [suppliers])
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -64,16 +77,25 @@ const InventoryStockView = ({
         const isActive = isPackaging ? true : item.isActive !== false
         const isLow = item.minimumStock != null && Number(item.stock) <= Number(item.minimumStock)
         const plates = getPlatesByIngredient(item)
-        return { item, meta, isPackaging, isActive, isLow, plates }
+        const isCatalogItem = !!INVENTORY_PRODUCT_MAP[item.name]
+        const supplierName = item.sourceType === 'preparado_interno'
+          ? 'Preparación interna'
+          : (item.supplierId ? supplierById[item.supplierId]?.name || 'Proveedor eliminado' : 'Sin proveedor')
+        return { item, meta, isPackaging, isActive, isLow, plates, isCatalogItem, supplierName }
       })
       .filter((row) => inventoryCategoryFilter === 'ALL' || row.meta?.category === inventoryCategoryFilter)
       .filter((row) => !lowStockOnly || row.isLow)
+      .filter((row) => {
+        if (supplierFilter === 'ALL') return true
+        if (supplierFilter === 'INTERNAL') return row.item.sourceType === 'preparado_interno'
+        return row.item.supplierId === supplierFilter
+      })
       .filter((row) => {
         if (!search.trim()) return true
         const q = search.trim().toLowerCase()
         return (row.meta?.label || row.item.name).toLowerCase().includes(q) || (row.meta?.category || '').toLowerCase().includes(q)
       })
-  }, [inventory, inventoryCategoryFilter, lowStockOnly, search, getProductPortionConfig, getPlatesByIngredient])
+  }, [inventory, inventoryCategoryFilter, lowStockOnly, supplierFilter, search, getProductPortionConfig, getPlatesByIngredient, supplierById])
 
   const sortedRows = useMemo(() => {
     const copy = [...rows]
@@ -122,7 +144,7 @@ const InventoryStockView = ({
             />
           </div>
 
-          <div className="relative w-full sm:w-56">
+          <div className="relative w-full sm:w-52">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-ui-muted" size={16} />
             <select
               className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
@@ -131,6 +153,20 @@ const InventoryStockView = ({
             >
               {CATEGORY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative w-full sm:w-48">
+            <select
+              className="w-full px-4 py-2.5 rounded-xl border border-ui-border bg-white font-black text-[10px] uppercase tracking-widest outline-none"
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+            >
+              <option value="ALL">Todos los proveedores</option>
+              <option value="INTERNAL">Preparación interna</option>
+              {suppliers.map((s) => (
+                <option key={s._id} value={s._id}>{s.name}</option>
               ))}
             </select>
           </div>
@@ -154,7 +190,7 @@ const InventoryStockView = ({
           </button>
 
           <Button variant="secondary" className="w-full sm:w-auto !bg-brand-blue/10 !text-brand-blue !border-brand-blue/20 !py-2.5 !px-4" onClick={onSync}>
-            Sincronizar
+            Actualizar catálogo
           </Button>
         </div>
       </div>
@@ -173,6 +209,7 @@ const InventoryStockView = ({
                   <tr className="bg-ui-bg/60 border-b border-ui-border text-[10px] font-black uppercase tracking-wider text-ui-muted">
                     <SortHeader label="Producto" sortKey="label" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
                     <SortHeader label="Categoría" sortKey="category" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                    <th className="py-4 px-6 whitespace-nowrap">Proveedor</th>
                     <SortHeader label="Stock" sortKey="stock" activeKey={sortKey} dir={sortDir} onSort={handleSort} align="right" />
                     <th className="py-4 px-6 text-right whitespace-nowrap">Platos</th>
                     <th className="py-4 px-6 text-center whitespace-nowrap">Estado</th>
@@ -183,9 +220,10 @@ const InventoryStockView = ({
                   {sortedRows.map((row) => (
                     <tr key={row.item._id} className={`hover:bg-ui-bg/10 transition-colors ${row.isLow ? 'bg-brand-red/5' : !row.isActive ? 'opacity-60' : ''}`}>
                       <td className="py-4 px-6">
-                        <p className="font-black text-sm text-ui-text capitalize">{row.meta?.label || row.item.name}</p>
+                        <p className="font-black text-sm text-ui-text capitalize">{row.item.displayLabel || row.meta?.label || row.item.name}</p>
                       </td>
                       <td className="py-4 px-6 text-ui-muted uppercase tracking-wide text-[10px] font-black">{row.meta?.category || 'Inventario'}</td>
+                      <td className="py-4 px-6 text-ui-muted text-[11px] font-bold">{row.supplierName}</td>
                       <td className={`py-4 px-6 text-right font-black text-sm ${row.isLow ? 'text-brand-red' : 'text-brand-blue'}`}>
                         {Number(row.item.stock).toFixed(2)} <span className="text-[10px] text-ui-muted font-bold uppercase">{row.item.unit}</span>
                       </td>
@@ -196,23 +234,32 @@ const InventoryStockView = ({
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setEditingItem(row.item)}
-                            className="text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
+                            title="Editar stock"
+                            className="text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
                           >
-                            Editar
+                            Stock
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDetailsItem(row.item)}
+                            title="Editar detalles"
+                            className="p-2 rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
+                          >
+                            <Settings2 size={14} />
                           </button>
                           {row.isPackaging ? (
-                            <span className="text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
+                            <span className="text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
                               Fijo
                             </span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => onToggleStatus(row.item.name, row.item.isActive ?? true)}
-                              className={`text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
+                              className={`text-[10px] font-black uppercase tracking-widest py-2 px-2.5 rounded-xl transition-all border ${
                                 row.item.isActive === false
                                   ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10'
                                   : 'border-brand-red text-brand-red hover:bg-brand-red/10'
@@ -221,6 +268,14 @@ const InventoryStockView = ({
                               {row.item.isActive === false ? 'Activar' : 'Desactivar'}
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setDeletingItem(row.item)}
+                            title="Eliminar producto"
+                            className="p-2 rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -239,10 +294,11 @@ const InventoryStockView = ({
                   !row.isActive ? 'bg-black/5 opacity-70 grayscale' : row.isLow ? 'bg-brand-red/5 border-brand-red/20' : 'bg-ui-bg/40'
                 }`}
               >
-                <div className="flex flex-row items-start justify-between gap-3 mb-4 min-w-0">
+                <div className="flex flex-row items-start justify-between gap-3 mb-3 min-w-0">
                   <div className="min-w-0 max-w-full">
-                    <h3 className="font-black text-ui-text capitalize leading-tight break-words">{row.meta?.label || row.item.name}</h3>
+                    <h3 className="font-black text-ui-text capitalize leading-tight break-words">{row.item.displayLabel || row.meta?.label || row.item.name}</h3>
                     <p className="text-[10px] font-black uppercase tracking-widest text-ui-muted mt-1 break-words">{row.meta?.category || 'Inventario'}</p>
+                    <p className="text-[10px] text-ui-muted font-bold mt-0.5 break-words">{row.supplierName}</p>
                   </div>
                   <div className="text-right shrink-0 max-w-[45%]">
                     <p className={`text-xl font-black break-words ${row.isLow ? 'text-brand-red' : 'text-brand-blue'}`}>
@@ -261,29 +317,43 @@ const InventoryStockView = ({
                   <div className={`w-fit text-[10px] font-black uppercase px-3 py-1 rounded-full ${!row.isActive ? 'bg-ui-muted/20 text-ui-muted' : 'bg-green-500/10 text-green-600'}`}>
                     {!row.isActive ? 'Inactivo' : 'Activo'}
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto min-w-0">
                     <button
                       type="button"
                       onClick={() => setEditingItem(row.item)}
-                      className="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
+                      className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
                     >
-                      Editar stock
+                      Stock
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDetailsItem(row.item)}
+                      className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border border-ui-border text-ui-muted hover:bg-ui-bg"
+                    >
+                      Detalles
                     </button>
                     {row.isPackaging ? (
-                      <div className="w-full sm:w-fit text-center text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
+                      <div className="text-center text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl border border-green-500/20 bg-green-500/10 text-green-700">
                         Fijo
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => onToggleStatus(row.item.name, row.item.isActive ?? true)}
-                        className={`w-full sm:w-auto text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
+                        className={`flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl transition-all border ${
                           row.item.isActive === false ? 'border-brand-blue text-brand-blue hover:bg-brand-blue/10' : 'border-brand-red text-brand-red hover:bg-brand-red/10'
                         }`}
                       >
                         {row.item.isActive === false ? 'Activar' : 'Desactivar'}
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setDeletingItem(row.item)}
+                      className="p-2 rounded-xl transition-all border border-brand-red/20 text-brand-red hover:bg-brand-red/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -299,6 +369,30 @@ const InventoryStockView = ({
         meta={editingItem ? getProductPortionConfig(editingItem.name) : null}
         isSaving={isSaving}
         onSave={onSaveStock}
+      />
+
+      <ProductDetailsModal
+        isOpen={!!detailsItem}
+        onClose={() => setDetailsItem(null)}
+        item={detailsItem}
+        meta={detailsItem ? getProductPortionConfig(detailsItem.name) : null}
+        suppliers={suppliers}
+        isCatalogItem={detailsItem ? !!INVENTORY_PRODUCT_MAP[detailsItem.name] : true}
+        isSaving={isSaving}
+        onSave={onUpdateDetails}
+        onRename={onRename}
+      />
+
+      <ConfirmReasonModal
+        isOpen={!!deletingItem}
+        onClose={() => setDeletingItem(null)}
+        title="Eliminar producto"
+        subtitle={deletingItem ? (getProductPortionConfig(deletingItem.name)?.label || deletingItem.name) : ''}
+        confirmLabel="Eliminar"
+        danger
+        reasonPlaceholder="Ej. producto descontinuado"
+        isSaving={isSaving}
+        onConfirm={(reason) => onDelete(deletingItem.name, reason)}
       />
     </div>
   )
